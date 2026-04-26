@@ -1,1 +1,36 @@
+name: Validate Build
 
+# Roda em qualquer push e em pull requests para main
+on:
+  push:
+    branches: [ "**" ]      # toda branch
+  pull_request:
+    branches: [ main ]      # PRs que vão pra main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Baixa o código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Instala Node.js (mesma versão que o Netlify usa)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # 3. Instala dependências (mesma coisa que npm install)
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Roda o build do Vite (mesma coisa que Netlify faz)
+      # Se falhar aqui, falha no Netlify também — bloqueia merge
+      - name: Build
+        run: npm run build
+
+      # 5. Sucesso — log explícito
+      - name: ✅ Build OK
+        run: echo "Build passou. Pode fazer merge com seguranca."
