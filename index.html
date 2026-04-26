@@ -3,8 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-
-    <!-- Theme color (escuro pra evitar flash branco em PWA standalone) -->
     <meta name="theme-color" content="#0a1420" />
 
     <!-- iOS standalone PWA -->
@@ -13,21 +11,16 @@
     <meta name="apple-mobile-web-app-title" content="MVDroiD" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Title + description -->
     <title>MVDroiD — Levantamento de local</title>
     <meta name="description" content="MVDroiD — App de documentação forense de cenas de crime. SCPe / Polícia Civil do Distrito Federal." />
 
-    <!-- ════════════════════════════════════════════════════════════
-         Favicon e Apple Touch Icon — arquivos físicos em /public
-         ════════════════════════════════════════════════════════════ -->
+    <!-- Favicon e Apple Touch Icon -->
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="alternate icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- ════════════════════════════════════════════════════════════
-         OPEN GRAPH (WhatsApp, Telegram, Facebook, LinkedIn, Discord)
-         ════════════════════════════════════════════════════════════ -->
+    <!-- Open Graph (WhatsApp, Telegram, Facebook) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MVDroiD" />
     <meta property="og:title" content="MVDroiD — Levantamento de local" />
@@ -48,22 +41,19 @@
     <meta name="twitter:image" content="https://mvdroid.vercel.app/og-preview.png" />
 
     <!-- ════════════════════════════════════════════════════════════
-         Estilo inline pra eliminar flash branco em PWA standalone
+         CSS pré-React: fundo azul SÓ no #initial-loader, NÃO no body.
+         O App.jsx controla o fundo via tema (claro ou escuro).
+         Isso evita "tela azul presa" ao trocar de aba no iOS Chrome.
          ════════════════════════════════════════════════════════════ -->
     <style>
       html, body {
         margin: 0;
         padding: 0;
-        background: #0a1420;
-        color: #fff;
         font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
         -webkit-font-smoothing: antialiased;
         overscroll-behavior: none;
       }
-      #root {
-        background: #0a1420;
-        min-height: 100vh;
-      }
+      /* Loader azul aparece em <100ms enquanto React carrega */
       #initial-loader {
         position: fixed;
         inset: 0;
@@ -71,7 +61,7 @@
         align-items: center;
         justify-content: center;
         background: #0a1420;
-        z-index: 1;
+        z-index: 9999;
       }
       #initial-loader .skull {
         width: 64px;
@@ -83,28 +73,44 @@
         0%, 100% { opacity: 0.5; transform: scale(0.95); }
         50% { opacity: 1; transform: scale(1.05); }
       }
+      /* Quando o React monta, esconde o loader (CSS oculta via .ready) */
+      body.app-ready #initial-loader {
+        display: none;
+      }
     </style>
   </head>
   <body>
-    <div id="root">
-      <div id="initial-loader">
-        <svg class="skull" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="bgInit" cx="50%" cy="40%">
-              <stop offset="0%" stop-color="#1a4a7a"/>
-              <stop offset="100%" stop-color="#0a2540"/>
-            </radialGradient>
-          </defs>
-          <circle cx="50" cy="50" r="48" fill="url(#bgInit)"/>
-          <path d="M50 22 C36 22 26 32 26 47 C26 57 31 64 38 68 L38 76 Q38 80 42 80 L44 80 L44 78 C44 76 45 75 47 75 C49 75 50 76 50 78 L50 80 L56 80 L56 78 C56 76 57 75 59 75 C61 75 62 76 62 78 L62 80 L64 80 Q68 80 68 76 L68 68 C75 64 80 57 80 47 C80 32 70 22 56 22 Z" fill="#f8f8fa" stroke="#a1a1a6" stroke-width="1"/>
-          <ellipse cx="41" cy="48" rx="6" ry="7" fill="#0a2540"/>
-          <ellipse cx="61" cy="48" rx="6" ry="7" fill="#0a2540"/>
-          <circle cx="39" cy="45" r="1.4" fill="#5ac8fa"/>
-          <circle cx="59" cy="45" r="1.4" fill="#5ac8fa"/>
-          <path d="M51 56 L48 64 L51 66 L54 64 Z" fill="#0a2540"/>
-        </svg>
-      </div>
+    <div id="root"></div>
+    <!-- Loader sai do #root pra evitar conflito com React -->
+    <div id="initial-loader">
+      <svg class="skull" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bgInit" cx="50%" cy="40%">
+            <stop offset="0%" stop-color="#1a4a7a"/>
+            <stop offset="100%" stop-color="#0a2540"/>
+          </radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#bgInit)"/>
+        <path d="M50 22 C36 22 26 32 26 47 C26 57 31 64 38 68 L38 76 Q38 80 42 80 L44 80 L44 78 C44 76 45 75 47 75 C49 75 50 76 50 78 L50 80 L56 80 L56 78 C56 76 57 75 59 75 C61 75 62 76 62 78 L62 80 L64 80 Q68 80 68 76 L68 68 C75 64 80 57 80 47 C80 32 70 22 56 22 Z" fill="#f8f8fa" stroke="#a1a1a6" stroke-width="1"/>
+        <ellipse cx="41" cy="48" rx="6" ry="7" fill="#0a2540"/>
+        <ellipse cx="61" cy="48" rx="6" ry="7" fill="#0a2540"/>
+        <circle cx="39" cy="45" r="1.4" fill="#5ac8fa"/>
+        <circle cx="59" cy="45" r="1.4" fill="#5ac8fa"/>
+        <path d="M51 56 L48 64 L51 66 L54 64 Z" fill="#0a2540"/>
+      </svg>
     </div>
+    <script>
+      // Quando React montar, marca body como ready pra esconder o loader
+      const checkReady = () => {
+        const root = document.getElementById('root');
+        if (root && root.children.length > 0) {
+          document.body.classList.add('app-ready');
+        } else {
+          requestAnimationFrame(checkReady);
+        }
+      };
+      requestAnimationFrame(checkReady);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

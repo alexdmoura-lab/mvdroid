@@ -1,209 +1,100 @@
-# 📦 MVDroiD v206 — Pacote completo (commit único)
+# 📦 MVDroiD v208 — Pacote ENXUTO (só o que mudou)
 
-Esse zip contém **TODOS os arquivos** que devem estar no repositório.
-Você sobe tudo de uma vez e faz **um único commit**.
-
----
-
-## ✅ O que esta versão traz
-
-### 🔥 v206 (esta versão) — FIX CRÍTICO
-- **Bug da tela azul ao trocar aba corrigido**
-- Causa: animações CSS começavam em `opacity:0` — se travasse, ficava invisível
-- Fix: animações sem `opacity:0` (só translate). Conteúdo sempre visível.
-- Service Worker v2 — invalida cache antigo automaticamente
-
-### v205
-- Manifest, favicon e ícones como arquivos físicos (não mais runtime)
-- Botão "Compartilhar DOCX" via WhatsApp/AirDrop/e-mail nativo
-- Slots com miniatura visual do croqui salvo + indicador de fotos
-
-### v204
-- Topbar respeita notch/Dynamic Island do iPhone PWA
-- Sem flash branco ao abrir pelo atalho (PWA standalone)
-- Body com fundo escuro fixo já no HTML inicial
-
-### v203
-- Layout Solicitação responsivo (Android-friendly)
-- Ano em select de 2 dígitos (24, 25, 26...)
-- Dark mode com mais contraste nos labels
-- Ícone forca/enforcamento — laçada redonda com nó
-
-### v202
-- Microfone APENAS em textareas (campos longos)
-- Botão de mic redesenhado (40×40 área, ícone visual menor)
-- Labels "Observações" identificam de qual seção pertencem
-- Imagens anatômicas como arquivos físicos (não mais base64)
-- Service Worker registrado (PWA offline)
-- **Shim do `window.storage`** — corrige bug do backup sumindo
+Esse zip tem **só os arquivos que precisam ser atualizados**. Quase tudo do seu repo continua igual e não precisa mexer.
 
 ---
 
-## 📂 Estrutura completa
+## 🎯 O que tem aqui (9 arquivos)
 
-```
-mvdroid/
-├── .github/
-│   └── workflows/
-│       └── validate.yml              ← validador automático GitHub Actions
-│
-├── public/
-│   ├── icon.svg                      ← ícone vetorial principal
-│   ├── icon-180.png                  ← Apple Touch Icon (iOS)
-│   ├── icon-192.png                  ← PWA Android
-│   ├── icon-512.png                  ← PWA Android grande + maskable
-│   ├── manifest.webmanifest          ← manifest PWA
-│   ├── og-preview.png                ← preview WhatsApp/Telegram
-│   ├── sw.js                         ← Service Worker v2 (offline)
-│   └── img/
-│       └── anatomy/                  ← 8 silhuetas anatômicas
-│           ├── body-front.jpg
-│           ├── body-back.jpg
-│           ├── body-left.jpg
-│           ├── body-right.jpg
-│           ├── head-front.jpg
-│           ├── head-back.jpg
-│           ├── head-left.jpg
-│           └── head-right.jpg
-│
-├── src/
-│   ├── App.jsx                       ← código principal (619 KB)
-│   └── main.jsx                      ← entry point (com shim storage + SW)
-│
-├── index.html                        ← HTML raiz (com OG tags + flash fix)
-├── netlify.toml                      ← config Netlify (legado, não estorva)
-├── CHANGELOG.md                      ← histórico completo
-└── README.md                         ← documentação do projeto
-```
+### 3 arquivos PARA SUBSTITUIR no GitHub
+- `src/App.jsx` — código principal v208
+- `index.html` — **FIX da tela azul**
+- `public/sw.js` — Service Worker v2 (força limpar cache antigo)
 
-> **Não incluído** porque você já tem e não muda:
-> - `package.json`
-> - `package-lock.json`
-> - `vite.config.js`
+### 5 arquivos NOVOS (não existem no repo ainda) + 1 substituir
+- `public/icon.svg` — ícone vetorial
+- `public/icon-180.png` — Apple Touch Icon
+- `public/icon-192.png` — PWA pequeno
+- `public/icon-512.png` — PWA grande
+- `public/manifest.webmanifest` — manifest PWA
 
 ---
 
-## 🚦 Como subir tudo de uma vez (commit único)
+## 🚀 Como subir (GitHub web — sem instalar nada)
 
-### Estratégia 1: GitHub Desktop (RECOMENDADO)
+### Passo 1: Substituir `index.html` (raiz do repo)
+1. Vai em https://github.com/alexdmoura-lab/mvdroid
+2. Clica em `index.html` na lista de arquivos
+3. Clica no ícone do **lápis** (✏️) no canto superior direito
+4. **Apaga TODO o conteúdo** (Ctrl+A → Delete)
+5. **Cola o conteúdo** do `index.html` deste zip
+6. Lá embaixo: **"Commit changes"** → mensagem: `v208: fix tela azul + manifest`
 
-1. Instala https://desktop.github.com (gratuito)
-2. Login com sua conta
-3. Clica em **"Clone repository"** → seleciona `mvdroid` → escolhe pasta no PC
-4. Abre essa pasta no Finder/Explorer
-5. **Apaga tudo de dentro** (mantém só `.git`, `package.json`, `package-lock.json`, `vite.config.js`)
-6. **Descompacta este zip** e arrasta a pasta inteira pra dentro do repo clonado
-7. Volta no GitHub Desktop — ele detecta todas as mudanças
-8. Em **"Summary"** escreve: `v206: fix tela azul + melhorias PWA + compartilhar DOCX + miniaturas`
-9. **"Commit to main"**
-10. **"Push origin"**
+### Passo 2: Substituir `src/App.jsx`
+1. Entra na pasta `src/`
+2. Clica em `App.jsx`
+3. Clica no lápis ✏️
+4. **Apaga TODO o conteúdo**
+5. **Cola o conteúdo** do `App.jsx` deste zip
+6. Commit changes
 
-Em ~30s o Vercel detecta e faz build.
+⚠️ **Atenção:** se o GitHub web der erro `RESULT_CODE_KILLED_BAD_MESSAGE`, isso acontece porque o `App.jsx` é grande (~620 KB). Nesse caso usa GitHub Desktop (instruções no fim).
 
-### Estratégia 2: GitHub web (mais lenta mas funciona)
+### Passo 3: Substituir `public/sw.js`
+1. Entra na pasta `public/`
+2. Clica em `sw.js` (se já existir) → lápis → apaga conteúdo → cola novo
+3. Se NÃO existir: botão **"Add file"** → "Create new file" → nome `public/sw.js` → cola conteúdo
+4. Commit
 
-1. Vai no repositório no GitHub
-2. **Apaga TUDO em `src/`**:
-   - Entra em `src/`
-   - Clica em `App.jsx` → ícone lixeira → commit
-   - Clica em `main.jsx` → ícone lixeira → commit
-3. **Apaga `index.html`** da raiz (lixeira → commit)
-4. **Apaga arquivos antigos em `public/`** se houver (`manifest.json`, ícones antigos)
-5. Descompacta o zip no PC
-6. Faz upload dos arquivos pasta por pasta:
-   - `src/` → upload de `App.jsx` e `main.jsx`
-   - `public/` → upload de tudo
-   - `public/img/anatomy/` → upload das 8 imagens
-   - `.github/workflows/` → criar arquivo (já existe)
-   - Raiz → upload de `index.html`, `CHANGELOG.md`, `README.md`
-7. Cada upload é um commit (vai dar uns 5-6 commits)
+### Passo 4: Subir os 5 arquivos novos
+1. Entra na pasta `public/`
+2. Clica em **"Add file"** → **"Upload files"**
+3. Arrasta os 5 arquivos de uma vez:
+   - `icon.svg`
+   - `icon-180.png`
+   - `icon-192.png`
+   - `icon-512.png`
+   - `manifest.webmanifest`
+4. Commit changes
 
-A Estratégia 1 deixa tudo num commit só, como você pediu.
-
----
-
-## ⚠️ IMPORTANTE: limpar cache do navegador depois
-
-Como o Service Worker mudou de versão (v1 → v2), o iPhone pode ficar segurando a versão antiga. Pra forçar atualização:
-
-### Se você usa pelo Safari (sem ícone na tela inicial)
-1. Abre o app
-2. Puxa pra baixo pra recarregar (algumas vezes)
-3. Ou: aperta a URL na barra → recarregar
-
-### Se você adicionou na tela inicial (PWA standalone)
-1. **Apaga o ícone do MVDroiD da tela inicial** (segura → "Remover app")
-2. Abre `mvdroid.vercel.app` no Safari
-3. Compartilhar → **"Adicionar à Tela de Início"** (nome de novo)
-4. Abre pelo novo ícone
-
-Isso garante que o Service Worker novo assume.
+**Pronto!** Vercel detecta os commits e faz build em ~30s.
 
 ---
 
-## ✅ Como confirmar que funcionou
+## 🚀 Alternativa: GitHub Desktop (1 commit só)
 
-Depois do Vercel buildar (~30s):
+Se quiser fazer tudo num commit único:
 
-### Teste 1 — Tela azul não aparece mais
-- Abre o app
-- Logue
-- Toca em "Próximo" várias vezes seguidas (rápido)
-- Faça swipe lateral em várias abas
-- ✅ Conteúdo sempre aparece — nunca tela azul vazia
-
-### Teste 2 — Compartilhar DOCX
-- Aba Exportar
-- Botão verde **"Compartilhar DOCX"** ao lado de "Croqui DOCX"
-- Sheet de compartilhamento abre → escolhe WhatsApp
-- ✅ Arquivo `.docx` anexado pronto pra mandar
-
-### Teste 3 — Slots com miniatura
-- Faz um croqui qualquer (desenha algo)
-- Espera 4 segundos (auto-save)
-- Vai na aba Exportar → seção "Slots"
-- ✅ Mostra miniatura do desenho, não só texto
-
-### Teste 4 — Preview no WhatsApp
-- Cola `https://mvdroid.vercel.app/?v=2` no chat
-- ✅ Aparece imagem da caveira + título
-
-### Teste 5 — Backup persiste
-- Preenche um campo, fecha o app, reabre
-- ✅ Matrícula auto-preenchida + dados preservados
+1. https://desktop.github.com (gratuito)
+2. Clone `mvdroid` pra uma pasta no PC
+3. Abre essa pasta no Finder/Explorer
+4. **Descompacta este zip**
+5. Arrasta o conteúdo da pasta `mvdroid-minimo/` pra dentro do repo clonado:
+   - `src/App.jsx` → substitui o existente
+   - `index.html` → substitui o existente
+   - `public/` → arquivos vão se juntar com os existentes (substituindo `sw.js` se houver)
+6. GitHub Desktop detecta as mudanças
+7. Commit message: `v208: fix tela azul + manifest novos icones`
+8. **Commit to main** → **Push origin**
 
 ---
 
-## 🆘 Se algo der errado
+## ⚠️ DEPOIS do deploy: limpar cache do Safari
 
-### Build falhou no Vercel
-1. Painel Vercel → Deployments → clica no que falhou
-2. Procura erro em vermelho
-3. Me manda screenshot
+Esse passo é **fundamental** porque o Service Worker antigo (v1) pode segurar a versão velha do `index.html`:
 
-### App não atualiza no celular
-1. Apaga o ícone da tela inicial
-2. Abre no Safari, compartilhar → adicionar à tela
-3. Abre pelo novo ícone
+1. **Configurações iPhone** → **Safari** → **Avançado** → **Dados de Sites**
+2. Procura **"vercel.app"** → desliza pra esquerda → **Apagar**
+3. Abre `mvdroid.vercel.app` no Safari de novo
 
-### Tela azul ainda aparece em alguma aba
-- Limpa cache do Safari (Configurações → Safari → Limpar Histórico)
-- Reabre o app
-
-### Backup antigo sumiu
-- Backups feitos ANTES da v202 (com shim) nunca foram salvos de verdade
-- A partir da v202 tudo persiste no localStorage
+Se você adicionou o ícone PWA na tela inicial, **apaga o ícone primeiro** (segura → Remover) e depois adiciona de novo.
 
 ---
 
-## 📝 Próximas melhorias possíveis (próxima sessão)
+## ✅ Como testar
 
-Se quiser continuar:
-
-1. **Branch protection no GitHub** — impede deploy quebrado em produção
-2. **Modo "trabalho rápido"** — esconde abas vazias
-3. **Auto-lock por inatividade** — segurança forense
-4. **Atalhos de teclado** (iPad com teclado físico)
-5. **Backup JSON criptografado** — segurança extra dos dados
-
-Mas honestamente, o app já está num ponto muito bom. Talvez o próximo passo seja **usar em alguns plantões reais** e voltar com lista de incômodos práticos.
+1. Recarrega a página
+2. Loga
+3. Toca em **"Próximo"** repetidamente — não pode mais aparecer tela azul presa
+4. Faz **swipe lateral** em várias abas — também não pode travar
+5. Volta com **"Anterior"** — deve fluir normal
