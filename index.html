@@ -13,12 +13,36 @@
     <meta name="apple-mobile-web-app-title" content="MVDroiD" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <title>MVDroiD — SCPe/PCDF</title>
+    <title>MVDroiD — Levantamento de local</title>
+    <meta name="description" content="MVDroiD — App de documentação forense de cenas de crime. SCPe / Polícia Civil do Distrito Federal." />
+
+    <!-- ════════════════════════════════════════════════════════════
+         OPEN GRAPH (WhatsApp, Telegram, Facebook, LinkedIn, Discord)
+         ════════════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MVDroiD" />
+    <meta property="og:title" content="MVDroiD — Levantamento de local" />
+    <meta property="og:description" content="App de documentação forense de cenas de crime. SCPe / Polícia Civil do Distrito Federal." />
+    <meta property="og:url" content="https://mvdroid.vercel.app/" />
+    <meta property="og:image" content="https://mvdroid.vercel.app/og-preview.png" />
+    <meta property="og:image:secure_url" content="https://mvdroid.vercel.app/og-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Logo do MVDroiD — caveira em fundo azul" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- ════════════════════════════════════════════════════════════
+         TWITTER CARD (Twitter / X — também usado por algumas apps)
+         ════════════════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MVDroiD — Levantamento de local" />
+    <meta name="twitter:description" content="App de documentação forense de cenas de crime. SCPe / PCDF." />
+    <meta name="twitter:image" content="https://mvdroid.vercel.app/og-preview.png" />
 
     <!-- 🔥 ESTILO INLINE: aplica ANTES do React carregar.
          Sem isto, em PWA standalone aparece um flash branco entre a splash
-         (azul) e a tela de login (azul escuro).
-         O fundo #0a1420 bate com o gradient bgLogin do App.jsx. -->
+         (azul) e a tela de login (azul escuro). -->
     <style>
       html, body {
         margin: 0;
@@ -33,7 +57,6 @@
         background: #0a1420;
         min-height: 100vh;
       }
-      /* Loader inline (mostra durante o carregamento do JS) */
       #initial-loader {
         position: fixed;
         inset: 0;
