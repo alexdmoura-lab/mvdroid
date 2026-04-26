@@ -1,3 +1,19 @@
+## v202 — Microfone só em textareas + Service Worker
+
+- **Microfone**: apareceu apenas em campos `type="textarea"` (observações longas)
+  - Antes: aparecia em **todo** input que não fosse data/número/etc. — incluindo nome, ocorrência, DP
+  - Agora: input single-line normal para campos curtos, sem botão de mic
+- **Botão de mic redesenhado**: 40×40 (área de toque generosa), ícone reduzido a 14
+  (visualmente menor, mas mais fácil de acertar no toque)
+- **Imagens anatômicas extraídas**: silhuetas (BODY_F/B/L/R, HEAD_F/B/L/R) viraram
+  `/img/anatomy/*.jpg` — JSX 88 KB menor, navegador cacheia entre cargas
+- **Service Worker** (`public/sw.js`): app funciona 100% offline depois da
+  primeira carga. Cache inteligente para app shell, imagens e bibliotecas
+- **GitHub Actions** (`.github/workflows/validate.yml`): valida build em cada
+  commit/PR — bloqueia merge se a sintaxe estiver quebrada
+- **Linhas-monstro quebradas**: maior linha caiu de 18.392 → 6.189 chars
+- **Cabeçalho enxuto**: histórico v115-v200 movido para CHANGELOG.md
+
 # Changelog — MVDroiD
 
 Histórico de versões do app de documentação forense.

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-    <!-- Theme color: bate com a tela de login pra eliminar flash branco -->
+    <!-- Theme color (escuro pra evitar flash branco em PWA standalone) -->
     <meta name="theme-color" content="#0a1420" />
 
     <!-- iOS standalone PWA -->
@@ -13,8 +13,17 @@
     <meta name="apple-mobile-web-app-title" content="MVDroiD" />
     <meta name="mobile-web-app-capable" content="yes" />
 
+    <!-- Title + description -->
     <title>MVDroiD — Levantamento de local</title>
     <meta name="description" content="MVDroiD — App de documentação forense de cenas de crime. SCPe / Polícia Civil do Distrito Federal." />
+
+    <!-- ════════════════════════════════════════════════════════════
+         Favicon e Apple Touch Icon — arquivos físicos em /public
+         ════════════════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="alternate icon" type="image/png" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- ════════════════════════════════════════════════════════════
          OPEN GRAPH (WhatsApp, Telegram, Facebook, LinkedIn, Discord)
@@ -32,17 +41,15 @@
     <meta property="og:image:alt" content="Logo do MVDroiD — caveira em fundo azul" />
     <meta property="og:locale" content="pt_BR" />
 
-    <!-- ════════════════════════════════════════════════════════════
-         TWITTER CARD (Twitter / X — também usado por algumas apps)
-         ════════════════════════════════════════════════════════════ -->
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MVDroiD — Levantamento de local" />
     <meta name="twitter:description" content="App de documentação forense de cenas de crime. SCPe / PCDF." />
     <meta name="twitter:image" content="https://mvdroid.vercel.app/og-preview.png" />
 
-    <!-- 🔥 ESTILO INLINE: aplica ANTES do React carregar.
-         Sem isto, em PWA standalone aparece um flash branco entre a splash
-         (azul) e a tela de login (azul escuro). -->
+    <!-- ════════════════════════════════════════════════════════════
+         Estilo inline pra eliminar flash branco em PWA standalone
+         ════════════════════════════════════════════════════════════ -->
     <style>
       html, body {
         margin: 0;
@@ -80,8 +87,6 @@
   </head>
   <body>
     <div id="root">
-      <!-- Loader inline aparece em <100ms, antes do React montar.
-           O React vai substituir o conteúdo do #root quando carregar. -->
       <div id="initial-loader">
         <svg class="skull" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <defs>
