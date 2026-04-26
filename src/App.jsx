@@ -70,7 +70,7 @@ const HEAD_F="/img/anatomy/head-front.jpg";
 const HEAD_B="/img/anatomy/head-back.jpg";
 const HEAD_L="/img/anatomy/head-left.jpg";
 const HEAD_R="/img/anatomy/head-right.jpg";
-import { ChevronLeft, ChevronRight, Sun, Moon, MapPin, Clock, Camera, Save, Plus, X, HardDrive, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sun, Moon, MapPin, Clock, Camera, Save, Plus, X, HardDrive, Copy, Image as ImageIcon } from "lucide-react";
 
 // ════════════════════════════════════════════════════════════════
 // DADOS DE REFERÊNCIA — Regiões anatômicas e tipos de lesão
