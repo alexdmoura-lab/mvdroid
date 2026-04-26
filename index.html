@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <!-- Theme color: bate com a tela de login pra eliminar flash branco -->
+    <meta name="theme-color" content="#0a1420" />
+
+    <!-- iOS standalone PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MVDroiD" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <title>MVDroiD — SCPe/PCDF</title>
+
+    <!-- 🔥 ESTILO INLINE: aplica ANTES do React carregar.
+         Sem isto, em PWA standalone aparece um flash branco entre a splash
+         (azul) e a tela de login (azul escuro).
+         O fundo #0a1420 bate com o gradient bgLogin do App.jsx. -->
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0a1420;
+        color: #fff;
+        font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior: none;
+      }
+      #root {
+        background: #0a1420;
+        min-height: 100vh;
+      }
+      /* Loader inline (mostra durante o carregamento do JS) */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a1420;
+        z-index: 1;
+      }
+      #initial-loader .skull {
+        width: 64px;
+        height: 64px;
+        opacity: 0.85;
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.5; transform: scale(0.95); }
+        50% { opacity: 1; transform: scale(1.05); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Loader inline aparece em <100ms, antes do React montar.
+           O React vai substituir o conteúdo do #root quando carregar. -->
+      <div id="initial-loader">
+        <svg class="skull" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bgInit" cx="50%" cy="40%">
+              <stop offset="0%" stop-color="#1a4a7a"/>
+              <stop offset="100%" stop-color="#0a2540"/>
+            </radialGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#bgInit)"/>
+          <path d="M50 22 C36 22 26 32 26 47 C26 57 31 64 38 68 L38 76 Q38 80 42 80 L44 80 L44 78 C44 76 45 75 47 75 C49 75 50 76 50 78 L50 80 L56 80 L56 78 C56 76 57 75 59 75 C61 75 62 76 62 78 L62 80 L64 80 Q68 80 68 76 L68 68 C75 64 80 57 80 47 C80 32 70 22 56 22 Z" fill="#f8f8fa" stroke="#a1a1a6" stroke-width="1"/>
+          <ellipse cx="41" cy="48" rx="6" ry="7" fill="#0a2540"/>
+          <ellipse cx="61" cy="48" rx="6" ry="7" fill="#0a2540"/>
+          <circle cx="39" cy="45" r="1.4" fill="#5ac8fa"/>
+          <circle cx="59" cy="45" r="1.4" fill="#5ac8fa"/>
+          <path d="M51 56 L48 64 L51 66 L54 64 Z" fill="#0a2540"/>
+        </svg>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
