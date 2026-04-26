@@ -1,0 +1,91 @@
+# ════════════════════════════════════════════════════════════════
+# MVDroiD — Configuração do Netlify
+# ════════════════════════════════════════════════════════════════
+# Este arquivo configura como o Netlify serve o app:
+#  • Headers de cache (imagens carregam instantâneo em recargas)
+#  • Headers de segurança (impede outros sites de embedar/abusar)
+#  • Permissions-Policy explícita (câmera/mic/GPS só funcionam no MVDroiD)
+#  • Redirect SPA (qualquer URL volta pro index.html)
+#
+# Como funciona: basta arrastar este arquivo junto com o resto pro Netlify.
+# Não exige build, não exige npm. Netlify lê automaticamente.
+# ════════════════════════════════════════════════════════════════
+
+
+# ───────── HEADERS DE SEGURANÇA (todos os arquivos) ─────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Impede outros sites de carregar o MVDroiD dentro de iframe
+    # (proteção contra clickjacking, importante p/ app forense)
+    X-Frame-Options = "DENY"
+
+    # Impede que o navegador "adivinhe" tipo de arquivo
+    # (proteção contra MIME confusion attacks)
+    X-Content-Type-Options = "nosniff"
+
+    # Quando o usuário sai do MVDroiD pra outro site, não revela
+    # a URL completa (que pode conter dados sensíveis)
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Restringe quais APIs do navegador outros sites embedados
+    # podem usar. Como bloqueamos iframe, isso é defesa em profundidade.
+    # Câmera, microfone e geolocalização só funcionam no próprio MVDroiD.
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=(self), accelerometer=(), gyroscope=()"
+
+    # Força HTTPS por 1 ano (HSTS — strict transport security)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+
+# ───────── CACHE LONGO PRA IMAGENS ─────────
+# Imagens raramente mudam — cacheia por 1 ano.
+# Se trocar logo PCDF, basta renomear o arquivo (logo-pcdf-v2.jpg)
+[[headers]]
+  for = "/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+
+# ───────── HTML SEM CACHE (sempre busca versão nova) ─────────
+# index.html nunca cacheia — quando você publicar nova versão,
+# o usuário recebe imediatamente
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+
+# ───────── CACHE MÉDIO PRO MANIFEST PWA ─────────
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"  # 1 hora
+
+
+# ───────── SPA FALLBACK ─────────
+# Qualquer URL que não exista vai pro index.html.
+# Útil porque o MVDroiD é single-page (não tem rotas de servidor).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
