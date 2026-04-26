@@ -1,24 +1,25 @@
 // ════════════════════════════════════════════════════════════════
-// MVDroiD — Service Worker
+// MVDroiD — Service Worker v2
 // ════════════════════════════════════════════════════════════════
-// Faz o app funcionar 100% offline depois da primeira carga.
+// VERSÃO INCREMENTADA pra forçar invalidação do cache antigo.
+// Se você notar comportamento estranho após atualizar, isso resolve.
 //
 // Estratégia:
 //  • App shell (HTML, JS, CSS, imagens): cache-first
-//      → carrega do cache, atualiza em background
-//      → app abre instantâneo, mesmo sem rede
-//  • Bibliotecas externas (cdnjs, etc): stale-while-revalidate
-//      → usa cache se tiver, busca rede em paralelo, atualiza pra próxima
-//  • Em modo avião: app continua funcionando 100%
-//
-// Versão: incrementar quando atualizar este arquivo (força refresh do cache)
+//  • Bibliotecas externas (cdnjs): stale-while-revalidate
+//  • Em modo avião: app continua funcionando 100% após primeiro uso
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v1';
+const CACHE_VERSION = 'mvdroid-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/manifest.json',
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/icon-180.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/og-preview.png',
   // Imagens anatômicas (críticas pro croqui funcionar offline)
   '/img/anatomy/body-front.jpg',
   '/img/anatomy/body-back.jpg',
@@ -30,13 +31,10 @@ const PRECACHE_URLS = [
   '/img/anatomy/head-right.jpg',
 ];
 
-// ───────── INSTALL ─────────
-// Roda quando service worker é instalado pela primeira vez (ou nova versão)
 self.addEventListener('install', (event) => {
   console.log('[SW] Install', CACHE_VERSION);
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
-      // Pre-cache de assets críticos. Falhas individuais não derrubam tudo.
       return Promise.allSettled(
         PRECACHE_URLS.map((url) =>
           cache.add(url).catch((err) => {
@@ -44,17 +42,14 @@ self.addEventListener('install', (event) => {
           })
         )
       );
-    }).then(() => self.skipWaiting()) // ativa imediatamente
+    }).then(() => self.skipWaiting())
   );
 });
 
-// ───────── ACTIVATE ─────────
-// Roda quando service worker passa a controlar a página
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activate', CACHE_VERSION);
   event.waitUntil(
     caches.keys().then((keys) => {
-      // Apaga caches antigos (de versões anteriores do SW)
       return Promise.all(
         keys
           .filter((k) => k !== CACHE_VERSION && k.startsWith('mvdroid-'))
@@ -63,36 +58,27 @@ self.addEventListener('activate', (event) => {
             return caches.delete(k);
           })
       );
-    }).then(() => self.clients.claim()) // toma controle imediato
+    }).then(() => self.clients.claim())
   );
 });
 
-// ───────── FETCH ─────────
-// Intercepta todas as requisições da página
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Ignora requisições que não sejam GET (POSTs nunca são cacheados)
   if (req.method !== 'GET') return;
-
-  // Ignora requisições com schemas estranhos (chrome-extension, etc.)
   if (!url.protocol.startsWith('http')) return;
 
-  // ─── Estratégia: navegação (HTML) ───
-  // Network-first: tenta rede, se falhar usa cache
-  // Garante que atualizações chegam rápido quando online
+  // Navegação (HTML): network-first, fallback cache
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((response) => {
-          // Atualiza cache com versão fresca
           const respClone = response.clone();
           caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
           return response;
         })
         .catch(() => {
-          // Sem rede → usa cache
           return caches.match(req).then((cached) => {
             return cached || caches.match('/index.html');
           });
@@ -101,22 +87,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ─── Estratégia: assets do próprio domínio ───
-  // Cache-first: usa cache se tiver, atualiza em background
+  // Assets do próprio domínio: cache-first com refresh em background
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(req).then((cached) => {
         if (cached) {
-          // Tem em cache — retorna imediato e atualiza em background
           fetch(req).then((response) => {
             if (response && response.status === 200) {
               const respClone = response.clone();
               caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
             }
-          }).catch(() => { /* offline, ok */ });
+          }).catch(() => {});
           return cached;
         }
-        // Não tem em cache — busca na rede e cacheia
         return fetch(req).then((response) => {
           if (response && response.status === 200) {
             const respClone = response.clone();
@@ -129,9 +112,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ─── Estratégia: bibliotecas externas (CDN) ───
-  // Stale-while-revalidate: usa cache, atualiza em paralelo
-  // (html2pdf.js, JSZip, etc. raramente mudam)
+  // Bibliotecas externas (CDN): stale-while-revalidate
   if (url.hostname.includes('cdnjs.cloudflare.com') ||
       url.hostname.includes('unpkg.com') ||
       url.hostname.includes('jsdelivr.net')) {
@@ -149,13 +130,8 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
-  // ─── Demais (analytics, etc.) ───
-  // Deixa rolar normal, sem interceptar
 });
 
-// ───────── MENSAGENS DA PÁGINA ─────────
-// Permite que a página force atualização do SW
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
