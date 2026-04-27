@@ -1,71 +1,75 @@
-# 🎯 MVDroiD v210 — FIX REAL DO BUG
+# 🎯 MVDroiD v211 — Melhorias e correções
 
-## O bug verdadeiro
+## ✅ O que mudou (4 itens)
 
-O console mostrou: `ReferenceError: ei is not defined at Array.map`.
+### 1. Scroll do mouse / Android funciona agora
+- Removido `overscroll-behavior: none` global do `index.html` que bloqueava scroll do mouse e do Android Chrome
+- iPhone continua funcionando normal
 
-**Causa:** Na linha 2553 do `App.jsx` tinha:
-```jsx
-label={`Observações — Edificação ${ei+1}`}  // ← "ei" não existe!
+### 2. Layout dos vestígios reorganizado
+- **Descrição** ocupa toda a largura
+- **Suporte / Local** vai logo abaixo da Descrição, com o mesmo tamanho
+- **Recolhido | Destino | Placa** agora ficam lado a lado (3 colunas)
+- Especialmente melhor visualizado em celular
+
+### 3. Dropdown de placa simplificado
+- Era: `Placa 01`, `Placa 02`, `Placa 03`...
+- Agora: `01`, `02`, `03`...
+- Aplica em Vestígios e em Papiloscopia
+
+### 4. "— Selecione —" removido dos selects
+- Visual mais limpo
+- Antes ficava cortado em telas pequenas (`— Sele...`)
+- Mantido apenas em selects que precisam de contexto educativo (ex: "— Selecione ou digite —" pra avisar que pode digitar manualmente)
+
+---
+
+## 📦 Apenas 2 arquivos
+
+```
+mvdroid-v211/
+├── INSTALACAO.md
+├── src/App.jsx          ← SUBSTITUIR
+└── index.html           ← SUBSTITUIR
 ```
 
-O `.map()` daquela seção declarava `(e,i)`, mas eu escrevi `ei` por engano (copiei sem querer da função de geração de DOCX que usa `forEach((e,ei)=>`).
+## 🚦 Como subir
 
-**Quando acontecia:**
-- Toda vez que a aba que tem Edificações renderizava → ReferenceError
-- ErrorBoundary capturava o erro → tela ficava vazia
-- Cor da "tela vazia" mudava conforme o background do CSS abaixo (azul/branco)
-- Por isso minhas tentativas de "consertar a cor" não resolviam — eu estava tratando sintoma
+### GitHub Web (mais rápido)
 
-## Apenas 2 arquivos pra subir
+1. **Substituir `index.html`** (raiz):
+   - Lápis ✏️ → apaga tudo → cola novo → Commit
 
-```
-mvdroid-fix/
-├── src/App.jsx       ← FIX do ei
-└── index.html        ← versão estável (com loader azul, sem o bug do bg branco)
-```
+2. **Substituir `src/App.jsx`**:
+   - `src/` → lápis ✏️ → apaga tudo → cola novo → Commit
 
-## Como subir
+Vercel deploya em ~30s.
 
-### Opção A: GitHub web (rápido, sem instalar nada)
+### GitHub Desktop (1 commit)
 
-1. **Substituir `src/App.jsx`**:
-   - GitHub → entra em `src/` → clica em `App.jsx`
-   - Lápis ✏️ → seleciona tudo (Ctrl+A) → apaga
-   - Cola conteúdo do `App.jsx` deste zip
-   - Commit changes
-
-2. **Substituir `index.html`** (raiz):
-   - Mesma coisa
-   - Lápis ✏️ → apaga tudo → cola novo
-   - Commit
-
-### Opção B: GitHub Desktop (1 commit)
-
-Já tem clone? Apenas:
-1. Substitui `src/App.jsx` e `index.html` na pasta local
-2. Commit message: `v210: fix ReferenceError ei na linha 2553`
+1. Substituir `App.jsx` e `index.html` na pasta local
+2. Commit: `v211: scroll do mouse, layout vestígios, placa numérica, selects limpos`
 3. Push
 
-## ⚠️ DEPOIS do deploy
+---
 
-**Limpar cache do Safari:**
-1. Configurações → Safari → Avançado → Dados de Sites
-2. Procura "vercel.app" → Apagar
-3. Reabre `mvdroid.vercel.app`
+## ✅ Verificações que fiz no código
 
-## ✅ Como confirmar
+Conferi que essas exportações continuam funcionando corretamente:
 
-1. Abre `mvdroid.vercel.app/?v=210` (`?v=210` ignora cache)
-2. Loga
-3. Toca em "Próximo" várias vezes — **sem tela azul ou branca**
-4. Faz swipe lateral em todas as abas
-5. Especialmente: testa a aba **Local** com a seção **Edificações** (era onde o bug acontecia)
+- ✅ **DOCX**: Vestígios usam `supPlaca(suporte, placa)` que combina os dois campos no laudo
+- ✅ **Croqui**: campos `desc`, `suporte`, `placa`, `destino`, `recolhido` continuam sendo passados
+- ✅ **ZIP completo**: todas as fotos + DOCX + PDF entram no zip
+- ✅ **Fotos em alta resolução**: o botão "📷 ✨" (laranja) na barra superior ativa o modo HQ por sessão (2400px / 92% qualidade JPEG vs 1200px / 78% padrão). Lembrando que a HQ só vale pra **fotos tiradas depois de ativar**.
 
-## 💭 Lição
+---
 
-Você tinha razão — eu deveria ter pedido o print do console na 1ª tentativa, não na 5ª. Sem o erro real, fiquei chutando "talvez é a animação", "talvez é o background"... O `ReferenceError` no console teria me apontado pra linha exata em segundos.
+## ⚠️ Sobre alta resolução de fotos
 
-**Erro silencioso de variável não declarada é o bug clássico que minificação esconde.** Em desenvolvimento, esse erro mostra `ei is not defined`. Em produção minificada, vira `ei` mesmo (a minificação não renomeou porque é nome curto). Esses bugs **só aparecem em runtime** — passa no build, passa no lint padrão, e só explode quando aquela linha é executada.
+Existe um botão **📷 ✨** (laranja quando ativo) na barra superior. Ele alterna entre:
+- **Padrão**: 1200px largura, 78% qualidade — ~150KB por foto
+- **Alta**: 2400px largura, 92% qualidade — ~600KB por foto
 
-Foi minha culpa não ter pedido visibilidade real antes. Obrigado por tua paciência.
+A **alta resolução é resetada a cada sessão** (não persiste). Isso é proposital — pra evitar que o usuário esqueça ligado e estoure a memória do navegador. Se quiser que persista entre sessões, posso fazer essa mudança numa próxima.
+
+Para fotos boas no laudo final, **ative antes de tirar fotos importantes** (ex: lesões, vestígios pequenos). Pra fotos panorâmicas e gerais, padrão é suficiente.
