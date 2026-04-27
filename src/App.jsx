@@ -5,14 +5,17 @@
 // ╠══════════════════════════════════════════════════════════════╣
 // ║  ⚠️  HISTÓRICO DE VERSÕES movido para CHANGELOG.md            ║
 // ║                                                                ║
-// ║  Versão atual: v208                                            ║
-// ║  • DIAGNÓSTICO CORRETO: index.html forçava bg azul fixo no body║
-// ║  • Causa raiz da tela azul ao trocar aba (não era CSS animation)║
-// ║  • Fundo azul agora SÓ no #initial-loader, não no body/#root   ║
-// ║  • Loader some quando React monta (body.app-ready)             ║
+// ║  Versão atual: v210 — FIX DEFINITIVO da "tela em branco/azul"  ║
 // ║                                                                ║
-// ║  v207 (descartada — diagnóstico errado)                        ║
-// ║  v206 (descartada — diagnóstico errado)                        ║
+// ║  CAUSA REAL (que demorei 4 versões pra achar):                 ║
+// ║  • Variável "ei" usada na label da Edificação não existia      ║
+// ║    no escopo do .map() — devia ser "i"                         ║
+// ║  • ReferenceError mata o render → ErrorBoundary captura        ║
+// ║    → tela vazia                                                ║
+// ║                                                                ║
+// ║  Linha 2553 corrigida: ${ei+1} → ${i+1}                        ║
+// ║                                                                ║
+// ║  v207-v209 (descartadas — diagnóstico errado de cor de fundo)  ║
 // ║                                                                ║
 // ║  v205:                                                         ║
 // ║  • Manifest, favicon e icons como arquivos físicos             ║
@@ -46,7 +49,7 @@
 // ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-const APP_VERSION="v208-MVDroiD";
+const APP_VERSION="v210-MVDroiD";
 // Detecta ambiente: dentro do Claude artifacts (limite 5MB), ou hospedado externamente (localStorage ~50MB no Safari)
 // Usa heurística: se window.storage é a versão do Claude (sem fallback localStorage), assume 4.8MB. Senão, 40MB.
 const STORAGE_LIMIT_KB=(typeof window!=="undefined"&&window.storage&&!window.storage.__isLocalStorageShim)?4800:40000;
@@ -2550,7 +2553,7 @@ return(<>
 </div>
 
 <div style={{marginBottom:8}}><label style={lb}>Descrição / Endereço complementar</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={inp} defaultValue={e.nome} onBlur={ev=>ue("nome",ev.target.value)}/></div>
-<div><F_ k={"eobs_"+e.id} label={`Observações — Edificação ${ei+1}`} type="textarea" val={e.obs||""} onChange={(_k,val)=>ue("obs",val)} styles={ST}/></div>
+<div><F_ k={"eobs_"+e.id} label={`Observações — Edificação ${i+1}`} type="textarea" val={e.obs||""} onChange={(_k,val)=>ue("obs",val)} styles={ST}/></div>
 </div>}</div>);})}
 <button style={abtn} onClick={()=>setEdificacoes([...edificacoes,mkEdif(Date.now())])}>+ Edificação</button></Cd_>
 <Cd_ styles={ST} title="Observações" aria-label="Observações" icon="📝"><F_ k="obs_l" label="Observações gerais — Local do Fato" type="textarea" val={g("obs_l")} onChange={s} styles={ST}/></Cd_>
