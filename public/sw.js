@@ -1,16 +1,22 @@
 // ════════════════════════════════════════════════════════════════
-// MVDroiD — Service Worker v2
+// MVDroiD — Service Worker v3 (Opção A — atualização silenciosa)
 // ════════════════════════════════════════════════════════════════
-// VERSÃO INCREMENTADA pra forçar invalidação do cache antigo.
+// VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos (v2 e anteriores).
 // Se você notar comportamento estranho após atualizar, isso resolve.
 //
 // Estratégia:
-//  • App shell (HTML, JS, CSS, imagens): cache-first
+//  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
+//    Isso garante que mudanças cheguem rápido quando você abre o app.
+//  • Assets versionados (.js/.css com hash): cache-first eterno
+//    Vite gera arquivos como index-G7Vibdf1.js — o nome muda quando o conteúdo
+//    muda, então cache-first é seguro e rápido.
+//  • Imagens anatômicas e ícones PWA: cache-first
 //  • Bibliotecas externas (cdnjs): stale-while-revalidate
-//  • Em modo avião: app continua funcionando 100% após primeiro uso
+//
+// Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v2';
+const CACHE_VERSION = 'mvdroid-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -69,50 +75,71 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
 
-  // Navegação (HTML): network-first, fallback cache
-  if (req.mode === 'navigate') {
+  // ──────────────────────────────────────────────────────
+  // 1) NAVEGAÇÃO (HTML): network-first, fallback cache
+  //    Garante que index.html sempre chega novo se tiver internet
+  // ──────────────────────────────────────────────────────
+  if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-store' })
         .then((response) => {
-          const respClone = response.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
+          if (response && response.status === 200) {
+            const respClone = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
+          }
           return response;
         })
         .catch(() => {
           return caches.match(req).then((cached) => {
-            return cached || caches.match('/index.html');
+            return cached || caches.match('/index.html') || caches.match('/');
           });
         })
     );
     return;
   }
 
-  // Assets do próprio domínio: cache-first com refresh em background
-  if (url.origin === self.location.origin) {
+  // ──────────────────────────────────────────────────────
+  // 2) HTML cru (rota /index.html): network-first também
+  // ──────────────────────────────────────────────────────
+  if (url.pathname === '/' || url.pathname === '/index.html') {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) {
-          fetch(req).then((response) => {
-            if (response && response.status === 200) {
-              const respClone = response.clone();
-              caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
-            }
-          }).catch(() => {});
-          return cached;
-        }
-        return fetch(req).then((response) => {
+      fetch(req, { cache: 'no-store' })
+        .then((response) => {
           if (response && response.status === 200) {
             const respClone = response.clone();
             caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
           }
           return response;
-        });
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // ──────────────────────────────────────────────────────
+  // 3) Assets do próprio domínio (JS/CSS/imagens):
+  //    Cache-first com refresh em background (stale-while-revalidate)
+  //    JS/CSS do Vite têm hash no nome, então é seguro cachear sempre
+  // ──────────────────────────────────────────────────────
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(req).then((cached) => {
+        const fetchPromise = fetch(req).then((response) => {
+          if (response && response.status === 200) {
+            const respClone = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(req, respClone));
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || fetchPromise;
       })
     );
     return;
   }
 
-  // Bibliotecas externas (CDN): stale-while-revalidate
+  // ──────────────────────────────────────────────────────
+  // 4) Bibliotecas externas (CDN): stale-while-revalidate
+  // ──────────────────────────────────────────────────────
   if (url.hostname.includes('cdnjs.cloudflare.com') ||
       url.hostname.includes('unpkg.com') ||
       url.hostname.includes('jsdelivr.net')) {
