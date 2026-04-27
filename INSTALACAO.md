@@ -1,98 +1,68 @@
-# 🎯 MVDroiD v212 — Auditoria completa + correções
+# 🎨 MVDroiD v214 — Setinhas dos selects + modal data/hora
+
+> Continuação do v213. Inclui tudo do v213 + correções visuais.
 
 ## ✅ Mudanças nesta versão
 
-### 🔴 Bug corrigido — DOCX completo agora
-Antes: 11 campos preenchidos pelo usuário sumiam no DOCX
-- Agente
-- Papiloscopista + matrícula
-- Viatura
-- Exame Externo (OIC)
-- Observações da Solicitação
-- Drone, Scanner, Luminol, Luz forense
-- Observações dos Vestígios
+### 🎯 Setinhas (▼) em todos os 25 selects
+Muitos campos pareciam "campos comuns" porque a setinha sumiu em alguma versão anterior. Agora **todos os selects** mostram a setinha SVG (▼) à direita, indicando que são clicáveis.
 
-Agora aparecem em:
-- **Capa "Resumo da Ocorrência"** — Agente, Papilo, Viatura, OIC
-- **Preâmbulo** — frase adicional "A equipe pericial contou com o apoio do Agente Policial X, do Papiloscopista Y, com a viatura Z."
-- **Histórico (seção 1)** — observações da solicitação
-- **Após Isolamento (seção 3)** — nova tabela "Recursos empregados" (drone, scanner, luminol, luz forense)
-- **Cadeia de Custódia (seção 5)** — observações dos vestígios
+**Afeta os campos:**
+- **Equipe**: 2º Perito, Agente, Papiloscopista, Viatura
+- **Solicitação**: DP, Ano, Natureza, Exame Externo, Drone, Scanner, Luminol, Luz forense, OIC
+- **Local**: Tipo, Via, Iluminação, Ligada, Área, Destinação, Pavimento, Faixas, Mão, Canteiro, Meio-fio, Trânsito, Frenagem, Derrapagem, Debris
+- **Vestígios**: Suporte, Recolhido?, Destino IC/II, Placa
+- **Edificação**: Tipo, Material, Cobertura, Estado, Perímetro, Acesso, Vizinhança
+- **Cadáveres**: Sexo, Faixa etária, Etnia, Diagnóstico, Estado, Posição, etc.
+- **Veículos**: Categoria, Tipo, Estado, Motor, Portas, Vidros, Chave
+- **Papiloscopia**: Vestígio, Placa
+- **Trilhas**: Padrão, Continuidade, Direcionamento
 
-### 🟡 A2 — Aviso de slot corrompido
-Antes: se JSON do slot estivesse corrompido, retornava null silenciosamente (você perdia tudo sem saber)
-Agora: mostra toast "⚠ Slot N corrompido — dados ilegíveis"
+### 📅 Modal de data/hora — mais largo + setinhas
+Antes: modal de **380px** com selects "27 / Abr / 26" apertados
+Agora:
+- Modal alargado pra **460px** (mais respiro)
+- Selects internos com **fonte 16px** (era 18px) — texto não corta mais
+- Setinha SVG aplicada nos selects do modal (consistência visual)
+- Padding interno reduzido pra dar mais espaço útil
 
-### 🟡 A5 — Vite atualizado pra 5.4.16+ (CVE-2025-31125 patcheado)
-- Era: `"vite": "^5.4.10"`
-- Agora: `"vite": "^5.4.16"`
-- Risco zero pra produção (CVE só afeta dev server), mas boa prática manter atualizado
+### 🔄 Atualização silenciosa (mantida do v213)
+Aplicar atualização em background quando você fica ocioso 30s ou minimiza o app.
 
-### 🟡 A6 — Touch targets 44px nos botões pequenos
-Antes: 16 botões tinham 36×36 (abaixo da recomendação WCAG)
-Agora: todos com 44×44, mais fácil acertar com luva/molhado/idoso
-**Microfone preservado em 40×40 (você pediu)**
-
-### 🟡 A7 — aria-labels completados nos buttons só-ícone
-- Botão de câmera flutuante (canto inferior)
-- Botões de tirar foto e galeria
-- Anterior/Próximo na navegação
-Cobertura: 47% → 49% (resto tem texto visível, screen reader já lê)
+### 🗑️ Template "Morte suspeita" removido (mantido do v213)
 
 ---
 
-## 📦 2 arquivos pra subir
+## 📦 3 arquivos pra subir
 
 ```
-mvdroid-v212/
-├── src/App.jsx          ← SUBSTITUIR
-└── package.json         ← SUBSTITUIR (Vite 5.4.16+)
+mvdroid-v214/
+├── src/App.jsx          ← SUBSTITUIR (setinhas + modal ajustado)
+├── src/main.jsx         ← SUBSTITUIR (lógica auto-update — só se ainda não subiu v213)
+└── public/sw.js         ← SUBSTITUIR (Service Worker v3 — só se ainda não subiu v213)
 ```
 
-> Note: `vite.config.js` NÃO mudou nesta versão (já está OK no GitHub)
+> Se você JÁ subiu o v213 com auto-update funcionando, **só precisa atualizar o `src/App.jsx`** — os outros 2 arquivos ficaram iguais.
 
 ## 🚦 Como subir
 
-### GitHub Web (mesmo procedimento de antes)
+GitHub web → editar cada arquivo → Commit. Vercel deploya em ~30s.
 
-1. **Substituir `src/App.jsx`**:
-   - `src/` → `App.jsx` → ✏️ → apagar tudo → colar novo → Commit
+**Se ainda NÃO instalou v213**: precisa limpar cache uma última vez (instruções no INSTALACAO do v213).
 
-2. **Substituir `package.json`** (raiz):
-   - `package.json` → ✏️ → apagar tudo → colar novo → Commit
-
-Vercel deploya em ~30s. **Vai instalar Vite 5.4.16+ automaticamente** no build.
-
-### ⚠️ Não esqueça
-
-Limpar cache do navegador depois do deploy:
-- iPhone: Configurações → Safari → Avançado → Dados de Sites → vercel.app → Apagar
-- PC Chrome: Ctrl+Shift+R
-- Android: Configurações Chrome → Privacidade → Limpar dados → vercel.app
-
-Ou só usar `https://mvdroid.vercel.app/?v=212` pra forçar reload novo.
+**Se JÁ instalou v213**: a atualização chega sozinha. Abre o app, usa, minimiza. Próxima abertura vai ter as setinhas.
 
 ---
 
-## 🧪 Como testar se DOCX foi corrigido
+## 🧪 Como confirmar que funcionou
 
 Depois do deploy:
 
-1. Abrir o app
-2. Preencher na aba Solicitação:
-   - Agente: Roberto Carlos
-   - Papiloscopista: Felipe (qualquer)
-   - Viatura: T-118
-   - Exame Externo: Sim
-   - Drone: Sim, Luminol: Sim
-3. Ir na aba Vestígios e adicionar uma observação geral
-4. Exportar DOCX
-5. Abrir no Word/Pages
+1. Abrir aba **Equipe**
+2. Olhar campos "Agente", "Papiloscopista", "Viatura"
+3. **Deveria ter ▼ no canto direito** de cada um indicando que é dropdown
+4. Tocar em qualquer campo de data ("Solicitação", "Deslocamento", etc)
+5. Modal abre mais largo, selects com setinhas visíveis
+6. Texto "Abr", "Mai" não corta mais
 
-**Deveria ver:**
-- "Resumo da ocorrência" tem linha "Agente: Roberto Carlos" e "Papiloscopista: Felipe (mat. ___)"
-- Preâmbulo diz "A equipe pericial contou com o apoio..."
-- Após "3 ISOLAMENTO" aparece tabela "Recursos empregados" com Drone Sim, Luminol Sim
-- Na seção 5 antes da papiloscopia aparece "Observações sobre os vestígios: [seu texto]"
-
-Se aparecer tudo isso, está funcionando. Se faltar algo, me avisa.
+Se as setinhas aparecerem, deu certo. Se algum campo específico ainda não tiver, me avisa qual e eu corrijo.
