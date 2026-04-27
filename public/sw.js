@@ -1,8 +1,12 @@
 // ════════════════════════════════════════════════════════════════
-// MVDroiD — Service Worker v3 (Opção A — atualização silenciosa)
+// MVDroiD — Service Worker (Opção A — atualização silenciosa)
+// CACHE_VERSION: mvdroid-v10 (acompanha App v226 — limpeza + câmera rajada)
 // ════════════════════════════════════════════════════════════════
-// VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos (v2 e anteriores).
-// Se você notar comportamento estranho após atualizar, isso resolve.
+// VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos.
+// v226: limpeza de código morto, helper pickFile, touch targets ≥44px,
+// modais com role=dialog/aria-modal, haptic na troca de aba, modal
+// customizado para confirmar Apagar TODOS, e câmera rajada (modo burst)
+// permitindo várias fotos seguidas sem fechar a câmera.
 //
 // Estratégia:
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
@@ -16,7 +20,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v4';
+const CACHE_VERSION = 'mvdroid-v10';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
