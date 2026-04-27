@@ -1,100 +1,71 @@
-# 📦 MVDroiD v208 — Pacote ENXUTO (só o que mudou)
+# 🎯 MVDroiD v210 — FIX REAL DO BUG
 
-Esse zip tem **só os arquivos que precisam ser atualizados**. Quase tudo do seu repo continua igual e não precisa mexer.
+## O bug verdadeiro
 
----
+O console mostrou: `ReferenceError: ei is not defined at Array.map`.
 
-## 🎯 O que tem aqui (9 arquivos)
+**Causa:** Na linha 2553 do `App.jsx` tinha:
+```jsx
+label={`Observações — Edificação ${ei+1}`}  // ← "ei" não existe!
+```
 
-### 3 arquivos PARA SUBSTITUIR no GitHub
-- `src/App.jsx` — código principal v208
-- `index.html` — **FIX da tela azul**
-- `public/sw.js` — Service Worker v2 (força limpar cache antigo)
+O `.map()` daquela seção declarava `(e,i)`, mas eu escrevi `ei` por engano (copiei sem querer da função de geração de DOCX que usa `forEach((e,ei)=>`).
 
-### 5 arquivos NOVOS (não existem no repo ainda) + 1 substituir
-- `public/icon.svg` — ícone vetorial
-- `public/icon-180.png` — Apple Touch Icon
-- `public/icon-192.png` — PWA pequeno
-- `public/icon-512.png` — PWA grande
-- `public/manifest.webmanifest` — manifest PWA
+**Quando acontecia:**
+- Toda vez que a aba que tem Edificações renderizava → ReferenceError
+- ErrorBoundary capturava o erro → tela ficava vazia
+- Cor da "tela vazia" mudava conforme o background do CSS abaixo (azul/branco)
+- Por isso minhas tentativas de "consertar a cor" não resolviam — eu estava tratando sintoma
 
----
+## Apenas 2 arquivos pra subir
 
-## 🚀 Como subir (GitHub web — sem instalar nada)
+```
+mvdroid-fix/
+├── src/App.jsx       ← FIX do ei
+└── index.html        ← versão estável (com loader azul, sem o bug do bg branco)
+```
 
-### Passo 1: Substituir `index.html` (raiz do repo)
-1. Vai em https://github.com/alexdmoura-lab/mvdroid
-2. Clica em `index.html` na lista de arquivos
-3. Clica no ícone do **lápis** (✏️) no canto superior direito
-4. **Apaga TODO o conteúdo** (Ctrl+A → Delete)
-5. **Cola o conteúdo** do `index.html` deste zip
-6. Lá embaixo: **"Commit changes"** → mensagem: `v208: fix tela azul + manifest`
+## Como subir
 
-### Passo 2: Substituir `src/App.jsx`
-1. Entra na pasta `src/`
-2. Clica em `App.jsx`
-3. Clica no lápis ✏️
-4. **Apaga TODO o conteúdo**
-5. **Cola o conteúdo** do `App.jsx` deste zip
-6. Commit changes
+### Opção A: GitHub web (rápido, sem instalar nada)
 
-⚠️ **Atenção:** se o GitHub web der erro `RESULT_CODE_KILLED_BAD_MESSAGE`, isso acontece porque o `App.jsx` é grande (~620 KB). Nesse caso usa GitHub Desktop (instruções no fim).
+1. **Substituir `src/App.jsx`**:
+   - GitHub → entra em `src/` → clica em `App.jsx`
+   - Lápis ✏️ → seleciona tudo (Ctrl+A) → apaga
+   - Cola conteúdo do `App.jsx` deste zip
+   - Commit changes
 
-### Passo 3: Substituir `public/sw.js`
-1. Entra na pasta `public/`
-2. Clica em `sw.js` (se já existir) → lápis → apaga conteúdo → cola novo
-3. Se NÃO existir: botão **"Add file"** → "Create new file" → nome `public/sw.js` → cola conteúdo
-4. Commit
+2. **Substituir `index.html`** (raiz):
+   - Mesma coisa
+   - Lápis ✏️ → apaga tudo → cola novo
+   - Commit
 
-### Passo 4: Subir os 5 arquivos novos
-1. Entra na pasta `public/`
-2. Clica em **"Add file"** → **"Upload files"**
-3. Arrasta os 5 arquivos de uma vez:
-   - `icon.svg`
-   - `icon-180.png`
-   - `icon-192.png`
-   - `icon-512.png`
-   - `manifest.webmanifest`
-4. Commit changes
+### Opção B: GitHub Desktop (1 commit)
 
-**Pronto!** Vercel detecta os commits e faz build em ~30s.
+Já tem clone? Apenas:
+1. Substitui `src/App.jsx` e `index.html` na pasta local
+2. Commit message: `v210: fix ReferenceError ei na linha 2553`
+3. Push
 
----
+## ⚠️ DEPOIS do deploy
 
-## 🚀 Alternativa: GitHub Desktop (1 commit só)
+**Limpar cache do Safari:**
+1. Configurações → Safari → Avançado → Dados de Sites
+2. Procura "vercel.app" → Apagar
+3. Reabre `mvdroid.vercel.app`
 
-Se quiser fazer tudo num commit único:
+## ✅ Como confirmar
 
-1. https://desktop.github.com (gratuito)
-2. Clone `mvdroid` pra uma pasta no PC
-3. Abre essa pasta no Finder/Explorer
-4. **Descompacta este zip**
-5. Arrasta o conteúdo da pasta `mvdroid-minimo/` pra dentro do repo clonado:
-   - `src/App.jsx` → substitui o existente
-   - `index.html` → substitui o existente
-   - `public/` → arquivos vão se juntar com os existentes (substituindo `sw.js` se houver)
-6. GitHub Desktop detecta as mudanças
-7. Commit message: `v208: fix tela azul + manifest novos icones`
-8. **Commit to main** → **Push origin**
-
----
-
-## ⚠️ DEPOIS do deploy: limpar cache do Safari
-
-Esse passo é **fundamental** porque o Service Worker antigo (v1) pode segurar a versão velha do `index.html`:
-
-1. **Configurações iPhone** → **Safari** → **Avançado** → **Dados de Sites**
-2. Procura **"vercel.app"** → desliza pra esquerda → **Apagar**
-3. Abre `mvdroid.vercel.app` no Safari de novo
-
-Se você adicionou o ícone PWA na tela inicial, **apaga o ícone primeiro** (segura → Remover) e depois adiciona de novo.
-
----
-
-## ✅ Como testar
-
-1. Recarrega a página
+1. Abre `mvdroid.vercel.app/?v=210` (`?v=210` ignora cache)
 2. Loga
-3. Toca em **"Próximo"** repetidamente — não pode mais aparecer tela azul presa
-4. Faz **swipe lateral** em várias abas — também não pode travar
-5. Volta com **"Anterior"** — deve fluir normal
+3. Toca em "Próximo" várias vezes — **sem tela azul ou branca**
+4. Faz swipe lateral em todas as abas
+5. Especialmente: testa a aba **Local** com a seção **Edificações** (era onde o bug acontecia)
+
+## 💭 Lição
+
+Você tinha razão — eu deveria ter pedido o print do console na 1ª tentativa, não na 5ª. Sem o erro real, fiquei chutando "talvez é a animação", "talvez é o background"... O `ReferenceError` no console teria me apontado pra linha exata em segundos.
+
+**Erro silencioso de variável não declarada é o bug clássico que minificação esconde.** Em desenvolvimento, esse erro mostra `ei is not defined`. Em produção minificada, vira `ei` mesmo (a minificação não renomeou porque é nome curto). Esses bugs **só aparecem em runtime** — passa no build, passa no lint padrão, e só explode quando aquela linha é executada.
+
+Foi minha culpa não ter pedido visibilidade real antes. Obrigado por tua paciência.

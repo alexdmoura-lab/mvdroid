@@ -20,7 +20,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Open Graph (WhatsApp, Telegram, Facebook) -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="MVDroiD" />
     <meta property="og:title" content="MVDroiD — Levantamento de local" />
@@ -34,17 +34,11 @@
     <meta property="og:image:alt" content="Logo do MVDroiD — caveira em fundo azul" />
     <meta property="og:locale" content="pt_BR" />
 
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MVDroiD — Levantamento de local" />
     <meta name="twitter:description" content="App de documentação forense de cenas de crime. SCPe / PCDF." />
     <meta name="twitter:image" content="https://mvdroid.vercel.app/og-preview.png" />
 
-    <!-- ════════════════════════════════════════════════════════════
-         CSS pré-React: fundo azul SÓ no #initial-loader, NÃO no body.
-         O App.jsx controla o fundo via tema (claro ou escuro).
-         Isso evita "tela azul presa" ao trocar de aba no iOS Chrome.
-         ════════════════════════════════════════════════════════════ -->
     <style>
       html, body {
         margin: 0;
@@ -52,8 +46,12 @@
         font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
         -webkit-font-smoothing: antialiased;
         overscroll-behavior: none;
+        background: #0a1420;
+        color: #fff;
       }
-      /* Loader azul aparece em <100ms enquanto React carrega */
+      #root {
+        min-height: 100vh;
+      }
       #initial-loader {
         position: fixed;
         inset: 0;
@@ -67,13 +65,12 @@
         width: 64px;
         height: 64px;
         opacity: 0.85;
-        animation: pulse 1.4s ease-in-out infinite;
+        animation: pulseLoader 1.4s ease-in-out infinite;
       }
-      @keyframes pulse {
+      @keyframes pulseLoader {
         0%, 100% { opacity: 0.5; transform: scale(0.95); }
         50% { opacity: 1; transform: scale(1.05); }
       }
-      /* Quando o React monta, esconde o loader (CSS oculta via .ready) */
       body.app-ready #initial-loader {
         display: none;
       }
@@ -81,7 +78,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Loader sai do #root pra evitar conflito com React -->
     <div id="initial-loader">
       <svg class="skull" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -100,7 +96,6 @@
       </svg>
     </div>
     <script>
-      // Quando React montar, marca body como ready pra esconder o loader
       const checkReady = () => {
         const root = document.getElementById('root');
         if (root && root.children.length > 0) {
