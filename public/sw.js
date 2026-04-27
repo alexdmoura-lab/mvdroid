@@ -16,7 +16,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v3';
+const CACHE_VERSION = 'mvdroid-v4';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
