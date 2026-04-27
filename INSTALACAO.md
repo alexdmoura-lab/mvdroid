@@ -1,75 +1,98 @@
-# 🎯 MVDroiD v211 — Melhorias e correções
+# 🎯 MVDroiD v212 — Auditoria completa + correções
 
-## ✅ O que mudou (4 itens)
+## ✅ Mudanças nesta versão
 
-### 1. Scroll do mouse / Android funciona agora
-- Removido `overscroll-behavior: none` global do `index.html` que bloqueava scroll do mouse e do Android Chrome
-- iPhone continua funcionando normal
+### 🔴 Bug corrigido — DOCX completo agora
+Antes: 11 campos preenchidos pelo usuário sumiam no DOCX
+- Agente
+- Papiloscopista + matrícula
+- Viatura
+- Exame Externo (OIC)
+- Observações da Solicitação
+- Drone, Scanner, Luminol, Luz forense
+- Observações dos Vestígios
 
-### 2. Layout dos vestígios reorganizado
-- **Descrição** ocupa toda a largura
-- **Suporte / Local** vai logo abaixo da Descrição, com o mesmo tamanho
-- **Recolhido | Destino | Placa** agora ficam lado a lado (3 colunas)
-- Especialmente melhor visualizado em celular
+Agora aparecem em:
+- **Capa "Resumo da Ocorrência"** — Agente, Papilo, Viatura, OIC
+- **Preâmbulo** — frase adicional "A equipe pericial contou com o apoio do Agente Policial X, do Papiloscopista Y, com a viatura Z."
+- **Histórico (seção 1)** — observações da solicitação
+- **Após Isolamento (seção 3)** — nova tabela "Recursos empregados" (drone, scanner, luminol, luz forense)
+- **Cadeia de Custódia (seção 5)** — observações dos vestígios
 
-### 3. Dropdown de placa simplificado
-- Era: `Placa 01`, `Placa 02`, `Placa 03`...
-- Agora: `01`, `02`, `03`...
-- Aplica em Vestígios e em Papiloscopia
+### 🟡 A2 — Aviso de slot corrompido
+Antes: se JSON do slot estivesse corrompido, retornava null silenciosamente (você perdia tudo sem saber)
+Agora: mostra toast "⚠ Slot N corrompido — dados ilegíveis"
 
-### 4. "— Selecione —" removido dos selects
-- Visual mais limpo
-- Antes ficava cortado em telas pequenas (`— Sele...`)
-- Mantido apenas em selects que precisam de contexto educativo (ex: "— Selecione ou digite —" pra avisar que pode digitar manualmente)
+### 🟡 A5 — Vite atualizado pra 5.4.16+ (CVE-2025-31125 patcheado)
+- Era: `"vite": "^5.4.10"`
+- Agora: `"vite": "^5.4.16"`
+- Risco zero pra produção (CVE só afeta dev server), mas boa prática manter atualizado
+
+### 🟡 A6 — Touch targets 44px nos botões pequenos
+Antes: 16 botões tinham 36×36 (abaixo da recomendação WCAG)
+Agora: todos com 44×44, mais fácil acertar com luva/molhado/idoso
+**Microfone preservado em 40×40 (você pediu)**
+
+### 🟡 A7 — aria-labels completados nos buttons só-ícone
+- Botão de câmera flutuante (canto inferior)
+- Botões de tirar foto e galeria
+- Anterior/Próximo na navegação
+Cobertura: 47% → 49% (resto tem texto visível, screen reader já lê)
 
 ---
 
-## 📦 Apenas 2 arquivos
+## 📦 2 arquivos pra subir
 
 ```
-mvdroid-v211/
-├── INSTALACAO.md
+mvdroid-v212/
 ├── src/App.jsx          ← SUBSTITUIR
-└── index.html           ← SUBSTITUIR
+└── package.json         ← SUBSTITUIR (Vite 5.4.16+)
 ```
+
+> Note: `vite.config.js` NÃO mudou nesta versão (já está OK no GitHub)
 
 ## 🚦 Como subir
 
-### GitHub Web (mais rápido)
+### GitHub Web (mesmo procedimento de antes)
 
-1. **Substituir `index.html`** (raiz):
-   - Lápis ✏️ → apaga tudo → cola novo → Commit
+1. **Substituir `src/App.jsx`**:
+   - `src/` → `App.jsx` → ✏️ → apagar tudo → colar novo → Commit
 
-2. **Substituir `src/App.jsx`**:
-   - `src/` → lápis ✏️ → apaga tudo → cola novo → Commit
+2. **Substituir `package.json`** (raiz):
+   - `package.json` → ✏️ → apagar tudo → colar novo → Commit
 
-Vercel deploya em ~30s.
+Vercel deploya em ~30s. **Vai instalar Vite 5.4.16+ automaticamente** no build.
 
-### GitHub Desktop (1 commit)
+### ⚠️ Não esqueça
 
-1. Substituir `App.jsx` e `index.html` na pasta local
-2. Commit: `v211: scroll do mouse, layout vestígios, placa numérica, selects limpos`
-3. Push
+Limpar cache do navegador depois do deploy:
+- iPhone: Configurações → Safari → Avançado → Dados de Sites → vercel.app → Apagar
+- PC Chrome: Ctrl+Shift+R
+- Android: Configurações Chrome → Privacidade → Limpar dados → vercel.app
 
----
-
-## ✅ Verificações que fiz no código
-
-Conferi que essas exportações continuam funcionando corretamente:
-
-- ✅ **DOCX**: Vestígios usam `supPlaca(suporte, placa)` que combina os dois campos no laudo
-- ✅ **Croqui**: campos `desc`, `suporte`, `placa`, `destino`, `recolhido` continuam sendo passados
-- ✅ **ZIP completo**: todas as fotos + DOCX + PDF entram no zip
-- ✅ **Fotos em alta resolução**: o botão "📷 ✨" (laranja) na barra superior ativa o modo HQ por sessão (2400px / 92% qualidade JPEG vs 1200px / 78% padrão). Lembrando que a HQ só vale pra **fotos tiradas depois de ativar**.
+Ou só usar `https://mvdroid.vercel.app/?v=212` pra forçar reload novo.
 
 ---
 
-## ⚠️ Sobre alta resolução de fotos
+## 🧪 Como testar se DOCX foi corrigido
 
-Existe um botão **📷 ✨** (laranja quando ativo) na barra superior. Ele alterna entre:
-- **Padrão**: 1200px largura, 78% qualidade — ~150KB por foto
-- **Alta**: 2400px largura, 92% qualidade — ~600KB por foto
+Depois do deploy:
 
-A **alta resolução é resetada a cada sessão** (não persiste). Isso é proposital — pra evitar que o usuário esqueça ligado e estoure a memória do navegador. Se quiser que persista entre sessões, posso fazer essa mudança numa próxima.
+1. Abrir o app
+2. Preencher na aba Solicitação:
+   - Agente: Roberto Carlos
+   - Papiloscopista: Felipe (qualquer)
+   - Viatura: T-118
+   - Exame Externo: Sim
+   - Drone: Sim, Luminol: Sim
+3. Ir na aba Vestígios e adicionar uma observação geral
+4. Exportar DOCX
+5. Abrir no Word/Pages
 
-Para fotos boas no laudo final, **ative antes de tirar fotos importantes** (ex: lesões, vestígios pequenos). Pra fotos panorâmicas e gerais, padrão é suficiente.
+**Deveria ver:**
+- "Resumo da ocorrência" tem linha "Agente: Roberto Carlos" e "Papiloscopista: Felipe (mat. ___)"
+- Preâmbulo diz "A equipe pericial contou com o apoio..."
+- Após "3 ISOLAMENTO" aparece tabela "Recursos empregados" com Drone Sim, Luminol Sim
+- Na seção 5 antes da papiloscopia aparece "Observações sobre os vestígios: [seu texto]"
+
+Se aparecer tudo isso, está funcionando. Se faltar algo, me avisa.
