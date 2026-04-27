@@ -1,68 +1,86 @@
-# 🎨 MVDroiD v214 — Setinhas dos selects + modal data/hora
+# 🩸 MVDroiD v216 — Ícone novo + quebra inteligente + campos pendentes
 
-> Continuação do v213. Inclui tudo do v213 + correções visuais.
+> Continuação do v215. Inclui tudo das versões anteriores + 3 novidades.
 
 ## ✅ Mudanças nesta versão
 
-### 🎯 Setinhas (▼) em todos os 25 selects
-Muitos campos pareciam "campos comuns" porque a setinha sumiu em alguma versão anterior. Agora **todos os selects** mostram a setinha SVG (▼) à direita, indicando que são clicáveis.
+### 🩸 Novo ícone PWA
+- **Caveira centralizada** (sem deslocamento pra cima)
+- **Sem o texto "MVDroiD"** dentro do ícone
+- **Lágrima de sangue** saindo do olho direito (do observador): trilha vermelha + gota grande pendurada + gota satélite
 
-**Afeta os campos:**
-- **Equipe**: 2º Perito, Agente, Papiloscopista, Viatura
-- **Solicitação**: DP, Ano, Natureza, Exame Externo, Drone, Scanner, Luminol, Luz forense, OIC
-- **Local**: Tipo, Via, Iluminação, Ligada, Área, Destinação, Pavimento, Faixas, Mão, Canteiro, Meio-fio, Trânsito, Frenagem, Derrapagem, Debris
-- **Vestígios**: Suporte, Recolhido?, Destino IC/II, Placa
-- **Edificação**: Tipo, Material, Cobertura, Estado, Perímetro, Acesso, Vizinhança
-- **Cadáveres**: Sexo, Faixa etária, Etnia, Diagnóstico, Estado, Posição, etc.
-- **Veículos**: Categoria, Tipo, Estado, Motor, Portas, Vidros, Chave
-- **Papiloscopia**: Vestígio, Placa
-- **Trilhas**: Padrão, Continuidade, Direcionamento
+### 📄 #2 — Quebra inteligente de página no Resumo da Ocorrência
+- Linhas individuais agora **não quebram entre páginas** (`cantSplit`)
+- Subtítulos (Identificação, Local, Datas, Equipe, Achados) **ficam grudados com pelo menos uma linha do grupo** (`keepNext`)
+- Acabou o problema de "Fotografias: 0" sozinho na 2ª página
 
-### 📅 Modal de data/hora — mais largo + setinhas
-Antes: modal de **380px** com selects "27 / Abr / 26" apertados
-Agora:
-- Modal alargado pra **460px** (mais respiro)
-- Selects internos com **fonte 16px** (era 18px) — texto não corta mais
-- Setinha SVG aplicada nos selects do modal (consistência visual)
-- Padding interno reduzido pra dar mais espaço útil
+### 🎨 #3 — Campos "A esclarecer" em itálico cinza
+- Campos pendentes (`A esclarecer`, `—`, `A ser informado`, `A ser descrito`) aparecem em **itálico, cor `#9A8B6A` (bege escuro)**
+- Hierarquia visual mais clara: relance no laudo dá pra identificar o que ainda falta
 
-### 🔄 Atualização silenciosa (mantida do v213)
-Aplicar atualização em background quando você fica ocioso 30s ou minimiza o app.
-
-### 🗑️ Template "Morte suspeita" removido (mantido do v213)
+Aplica em ambos PDF e DOCX.
 
 ---
 
-## 📦 3 arquivos pra subir
+## 📦 Arquivos pra subir
 
 ```
-mvdroid-v214/
-├── src/App.jsx          ← SUBSTITUIR (setinhas + modal ajustado)
-├── src/main.jsx         ← SUBSTITUIR (lógica auto-update — só se ainda não subiu v213)
-└── public/sw.js         ← SUBSTITUIR (Service Worker v3 — só se ainda não subiu v213)
+mvdroid-v216/
+├── src/
+│   ├── App.jsx          ← SUBSTITUIR (#2 + #3 + v216)
+│   └── main.jsx         ← (igual v213/v214/v215)
+└── public/
+    ├── sw.js            ← SUBSTITUIR (CACHE_VERSION = mvdroid-v4)
+    ├── icon.svg         ← SUBSTITUIR (novo design)
+    ├── icon-180.png     ← SUBSTITUIR (novo design)
+    ├── icon-192.png     ← SUBSTITUIR (novo design)
+    └── icon-512.png     ← SUBSTITUIR (novo design)
 ```
 
-> Se você JÁ subiu o v213 com auto-update funcionando, **só precisa atualizar o `src/App.jsx`** — os outros 2 arquivos ficaram iguais.
+⚠️ **IMPORTANTE**: Os 4 ícones e o `sw.js` precisam ser substituídos juntos. O Service Worker bumpou pra `mvdroid-v4` justamente pra invalidar os ícones antigos cacheados.
 
-## 🚦 Como subir
+## 🚦 Como subir no GitHub
 
-GitHub web → editar cada arquivo → Commit. Vercel deploya em ~30s.
+1. **Substituir `src/App.jsx`** — texto, edição inline
+2. **Substituir `public/sw.js`** — texto, edição inline
+3. **Substituir os 4 ícones** — PNG e SVG, vai precisar **deletar o arquivo antigo e fazer upload do novo** (GitHub web não tem botão "substituir" pra binários):
+   - Vá em `public/icon-180.png` → ⋯ (botão direito) → Delete file → Commit
+   - Volte em `public/` → Add file → Upload files → arrasta o `icon-180.png` novo
+   - Repita pra `icon-192.png`, `icon-512.png` e `icon.svg`
+4. Aguarde Vercel buildar (~30s)
 
-**Se ainda NÃO instalou v213**: precisa limpar cache uma última vez (instruções no INSTALACAO do v213).
+## 📱 Pra ícone novo aparecer no iPhone
 
-**Se JÁ instalou v213**: a atualização chega sozinha. Abre o app, usa, minimiza. Próxima abertura vai ter as setinhas.
+O iOS guarda o ícone em cache **separado** do app. Pra ver o novo:
+
+1. **Apague o ícone PWA** atual da tela inicial (segura, opção "Apagar")
+2. **Limpa cache do Safari**: Configurações → Safari → Avançado → Dados de sites → vercel.app → Apagar
+3. Abre `https://mvdroid.vercel.app/?v=216` no Safari
+4. Compartilhar → Adicionar à Tela de Início
+
+A partir desse momento, atualizações futuras chegam sozinhas (auto-update do v213).
+
+## ℹ️ Observação sobre o nome embaixo do ícone
+
+O iPhone mostra um nome embaixo do ícone na tela inicial (vem do `short_name: "MVDroiD"` do manifest). Quando você toca em **"Adicionar à Tela de Início"**, o iOS deixa você **editar esse nome** antes de confirmar. Então pode chamar de "Forense", "Crime", "ML" ou o que quiser — só tirar o "MVDroiD" sugerido e digitar o novo.
+
+Se quiser mudar o padrão sugerido, me avisa e eu atualizo o `manifest.webmanifest`.
 
 ---
 
-## 🧪 Como confirmar que funcionou
+## 🧪 Como testar
 
-Depois do deploy:
+### Ícone
+1. Reinstalar PWA (apagar e reinstalar conforme acima)
+2. Olhar tela inicial: caveira centralizada, sem texto, com lágrima vermelha pingando
 
-1. Abrir aba **Equipe**
-2. Olhar campos "Agente", "Papiloscopista", "Viatura"
-3. **Deveria ter ▼ no canto direito** de cada um indicando que é dropdown
-4. Tocar em qualquer campo de data ("Solicitação", "Deslocamento", etc)
-5. Modal abre mais largo, selects com setinhas visíveis
-6. Texto "Abr", "Mai" não corta mais
+### Quebra inteligente (#2)
+1. Preenche um laudo grande (com edificação, veículo, trilha, várias fotos)
+2. Exporta DOCX/PDF
+3. Vê o Resumo da Ocorrência: subtítulos sempre estão junto com pelo menos uma linha do grupo
+4. Linhas não cortam pela metade entre páginas
 
-Se as setinhas aparecerem, deu certo. Se algum campo específico ainda não tiver, me avisa qual e eu corrijo.
+### Pendentes (#3)
+1. Deixa "Diagnóstico" e "Instrumento" em "A esclarecer"
+2. Exporta DOCX/PDF
+3. No Resumo: essas duas linhas aparecem em **itálico cinza claro** vs. o restante em preto normal
