@@ -49,7 +49,7 @@
 // ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-const APP_VERSION="v214-MVDroiD";
+const APP_VERSION="v216-MVDroiD";
 // Detecta ambiente: dentro do Claude artifacts (limite 5MB), ou hospedado externamente (localStorage ~50MB no Safari)
 // Usa heurística: se window.storage é a versão do Claude (sem fallback localStorage), assume 4.8MB. Senão, 40MB.
 const STORAGE_LIMIT_KB=(typeof window!=="undefined"&&window.storage&&!window.storage.__isLocalStorageShim)?4800:40000;
@@ -1433,7 +1433,7 @@ const saveCroquiDocx=async(returnBlobOnly=false)=>{
     const zip=new JSZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp||"___";
 /* v201: esc2 reforçado — strip de control chars que quebram XML (zero-width, BOMs etc.) */
 const esc2=(s)=>String(s??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
-const Pp=(text,opts={})=>{const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?`<w:color w:val="${opts.color}"/>`:"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:"";const ind=opts.indFirst?`<w:ind w:firstLine="${opts.indFirst}"/>`:"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing=`<w:spacing w:before="${spBef}" w:after="${spAft}" w:line="320" w:lineRule="auto"/>`;const brd=opts.border?`<w:pBdr>${opts.border}</w:pBdr>`:"";const pPr=`<w:pPr>${center}${brd}${spacing}${ind}${shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:""}<w:rPr>${bold}${italic}<w:sz w:val="${sz}"/>${color}</w:rPr></w:pPr>`;return`<w:p>${pPr}<w:r><w:rPr>${bold}${italic}${caps}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${color}</w:rPr><w:t xml:space="preserve">${esc2(text)}</w:t></w:r></w:p>`;};
+const Pp=(text,opts={})=>{const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?`<w:color w:val="${opts.color}"/>`:"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:"";const ind=opts.indFirst?`<w:ind w:firstLine="${opts.indFirst}"/>`:"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing=`<w:spacing w:before="${spBef}" w:after="${spAft}" w:line="320" w:lineRule="auto"/>`;const brd=opts.border?`<w:pBdr>${opts.border}</w:pBdr>`:"";const keepNext=opts.keepNext?'<w:keepNext/>':"";const keepLines=opts.keepLines?'<w:keepLines/>':"";const pPr=`<w:pPr>${keepNext}${keepLines}${center}${brd}${spacing}${ind}${shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:""}<w:rPr>${bold}${italic}<w:sz w:val="${sz}"/>${color}</w:rPr></w:pPr>`;return`<w:p>${pPr}<w:r><w:rPr>${bold}${italic}${caps}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${color}</w:rPr><w:t xml:space="preserve">${esc2(text)}</w:t></w:r></w:p>`;};
 // H1_NUM: numbered top-level section "1 HISTÓRICO"
 const H1_NUM=(num,title)=>Pp(`${num} ${title}`,{bold:true,sz:28,caps:true,spBef:280,spAft:140,color:"1A1A2E"});
 // H2_NUM: numbered subsection "4.1 Do Local"
@@ -1448,7 +1448,22 @@ const PARA=(text)=>Pp(text,{sz:22,justify:true,indFirst:709,spAft:140});
 const ROW_Z=(l,v,idx)=>{if(!v&&v!==0)return"";const fill=(idx%2===0)?"F5F5F7":"FFFFFF";return`<w:tr><w:tc><w:tcPr><w:tcW w:w="3200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8E8EC"/></w:tcPr>${Pp(l,{bold:true,sz:20,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="6800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(String(v),{sz:20,spAft:0})}
 </w:tc></w:tr>`;};
+// ROW_GOLD: linha estilo dourado (label em E8D9A8, valor zebrado FFF8E8/FFFCEF)
+// cantSplit: linha não quebra entre páginas
+// "A esclarecer", "—", etc → itálico cinza (campo pendente)
+const isPendingValue=(v)=>{const s=String(v||"").trim().toLowerCase();return s==="a esclarecer"||s==="—"||s==="-"||s==="a ser informado"||s==="a ser descrito";};
+const ROW_GOLD=(l,v,idx)=>{if(!v&&v!==0)return"";const fill=(idx%2===0)?"FFF8E8":"FFFCEF";const pending=isPendingValue(v);const valOpts=pending?{sz:20,spAft:0,italic:true,color:"9A8B6A"}:{sz:20,spAft:0};return`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="3200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8D9A8"/></w:tcPr>${Pp(l,{bold:true,sz:20,spAft:0,color:"6B5326"})}
+</w:tc><w:tc><w:tcPr><w:tcW w:w="6800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(String(v),valOpts)}
+</w:tc></w:tr>`;};
+// ROW_GOLD_GROUP: linha de subtítulo (colspan=2 com fundo dourado mais forte)
+// cantSplit + keepNext: subtítulo não quebra e fica junto com a próxima linha (não fica órfão no fim de página)
+const ROW_GOLD_GROUP=(title)=>`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="10000" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="C9A961"/></w:tcPr>${Pp(title,{bold:true,sz:20,caps:true,spAft:0,color:"FFFFFF",keepNext:true,keepLines:true})}
+</w:tc></w:tr>`;
 const TBL_Z=(rowsArr)=>{let r="";rowsArr.filter(x=>x).forEach((item,i)=>{if(typeof item==="string"){r+=item.replace(/<!--IDX-->/g,String(i));}else{r+=ROW_Z(item[0],item[1],i);}});if(!r)return"";return`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${r}</w:tbl>`;};
+// TBL_GOLD: tabela dourada com agrupamento. Aceita array onde:
+//  - {group:"TÍTULO"} cria linha de subtítulo
+//  - [label, valor] cria linha normal (skipped if valor vazio)
+const TBL_GOLD=(rowsArr)=>{let r="";let visIdx=0;rowsArr.filter(x=>x).forEach((item)=>{if(item&&typeof item==="object"&&item.group){r+=ROW_GOLD_GROUP(item.group);visIdx=0;}else if(Array.isArray(item)){const out=ROW_GOLD(item[0],item[1],visIdx);if(out){r+=out;visIdx++;}}});if(!r)return"";return`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:left w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:right w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/></w:tblBorders></w:tblPr>${r}</w:tbl>`;};
 const PAGE_BREAK=()=>`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
 const SPACER=(sz=120)=>`<w:p><w:pPr><w:spacing w:after="${sz}"/></w:pPr></w:p>`;
 // ═════════════ BODY ═════════════
@@ -1473,17 +1488,69 @@ const vestRecolhidos=[...vestigios.filter(v=>v.desc&&v.recolhido==="Sim"),...can
 // === RESUMO EXECUTIVO (DOCX) ===
 const cadDescDx=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"Sem cadáver";})();
 const instrumentoExecDx=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"—";})();
-const enderecoCurtoDx=(d.end||"").slice(0,120)+((d.end||"").length>120?"…":"");
 const woundsTotalDx=wounds.length;
-const achadosExecDx=`${woundsTotalDx} lesão(ões) documentada(s); ${vestTotal} vestígio(s)${vestRecolhidos?` (${vestRecolhidos} recolhido${vestRecolhidos>1?"s":""})`:""}; ${(fotos||[]).length} fotografia(s)`;
-body+=Pp("⚖️ RESUMO EXECUTIVO",{bold:true,sz:22,center:true,caps:true,spBef:280,spAft:140,color:"FFFFFF",shd:"C9A961"});
-body+=TBL_Z([["Natureza",`${natLbl} — Oc. ${oc}/${ano} (${dp}ª DP)`],["Vítima(s)",cadDescDx],["Instrumento / meio",instrumentoExecDx],["Local",enderecoCurtoDx||"—"],["Principais achados",achadosExecDx]]);
-body+=Pp("RESUMO DA OCORRÊNCIA",{bold:true,sz:24,center:true,caps:true,spBef:360,spAft:240,color:"1A1A2E",shd:"F5F5F7"});
 const agenteLbl=d.ag==="Outro"?(d.ag_outro||"—"):(d.ag||"—");
 const papiloLbl=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"—";
 const viaturaLbl=d.vt==="Outra"?(d.vt_outro||"—"):(d.vt||"—");
 const oicLbl=d.oic||"—";
-body+=TBL_Z([["Ocorrência / DP",`${oc}/${ano} — ${dp}`],["Natureza",natLbl],["Exame Externo",oicLbl],["Endereço",d.end||"—"],["GPS",d.gps||"—"],["Data da solicitação",d.dt_sol||"—"],["Data do deslocamento",d.dt_des||"—"],["Data do atendimento",d.dt_che||"—"],["Data da finalização",d.dt_ter||"—"],["Perito(s) criminais",peritoLabel],["Agente",agenteLbl],["Papiloscopista",papiloLbl],["Viatura",viaturaLbl],["Diagnóstico",diagCad],["Cadáveres",String(cadCount)],["Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`],["Fotografias",String((fotos||[]).length)]]);
+// Tipo do local (d.tp é array de strings)
+const tipoLocalLbl=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"—");
+// Recursos empregados (só os marcados "Sim")
+const recursos=[];
+if(d.drone==="Sim")recursos.push("Drone");
+if(d.scanner==="Sim")recursos.push("Scanner 3D");
+if(d.luminol==="Sim")recursos.push("Luminol");
+if(d.luz_forense==="Sim")recursos.push("Luz forense");
+const recursosLbl=recursos.length?recursos.join(", "):"—";
+// Contadores
+const veicsComDataResumo=veiculos.filter((_,vi)=>d[`v${vi}_tipo`]||d[`v${vi}_placa`]).length;
+const edifsComData=edificacoes.filter(e=>e&&(e.tipo||e.material||e.andares||(e.comodos_list&&e.comodos_list.length)||(e.comodos_fato&&e.comodos_fato.length))).length;
+const trilhasComData=trilhas.filter(tr=>tr&&(tr.origem||tr.destino||tr.padrao||tr.comprimento||tr.obs)).length;
+// Construir array da tabela com grupos
+const resumoRows=[
+  {group:"Identificação"},
+  ["Ocorrência / DP",`${oc}/${ano} — ${dp}`],
+  ["Natureza",natLbl],
+  ["Vítima(s)",cadDescDx],
+  ["Instrumento / meio",instrumentoExecDx],
+  ["Exame Externo",oicLbl],
+  {group:"Local"},
+  ["Endereço",d.end||"—"],
+  ["GPS",d.gps||"—"],
+  ["Tipo do local",tipoLocalLbl],
+  {group:"Datas"},
+  ["Data da solicitação",d.dt_sol||"—"],
+  ["Data do deslocamento",d.dt_des||"—"],
+  ["Data do atendimento",d.dt_che||"—"],
+  ["Data da finalização",d.dt_ter||"—"],
+  {group:"Equipe"},
+  ["Perito(s) criminais",peritoLabel],
+  ["Agente",agenteLbl],
+  ["Papiloscopista",papiloLbl],
+  ["Viatura",viaturaLbl],
+  recursos.length?["Recursos empregados",recursosLbl]:null,
+  {group:"Achados"},
+  ["Diagnóstico",diagCad],
+  ["Cadáveres",String(cadCount)],
+  ["Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`],
+  woundsTotalDx>0?["Lesões documentadas",String(woundsTotalDx)]:null,
+  edifsComData>0?["Edificações examinadas",String(edifsComData)]:null,
+  veicsComDataResumo>0?["Veículos examinados",String(veicsComDataResumo)]:null,
+  trilhasComData>0?["Trilhas de sangue",String(trilhasComData)]:null,
+  ["Fotografias",String((fotos||[]).length)]
+];
+body+=Pp("⚖️ RESUMO DA OCORRÊNCIA",{bold:true,sz:24,center:true,caps:true,spBef:280,spAft:160,color:"FFFFFF",shd:"C9A961"});
+// Linha de leitura rápida (TL;DR — síntese em 1 linha pra leitura ágil)
+const tldrPartes=[];
+tldrPartes.push(natLbl);
+if(tipoLocalLbl&&tipoLocalLbl!=="—")tldrPartes.push(`em ${tipoLocalLbl}`);
+if(woundsTotalDx>0)tldrPartes.push(`${woundsTotalDx} lesão${woundsTotalDx>1?"ões":""} documentada${woundsTotalDx>1?"s":""}`);
+if(vestTotal>0)tldrPartes.push(`${vestTotal} vestígio${vestTotal>1?"s":""}${vestRecolhidos?` (${vestRecolhidos} recolhido${vestRecolhidos>1?"s":""})`:""}`);
+const fotosCount=(fotos||[]).length;
+if(fotosCount>0)tldrPartes.push(`${fotosCount} fotografia${fotosCount>1?"s":""}`);
+const tldrTexto=tldrPartes.join(" · ");
+body+=Pp(tldrTexto,{sz:22,italic:true,center:true,spBef:0,spAft:200,color:"6B5326",shd:"FFFCEF"});
+body+=TBL_GOLD(resumoRows);
 body+=PAGE_BREAK();
 // ──── PREÂMBULO ────
 body+=H_CENTER("PREÂMBULO");
@@ -1893,38 +1960,74 @@ const diagCad=d.c0_dg||"—";
 const cadCount=cadaveres.filter((_,ci)=>d[`c${ci}_fx`]||d[`c${ci}_dg`]||d[`c${ci}_sx`]||wounds.some(w=>w.cadaver===ci)).length;
 const vestTotal=vestigios.filter(v=>v.desc).length+canvasVest.filter(v=>v.desc).length;
 const vestRecolhidos=[...vestigios.filter(v=>v.desc&&v.recolhido==="Sim"),...canvasVest.filter(v=>v.desc&&v.recolhido==="Sim")].length;
-// === RESUMO EXECUTIVO (5 linhas — destaque para leitura rápida) ===
+// === RESUMO DA OCORRÊNCIA UNIFICADO (dourado, com subtítulos) ===
 const cadDesc=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"Sem cadáver";})();
 const instrumentoExec=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"—";})();
-const enderecoCurto=(d.end||"").slice(0,100)+((d.end||"").length>100?"…":"");
 const woundsTotal=wounds.length;
-const achadosExec=`${woundsTotal} lesão(ões) documentada(s); ${vestTotal} vestígio(s)${vestRecolhidos?` (${vestRecolhidos} recolhido${vestRecolhidos>1?"s":""})`:""}; ${(fotos||[]).length} fotografia(s)`;
-h+=`<div style="border:2px solid #C9A961;border-radius:6px;padding:0;margin:0 0 16px;background:linear-gradient(180deg,#FFF8E8 0%,#FFFCEF 100%)">
-<div style="background:#C9A961;color:#fff;padding:6px 14px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-align:center;text-transform:uppercase"><AppIcon name="⚖️" size={14} mr={4}/>Resumo Executivo</div>
+const agenteLblP=d.ag==="Outro"?(d.ag_outro||"—"):(d.ag||"—");
+const papiloLblP=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"—";
+const viaturaLblP=d.vt==="Outra"?(d.vt_outro||"—"):(d.vt||"—");
+const oicLblP=d.oic||"—";
+const tipoLocalLblP=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"—");
+const recursosP=[];
+if(d.drone==="Sim")recursosP.push("Drone");
+if(d.scanner==="Sim")recursosP.push("Scanner 3D");
+if(d.luminol==="Sim")recursosP.push("Luminol");
+if(d.luz_forense==="Sim")recursosP.push("Luz forense");
+const recursosLblP=recursosP.length?recursosP.join(", "):"—";
+const veicsComDataP=veiculos.filter((_,vi)=>d[`v${vi}_tipo`]||d[`v${vi}_placa`]).length;
+const edifsComDataP=edificacoes.filter(e=>e&&(e.tipo||e.material||e.andares||(e.comodos_list&&e.comodos_list.length)||(e.comodos_fato&&e.comodos_fato.length))).length;
+const trilhasComDataP=trilhas.filter(tr=>tr&&(tr.origem||tr.destino||tr.padrao||tr.comprimento||tr.obs)).length;
+// Linha de leitura rápida (TL;DR)
+const tldrPartesP=[];
+tldrPartesP.push(natLbl);
+if(tipoLocalLblP&&tipoLocalLblP!=="—")tldrPartesP.push(`em ${tipoLocalLblP}`);
+if(woundsTotal>0)tldrPartesP.push(`${woundsTotal} lesão${woundsTotal>1?"ões":""} documentada${woundsTotal>1?"s":""}`);
+if(vestTotal>0)tldrPartesP.push(`${vestTotal} vestígio${vestTotal>1?"s":""}${vestRecolhidos?` (${vestRecolhidos} recolhido${vestRecolhidos>1?"s":""})`:""}`);
+const fotosCountP=(fotos||[]).length;
+if(fotosCountP>0)tldrPartesP.push(`${fotosCountP} fotografia${fotosCountP>1?"s":""}`);
+const tldrTextoP=tldrPartesP.join(" · ");
+// Helpers HTML — page-break-inside:avoid em rows; subtítulos com page-break-after:avoid (não ficam órfãos)
+const isPendingValueP=(v)=>{const s=String(v||"").trim().toLowerCase();return s==="a esclarecer"||s==="—"||s==="-"||s==="a ser informado"||s==="a ser descrito";};
+const ROW_GP=(label,val,zebra)=>{if(!val&&val!==0)return"";const fill=zebra?"#FFFCEF":"#FFF8E8";const pending=isPendingValueP(val);const valStyle=pending?"font-style:italic;color:#9A8B6A;":"";return`<tr style="page-break-inside:avoid"><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8;border-bottom:1px solid #E8D9A8">${label}</td><td style="padding:6px 14px;font-size:11.5px;background:${fill};border-bottom:1px solid #E8D9A8;${valStyle}">${esc(String(val))}</td></tr>`;};
+const ROW_GG=(title)=>`<tr style="page-break-inside:avoid;page-break-after:avoid"><td colspan="2" style="padding:7px 14px;font-weight:700;color:#fff;font-size:11.5px;background:#C9A961;letter-spacing:1px;text-transform:uppercase;border-bottom:1.5px solid #B89651">${title}</td></tr>`;
+let resumoZebra=false;
+const rg=(l,v)=>{const out=ROW_GP(l,v,resumoZebra);if(out)resumoZebra=!resumoZebra;return out;};
+const rgg=(t)=>{resumoZebra=false;return ROW_GG(t);};
+h+=`<div style="border:2px solid #C9A961;border-radius:6px;padding:0;margin:0 0 20px;overflow:hidden;page-break-inside:avoid">
+<div style="background:#C9A961;color:#fff;padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:1.2px;text-align:center;text-transform:uppercase">⚖️ Resumo da Ocorrência</div>
+<div style="padding:8px 16px;background:#FFFCEF;font-size:12px;font-style:italic;text-align:center;color:#6B5326;border-bottom:1px solid #E8D9A8">${esc(tldrTextoP)}</div>
 <table style="width:100%;border-collapse:collapse">
-<tr><td style="padding:6px 14px;font-weight:700;color:#1A1A2E;width:25%;font-size:11px;border-bottom:1px solid #E8D9A8">Natureza</td><td style="padding:6px 14px;font-size:11.5px;border-bottom:1px solid #E8D9A8;font-weight:600">${esc(natLbl)} — Oc. ${esc(d.oc||"___")}/${esc(d.oc_ano||"____")} (${esc(d.dp||"___")}ª DP)</td></tr>
-<tr><td style="padding:6px 14px;font-weight:700;color:#1A1A2E;font-size:11px;border-bottom:1px solid #E8D9A8">Vítima(s)</td><td style="padding:6px 14px;font-size:11.5px;border-bottom:1px solid #E8D9A8">${esc(cadDesc)}</td></tr>
-<tr><td style="padding:6px 14px;font-weight:700;color:#1A1A2E;font-size:11px;border-bottom:1px solid #E8D9A8">Instrumento / meio</td><td style="padding:6px 14px;font-size:11.5px;border-bottom:1px solid #E8D9A8">${esc(instrumentoExec)}</td></tr>
-<tr><td style="padding:6px 14px;font-weight:700;color:#1A1A2E;font-size:11px;border-bottom:1px solid #E8D9A8">Local</td><td style="padding:6px 14px;font-size:11.5px;border-bottom:1px solid #E8D9A8">${esc(enderecoCurto||"—")}</td></tr>
-<tr><td style="padding:6px 14px;font-weight:700;color:#1A1A2E;font-size:11px">Principais achados</td><td style="padding:6px 14px;font-size:11.5px">${esc(achadosExec)}</td></tr>
-</table>
-</div>`;
-h+=`<div style="border:1.5px solid ${PRIMARY};border-radius:6px;padding:0;margin:0 0 20px">
-<div style="background:${PRIMARY};color:#fff;padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:0.5px;text-align:center;text-transform:uppercase">Resumo da Ocorrência</div>
-<table style="width:100%;border-collapse:collapse">
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};width:32%;font-size:11px;background:${LIGHT}">Ocorrência / DP</td><td style="padding:6px 14px;font-size:11px">${esc(`${d.oc||"___"}/${d.oc_ano||"____"} — ${d.dp||"___"}ª DP`)}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Natureza</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${esc(natLbl)}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Endereço</td><td style="padding:6px 14px;font-size:11px">${esc(d.end||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">GPS</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${esc(d.gps||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Data da solicitação</td><td style="padding:6px 14px;font-size:11px">${esc(d.dt_sol||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Data do deslocamento</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${esc(d.dt_des||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Data do atendimento</td><td style="padding:6px 14px;font-size:11px">${esc(d.dt_che||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Data da finalização</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${esc(d.dt_ter||"—")}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Perito(s) criminais</td><td style="padding:6px 14px;font-size:11px">${esc(peritoLabel)}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Diagnóstico</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${esc(diagCad)}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Cadáveres</td><td style="padding:6px 14px;font-size:11px">${cadCount}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Vestígios</td><td style="padding:5px 12px;font-size:11px;background:${ZEBRA}">${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}</td></tr>
-<tr><td style="padding:5px 12px;font-weight:600;color:${PRIMARY};font-size:11px;background:${LIGHT}">Fotografias</td><td style="padding:6px 14px;font-size:11px">${(fotos||[]).length}</td></tr>
+${rgg("Identificação")}
+${rg("Ocorrência / DP",`${d.oc||"___"}/${d.oc_ano||"____"} — ${d.dp||"___"}`)}
+${rg("Natureza",natLbl)}
+${rg("Vítima(s)",cadDesc)}
+${rg("Instrumento / meio",instrumentoExec)}
+${rg("Exame Externo",oicLblP)}
+${rgg("Local")}
+${rg("Endereço",d.end||"—")}
+${rg("GPS",d.gps||"—")}
+${rg("Tipo do local",tipoLocalLblP)}
+${rgg("Datas")}
+${rg("Data da solicitação",d.dt_sol||"—")}
+${rg("Data do deslocamento",d.dt_des||"—")}
+${rg("Data do atendimento",d.dt_che||"—")}
+${rg("Data da finalização",d.dt_ter||"—")}
+${rgg("Equipe")}
+${rg("Perito(s) criminais",peritoLabel)}
+${rg("Agente",agenteLblP)}
+${rg("Papiloscopista",papiloLblP)}
+${rg("Viatura",viaturaLblP)}
+${recursosP.length?rg("Recursos empregados",recursosLblP):""}
+${rgg("Achados")}
+${rg("Diagnóstico",diagCad)}
+${rg("Cadáveres",String(cadCount))}
+${rg("Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`)}
+${woundsTotal>0?rg("Lesões documentadas",String(woundsTotal)):""}
+${edifsComDataP>0?rg("Edificações examinadas",String(edifsComDataP)):""}
+${veicsComDataP>0?rg("Veículos examinados",String(veicsComDataP)):""}
+${trilhasComDataP>0?rg("Trilhas de sangue",String(trilhasComDataP)):""}
+${rg("Fotografias",String((fotos||[]).length))}
 </table>
 </div>`;
 // --- PREÂMBULO ---
