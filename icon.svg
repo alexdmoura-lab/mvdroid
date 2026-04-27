@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <radialGradient id="bg1" cx="50%" cy="40%">
+      <stop offset="0%" stop-color="#1a4a7a"/>
+      <stop offset="100%" stop-color="#0a2540"/>
+    </radialGradient>
+    <linearGradient id="sk1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8f8fa"/>
+      <stop offset="100%" stop-color="#d1d1d6"/>
+    </linearGradient>
+    <linearGradient id="bloodG" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8b0000"/>
+      <stop offset="55%" stop-color="#c01010"/>
+      <stop offset="100%" stop-color="#5a0000"/>
+    </linearGradient>
+    <radialGradient id="bloodHi" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Fundo arredondado -->
+  <rect width="180" height="180" rx="40" fill="url(#bg1)"/>
+  <!-- Caveira centralizada (translate +12 vertical pra centralizar no viewBox) -->
+  <g transform="translate(0, 12)">
+    <!-- Crânio -->
+    <path d="M90 36 C63 36 43 56 43 86 C43 104 50 117 63 124 L63 140 Q63 146 70 146 L74 146 L74 142 C74 139 76 137 79 137 C82 137 84 139 84 142 L84 146 L96 146 L96 142 C96 139 98 137 101 137 C104 137 107 139 107 142 L107 146 L110 146 Q117 146 117 140 L117 124 C130 117 137 104 137 86 C137 56 117 36 90 36 Z"
+      fill="url(#sk1)" stroke="#a1a1a6" stroke-width="1.5"/>
+    <!-- Olhos -->
+    <ellipse cx="70" cy="88" rx="13" ry="14" fill="#0a2540"/>
+    <ellipse cx="110" cy="88" rx="13" ry="14" fill="#0a2540"/>
+    <!-- Brilho dos olhos -->
+    <circle cx="66" cy="84" r="2.2" fill="#5ac8fa"/>
+    <circle cx="106" cy="84" r="2.2" fill="#5ac8fa"/>
+    <!-- Nariz -->
+    <path d="M90 102 L85 116 L90 119 L95 116 Z" fill="#0a2540"/>
+    <!-- Estrias dos dentes -->
+    <path d="M74 138 L74 145 M80 138 L80 145 M86 138 L86 145 M90 138 L90 145 M94 138 L94 145 M100 138 L100 145 M106 138 L106 145"
+      stroke="#a1a1a6" stroke-width="0.6" opacity="0.5"/>
+    <!-- LÁGRIMA DE SANGUE no olho direito (perspectiva do observador = canto inferior esquerdo do crânio) -->
+    <!-- Trilha de sangue escorrendo do olho -->
+    <path d="M70 102 Q68 112 70 124 Q71 132 69 138" stroke="url(#bloodG)" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.85"/>
+    <!-- Gota grande pendurada -->
+    <path d="M69 138 Q63 144 64 152 Q65 158 69 158 Q73 158 74 152 Q75 144 69 138 Z" fill="url(#bloodG)"/>
+    <!-- Brilho da gota (3D) -->
+    <ellipse cx="67" cy="148" rx="1.8" ry="3" fill="url(#bloodHi)" opacity="0.9"/>
+    <!-- Pequena gota satélite escorrendo -->
+    <ellipse cx="71" cy="115" rx="1.4" ry="2.2" fill="url(#bloodG)" opacity="0.7"/>
+  </g>
+</svg>
