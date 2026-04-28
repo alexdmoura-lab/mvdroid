@@ -1,11 +1,11 @@
 // ════════════════════════════════════════════════════════════════
 // MVDroiD — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: mvdroid-v12 (acompanha App v228 — fix layout Desenho)
+// CACHE_VERSION: mvdroid-v14 (acompanha App v230 — REVERT spacer/floors)
 // ════════════════════════════════════════════════════════════════
 // VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos.
-// v228 corrige: aba Desenho com toolbar fora do lugar (sticky quebrado
-// pelo overflow:hidden do Cd_ wrapper, que invalida position:sticky).
-// Solução: removida a sticky — toolbar agora rola normal com a página.
+// v230 reverte os "floors" introduzidos na v225 que infraram artificialmente
+// o spacer (140+env vs 96+env do v220). O resultado correto agora é igual
+// ao layout pré-v225: tabsBar gruda no topBar, conteúdo começa logo abaixo.
 //
 // Estratégia:
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
@@ -19,7 +19,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v12';
+const CACHE_VERSION = 'mvdroid-v14';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
