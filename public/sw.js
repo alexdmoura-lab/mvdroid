@@ -1,12 +1,11 @@
 // ════════════════════════════════════════════════════════════════
 // MVDroiD — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: mvdroid-v10 (acompanha App v226 — limpeza + câmera rajada)
+// CACHE_VERSION: mvdroid-v12 (acompanha App v228 — fix layout Desenho)
 // ════════════════════════════════════════════════════════════════
 // VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos.
-// v226: limpeza de código morto, helper pickFile, touch targets ≥44px,
-// modais com role=dialog/aria-modal, haptic na troca de aba, modal
-// customizado para confirmar Apagar TODOS, e câmera rajada (modo burst)
-// permitindo várias fotos seguidas sem fechar a câmera.
+// v228 corrige: aba Desenho com toolbar fora do lugar (sticky quebrado
+// pelo overflow:hidden do Cd_ wrapper, que invalida position:sticky).
+// Solução: removida a sticky — toolbar agora rola normal com a página.
 //
 // Estratégia:
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
@@ -20,7 +19,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v10';
+const CACHE_VERSION = 'mvdroid-v12';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
