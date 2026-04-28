@@ -1,11 +1,12 @@
 // ════════════════════════════════════════════════════════════════
 // MVDroiD — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: mvdroid-v14 (acompanha App v230 — REVERT spacer/floors)
+// CACHE_VERSION: mvdroid-v15 (acompanha App v231 — fix ZIP fotos + diag)
 // ════════════════════════════════════════════════════════════════
 // VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos.
-// v230 reverte os "floors" introduzidos na v225 que infraram artificialmente
-// o spacer (140+env vs 96+env do v220). O resultado correto agora é igual
-// ao layout pré-v225: tabsBar gruda no topBar, conteúdo começa logo abaixo.
+// v231: corrige bug onde fotos NUNCA eram incluídas no ZIP do "Pacote
+// completo" (propriedade f.data → f.dataUrl), e adiciona rastreamento
+// por estágio: o toast de erro agora informa qual passo falhou (PDF
+// Croqui, PDF RRV, DOCX, JSON Backup, fotos, compactando, share, etc).
 //
 // Estratégia:
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
@@ -19,7 +20,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v14';
+const CACHE_VERSION = 'mvdroid-v15';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
