@@ -1,26 +1,30 @@
 // ════════════════════════════════════════════════════════════════
-// MVDroiD — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: mvdroid-v15 (acompanha App v231 — fix ZIP fotos + diag)
+// Xandroid — Service Worker (Opção A — atualização silenciosa)
+// CACHE_VERSION: xandroid-v1 (acompanha App v232 — rebrand + fix ZIP)
 // ════════════════════════════════════════════════════════════════
-// VERSÃO INCREMENTADA pra forçar invalidação dos caches antigos.
-// v231: corrige bug onde fotos NUNCA eram incluídas no ZIP do "Pacote
-// completo" (propriedade f.data → f.dataUrl), e adiciona rastreamento
-// por estágio: o toast de erro agora informa qual passo falhou (PDF
-// Croqui, PDF RRV, DOCX, JSON Backup, fotos, compactando, share, etc).
+// IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
+// O bloco de activate (mais abaixo) limpa caches antigos com prefixo
+// "mvdroid-" automaticamente, então usuários da versão MVDroiD não
+// ficam com lixo cacheado.
 //
-// Estratégia:
+// v232: rebrand para Xandroid e correções importantes no Pacote ZIP:
+//  - Guard contra cliques duplos em "Compartilhar ZIP" / "Baixar ZIP"
+//    (antes, dois cliques rápidos rodavam em paralelo e travavam)
+//  - Timeout de 60s por PDF (html2pdf às vezes trava em silêncio no iOS)
+//  - Tolerância individual: se o PDF do Croqui ou do RRV falhar, o ZIP
+//    é gerado com o que sobrou (DOCX, JSON, fotos) + aviso no LEIA-ME
+//  - ID único do container temporário (evita colisão entre PDFs)
+//
+// Estratégia (sem mudanças):
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
-//    Isso garante que mudanças cheguem rápido quando você abre o app.
 //  • Assets versionados (.js/.css com hash): cache-first eterno
-//    Vite gera arquivos como index-G7Vibdf1.js — o nome muda quando o conteúdo
-//    muda, então cache-first é seguro e rápido.
 //  • Imagens anatômicas e ícones PWA: cache-first
 //  • Bibliotecas externas (cdnjs): stale-while-revalidate
 //
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'mvdroid-v15';
+const CACHE_VERSION = 'xandroid-v1';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -62,7 +66,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys
-          .filter((k) => k !== CACHE_VERSION && k.startsWith('mvdroid-'))
+          .filter((k) => k !== CACHE_VERSION && (k.startsWith('mvdroid-') || k.startsWith('xandroid-')))
           .map((k) => {
             console.log('[SW] Deletando cache antigo:', k);
             return caches.delete(k);
