@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v2 (acompanha App v233 — fix generateAsync)
+// CACHE_VERSION: xandroid-v3 (acompanha App v234 — bug fixes RRV/DOCX/PDF/ZIP + obs_geral)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -24,7 +24,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v2';
+const CACHE_VERSION = 'xandroid-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
