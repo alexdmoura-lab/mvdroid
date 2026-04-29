@@ -24,7 +24,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v6';
+const CACHE_VERSION = 'xandroid-v7';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -33,7 +33,7 @@ const PRECACHE_URLS = [
   '/icon-180.png',
   '/icon-192.png',
   '/icon-512.png',
-  '/og-preview.png',
+  '/og-preview.jpg',
   // Imagens anatômicas (críticas pro croqui funcionar offline)
   '/img/anatomy/body-front.jpg',
   '/img/anatomy/body-back.jpg',
