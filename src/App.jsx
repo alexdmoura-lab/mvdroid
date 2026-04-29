@@ -49,7 +49,7 @@
 // ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-const APP_VERSION="v232-Xandroid";
+const APP_VERSION="v233-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -1912,7 +1912,7 @@ if(fotos&&fotos.length>0){stage="fotos";showToast(`🖼️ Adicionando ${fotos.l
 // 6) README
 stage="README";const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("pdf","RRV")} — Relatório RRV\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup completo (importável)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n`;zip.file("LEIA-ME.txt",readme);
 // Gerar ZIP final
-stage="compactando";showToast("📦 Compactando…");const zipBlob=await zip.generateAsync({type:"blob"},{level:6});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
+stage="compactando";showToast("📦 Compactando…");const zipBlob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
 // Web Share API se solicitado e disponível
 if(useShare){stage="share";try{const file=new File([zipBlob],zipName,{type:"application/zip"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:`Xandroid ${oc}/${ano}`,text:`Documentação forense — Ocorrência ${oc}/${ano}`});showToast(failures.length?`⚠️ Compartilhado parcial — falhou: ${failures.join(", ")}`:"✅ Compartilhado!");return;}else{showToast("⚠️ Compartilhamento não disponível, baixando…");}}catch(e){if(e.name==="AbortError"){showToast("Compartilhamento cancelado");return;}console.warn("Share falhou:",e);showToast("⚠️ Falhou — baixando arquivo");}}
 // Fallback: download
