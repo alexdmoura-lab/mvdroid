@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════
-// MVDroiD — main.jsx (entry point Vite) — v223
+// Xandroid — main.jsx (entry point Vite) — v232
 // ════════════════════════════════════════════════════════════════
 // Inclui:
 //  1. Shim do window.storage usando IndexedDB
@@ -139,16 +139,16 @@ async function _migrateFromLocalStorage() {
           migrated++;
         }
       } catch (e) {
-        console.warn('[MVDroiD] migração: falha em', k, e);
+        console.warn('[Xandroid] migração: falha em', k, e);
       }
     }
 
     try { localStorage.setItem(MIGRATION_FLAG, '1'); } catch (_) { /* ignore */ }
     if (migrated > 0) {
-      console.log('[MVDroiD] Migrados ' + migrated + ' item(s) de localStorage → IndexedDB');
+      console.log('[Xandroid] Migrados ' + migrated + ' item(s) de localStorage → IndexedDB');
     }
   } catch (e) {
-    console.warn('[MVDroiD] Erro na migração localStorage→IDB:', e);
+    console.warn('[Xandroid] Erro na migração localStorage→IDB:', e);
   }
   return { migrated };
 }
@@ -167,15 +167,15 @@ async function _requestPersistence() {
     if (typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.persist === 'function') {
       const already = navigator.storage.persisted ? await navigator.storage.persisted() : false;
       if (already) {
-        console.log('[MVDroiD] Storage já está persistente');
+        console.log('[Xandroid] Storage já está persistente');
         return true;
       }
       const granted = await navigator.storage.persist();
-      console.log('[MVDroiD] navigator.storage.persist() →', granted ? 'concedido' : 'negado');
+      console.log('[Xandroid] navigator.storage.persist() →', granted ? 'concedido' : 'negado');
       return granted;
     }
   } catch (e) {
-    console.warn('[MVDroiD] persist() falhou:', e);
+    console.warn('[Xandroid] persist() falhou:', e);
   }
   return false;
 }
@@ -262,7 +262,7 @@ if (typeof window !== 'undefined' && !window.storage) {
       return null;
     }
   };
-  console.log('[MVDroiD] window.storage shim ativado (modo IndexedDB)');
+  console.log('[Xandroid] window.storage shim ativado (modo IndexedDB)');
 }
 
 // ───────── RENDER ─────────
@@ -304,7 +304,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     if (typeof window !== 'undefined' && window.__mvdroidIsSaving) return;
     const idleFor = Date.now() - lastUserActivity;
     if (idleFor >= IDLE_THRESHOLD_MS || document.visibilityState === 'hidden') {
-      console.log('[MVDroiD] Aplicando atualização silenciosa...');
+      console.log('[Xandroid] Aplicando atualização silenciosa...');
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
   };
@@ -322,15 +322,15 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
-        console.log('[MVDroiD] SW registrado:', reg.scope);
+        console.log('[Xandroid] SW registrado:', reg.scope);
 
         // Verifica atualização imediatamente ao abrir
-        reg.update().catch((e) => console.warn('[MVDroiD] SW update check:', e));
+        reg.update().catch((e) => console.warn('[Xandroid] SW update check:', e));
 
         // Verifica novamente quando o app volta do background
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
-            reg.update().catch((e) => console.warn('[MVDroiD] SW update on visible:', e));
+            reg.update().catch((e) => console.warn('[Xandroid] SW update on visible:', e));
           }
         });
 
@@ -338,12 +338,12 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
-          console.log('[MVDroiD] Nova versão detectada, baixando em background...');
+          console.log('[Xandroid] Nova versão detectada, baixando em background...');
 
           newWorker.addEventListener('statechange', () => {
             // Quando o novo SW terminou de instalar e está esperando
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[MVDroiD] Nova versão pronta. Aplicando quando o app estiver ocioso.');
+              console.log('[Xandroid] Nova versão pronta. Aplicando quando o app estiver ocioso.');
               waitingWorker = newWorker;
               // Tenta aplicar imediatamente se estiver ocioso
               tryApplyUpdate();
@@ -353,12 +353,12 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 
         // Se já tem worker esperando ao iniciar (versão pendente)
         if (reg.waiting && navigator.serviceWorker.controller) {
-          console.log('[MVDroiD] Versão pendente encontrada. Aplicando quando ocioso.');
+          console.log('[Xandroid] Versão pendente encontrada. Aplicando quando ocioso.');
           waitingWorker = reg.waiting;
           tryApplyUpdate();
         }
       })
-      .catch((err) => console.warn('[MVDroiD] SW registro falhou:', err));
+      .catch((err) => console.warn('[Xandroid] SW registro falhou:', err));
 
     // Quando o controller muda (atualização aplicada), recarrega a página
     // v223: se houver save em andamento, espera terminar antes de recarregar
@@ -375,9 +375,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
           return;
         }
         if (window.__mvdroidIsSaving) {
-          console.warn('[MVDroiD] Reload forçado: save passou de 10s sem terminar');
+          console.warn('[Xandroid] Reload forçado: save passou de 10s sem terminar');
         }
-        console.log('[MVDroiD] Recarregando para usar nova versão...');
+        console.log('[Xandroid] Recarregando para usar nova versão...');
         window.location.reload();
       };
       safeReload();
