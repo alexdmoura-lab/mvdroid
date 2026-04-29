@@ -36,6 +36,13 @@
     # Força HTTPS por 1 ano (HSTS — strict transport security)
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
+    # Content-Security-Policy — lista quais origens o app pode usar
+    # (defesa extra contra XSS e injeção de código). Como agora as bibliotecas
+    # estão no bundle local, não precisamos mais permitir CDN externo.
+    # 'unsafe-inline' é necessário pros estilos inline gerados pelo React
+    # e pelos templates de PDF. data: e blob: são pra fotos/PDFs gerados.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
 
 # ───────── CACHE LONGO PRA IMAGENS ─────────
 # Imagens raramente mudam — cacheia por 1 ano.

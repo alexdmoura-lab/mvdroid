@@ -49,7 +49,9 @@
 // ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-const APP_VERSION="v234-Xandroid";
+import html2pdf from "html2pdf.js";
+import JSZip from "jszip";
+const APP_VERSION="v235-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -940,11 +942,17 @@ setVeiVest(safeArr(bd.veiVest,[]));
 setCanvasVest(fillDefaults(safeArr(bd.canvasVest,[]),VEST_DEF));
 setCadaveres(fillDefaults(safeArr(bd.cadaveres,[{id:1,label:"Cadáver 1"}],c=>c.id!==null),CADAVER_DEF));
 setVeiculos(fillDefaults(safeArr(bd.veiculos,[{id:1,label:"Veículo 1"}],c=>c.id!==null),VEICULO_DEF));
-if(bd.desenho){if(typeof bd.desenho==="string")imgRef.current={0:bd.desenho};else if(typeof bd.desenho==="object"&&bd.desenho!==null)imgRef.current=bd.desenho;else imgRef.current={};}else{imgRef.current={};}
+// v235: valida desenhos — só aceita strings que sejam data:image/* ou blob:
+// (mesmo motivo da validação de fotos abaixo).
+const isSafeDrawing=(u)=>typeof u==="string"&&(/^data:image\//i.test(u)||/^blob:/i.test(u));
+if(bd.desenho){if(typeof bd.desenho==="string"){imgRef.current=isSafeDrawing(bd.desenho)?{0:bd.desenho}:{};}else if(typeof bd.desenho==="object"&&bd.desenho!==null){const safe={};for(const k of Object.keys(bd.desenho)){if(isSafeDrawing(bd.desenho[k]))safe[k]=bd.desenho[k];}imgRef.current=safe;}else{imgRef.current={};}}else{imgRef.current={};}
 setDesenhos(fillDefaults(safeArr(bd.desenhos,[{id:1,label:"Croqui 1"}],d=>d.id!==null),DESENHO_DEF));
 setPpm(typeof bd.ppm==="number"&&bd.ppm>0?bd.ppm:40);
 setStampObjs(safeArr(bd.stampObjs,[]));
-setFotos(safeArr(bd.fotos,[],f=>typeof f.dataUrl==="string"));
+// v235: valida URL da foto — só aceita data:image/* ou blob: pra impedir
+// que backup malicioso injete javascript: ou esquemas estranhos.
+const isSafeImgUrl=(u)=>typeof u==="string"&&(/^data:image\//i.test(u)||/^blob:/i.test(u));
+setFotos(safeArr(bd.fotos,[],f=>isSafeImgUrl(f.dataUrl)));
 setTrilhas(fillDefaults(safeArr(bd.trilhas,[]),TRILHA_DEF));
 setResetKey(k=>k+1);
 }catch(err){console.error("CQ applyBackup:",err);showToast("❌ Erro ao restaurar: "+String(err.message||err).slice(0,50));}};
@@ -1424,15 +1432,15 @@ setStampObjs(so=>so.filter(s2=>s2.sheet!==desenhoIdx));setSelStamp(null);};
 
 // Export
 const pCSS=`@page{size:A4;margin:25mm 15mm 20mm 15mm}@page{@bottom-center{content:"Croqui de Levantamento de Local — pág. " counter(page) " de " counter(pages) " — SCPe/IC/DPT/PCDF";font-size:9px;color:#666;font-family:Arial,Helvetica,sans-serif}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body,html{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1A1A1A;line-height:1.55;padding:15px;margin:0}table{width:100%;border-collapse:collapse}td,th{line-height:1.5}img{max-width:100%}h2,h3,h4,h5,h6{font-family:Arial,Helvetica,sans-serif}`;
-// Cache de biblioteca em localStorage para uso offline (com TTL de 30 dias)
-const LIB_CACHE_TTL=30*24*60*60*1000;
-// v232: validações extras — se cache retornou um Object onde devia ser função,
-// invalida cache e recarrega. Sintoma típico: "o is not a function".
-const loadCachedScript=async(name,url,globalName,expectFn=true)=>{const checkOk=(v)=>v&&(!expectFn||typeof v==="function");if(checkOk(window[globalName]))return window[globalName];if(window[globalName]&&!checkOk(window[globalName])){console.warn("[Xandroid] "+globalName+" carregado mas tipo errado, invalidando…");try{delete window[globalName];}catch(_){window[globalName]=undefined;}}const cacheKey="cq_lib_"+name;// 1) Tenta cache local
-try{const raw=localStorage.getItem(cacheKey);if(raw){const{ts,code}=JSON.parse(raw);if(Date.now()-ts<LIB_CACHE_TTL&&code){const sc=document.createElement("script");sc.textContent=code;document.head.appendChild(sc);if(checkOk(window[globalName]))return window[globalName];console.warn("[Xandroid] cache de "+name+" produziu "+typeof window[globalName]+", apagando cache");try{localStorage.removeItem(cacheKey);}catch(_){}try{delete window[globalName];}catch(_){window[globalName]=undefined;}}}}catch(e){console.warn("CQ lib cache read:",e);}// 2) Tenta baixar via fetch (para conseguir cachear)
-try{const r=await fetch(url);if(r.ok){const code=await r.text();try{localStorage.setItem(cacheKey,JSON.stringify({ts:Date.now(),code}));}catch(e){console.warn("CQ lib cache write:",e);}const sc=document.createElement("script");sc.textContent=code;document.head.appendChild(sc);if(checkOk(window[globalName]))return window[globalName];}}catch(e){console.warn("CQ lib fetch falhou (CORS?):",e);}// 3) Fallback: <script src> tradicional (sem cache, mas funciona com CORS restritivo)
-return new Promise((res,rej)=>{const sc=document.createElement("script");sc.src=url;sc.onload=()=>{if(checkOk(window[globalName]))res(window[globalName]);else rej(new Error(globalName+" carregou como "+typeof window[globalName]+", esperado função"));};sc.onerror=()=>rej(new Error("Sem rede e sem cache de "+name));document.head.appendChild(sc);});};
-const loadH2P=()=>loadCachedScript("html2pdf","https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js","html2pdf");
+// v235: bibliotecas (html2pdf, JSZip) agora vêm do bundle local via import,
+// não mais via fetch a CDN com cache em localStorage. Vantagens:
+//  • Sem risco de cdnjs comprometido executar código no app forense
+//  • Sem cache de 30 dias em localStorage que poderia perpetuar comprometimento
+//  • Funciona offline desde a primeira carga (sem precisar baixar de rede)
+//  • CSP mais restritiva (script-src 'self') passa a ser viável
+// Mantemos as funções loadH2P/loadJSZip como wrappers async para preservar
+// a assinatura usada no resto do código (await loadH2P()).
+const loadH2P=async()=>html2pdf;
   // ──────────────────────────────────────────
   // MAPA — Abre Google Maps + sobe screenshot como base do canvas
   // ──────────────────────────────────────────
@@ -1489,7 +1497,7 @@ const savePDF=async(title)=>{
 // R6: PDFs com muitas fotos podem travar iOS Safari (OOM). Avisa e dá saída.
 if(fotos.length>50){const ok=window.confirm(`⚠️ Atenção: este croqui tem ${fotos.length} fotos.\n\nGerar PDF com mais de 50 fotos pode:\n• Travar o navegador (iOS especialmente)\n• Demorar 1-2 minutos\n• Gerar arquivo > 50MB\n\nAlternativa recomendada: baixe DOCX (mais leve) e fotos pelo backup JSON.\n\nContinuar mesmo assim?`);if(!ok){setCopyOk("Cancelado — use DOCX para muitas fotos.");setTimeout(()=>setCopyOk(""),4000);return;}}
 setPdfBusy(true);setCopyOk("Gerando PDF…");if(pdfDataUrl)try{URL.revokeObjectURL(pdfDataUrl);}catch(e){console.warn("CQ:",e);}setPdfDataUrl(null);try{const html2pdf=await loadH2P();const el=document.getElementById("pdf-preview");if(!el)throw new Error("Preview não encontrado");const pdfObj=await html2pdf().set({margin:[14,8,14,8],filename:mkFileName("pdf",title==="RRV"?"RRV":"Croqui"),image:{type:"jpeg",quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["avoid-all","css","legacy"]}}).from(el).toPdf().get("pdf");const totalPages=pdfObj.internal.getNumberOfPages();const pageW=pdfObj.internal.pageSize.getWidth();const pageH=pdfObj.internal.pageSize.getHeight();for(let i=1;i<=totalPages;i++){pdfObj.setPage(i);pdfObj.setFontSize(7);pdfObj.setTextColor(150);pdfObj.text(`Oc.: ${data.oc||"___"}/${data.oc_ano||""} | DP: ${data.dp||""} | Perito: ${data.p1||"___"}`,pageW/2,8,{align:"center"});pdfObj.text(`Página ${i} de ${totalPages}`,pageW/2,pageH-5,{align:"center"});}const blob=pdfObj.output("blob");const blobUrl=URL.createObjectURL(blob);setPdfDataUrl(blobUrl);setCopyOk("PDF gerado! Toque no link abaixo para baixar.");}catch(e){setCopyOk("Erro: "+e.message);setTimeout(()=>setCopyOk(""),6000);}finally{setPdfBusy(false);}};
-const loadJSZip=()=>loadCachedScript("jszip","https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js","JSZip");
+const loadJSZip=async()=>JSZip;
 const X=(s)=>{if(!s)return"";const v=Array.isArray(s)?s.join(", "):String(s);return v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
 const saveCroquiDocx=async(returnBlobOnly=false)=>{
   /* v201: forceSaveCanvas pode falhar (canvas vazio/quebrado) — não pode bloquear o DOCX */
