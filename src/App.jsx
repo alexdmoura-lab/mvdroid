@@ -49,7 +49,7 @@
 // ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-const APP_VERSION="v233-Xandroid";
+const APP_VERSION="v234-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -772,7 +772,7 @@ const s=useCallback((k,v)=>setData(p=>({...p,[k]:v})),[]);const dataRef=useRef(d
   // ──────────────────────────────────────────
   // UTILITÁRIOS — Toast de notificação
   // ──────────────────────────────────────────
-const[backupStatus,setBackupStatus]=useState("");const[showConfirmNovo,setShowConfirmNovo]=useState(false);const[showConfirmRecup,setShowConfirmRecup]=useState(false);const[recupData,setRecupData]=useState(null);const[showTemplatePicker,setShowTemplatePicker]=useState(false);const[showLocalPicker,setShowLocalPicker]=useState(false);const[pendingTemplateId,setPendingTemplateId]=useState(null);const[showCameraHelp,setShowCameraHelp]=useState(false);const[cameraCancelCount,setCameraCancelCount]=useState(0);const[showConfirmDeleteAll,setShowConfirmDeleteAll]=useState(false);const[deleteAllInput,setDeleteAllInput]=useState("");const[burstCtx,setBurstCtx]=useState(null);const[showDiag,setShowDiag]=useState(false);
+const[backupStatus,setBackupStatus]=useState("");const[showConfirmNovo,setShowConfirmNovo]=useState(false);const[showConfirmRecup,setShowConfirmRecup]=useState(false);const[recupData,setRecupData]=useState(null);const[showTemplatePicker,setShowTemplatePicker]=useState(false);const[showLocalPicker,setShowLocalPicker]=useState(false);const[pendingTemplateId,setPendingTemplateId]=useState(null);const[showCameraHelp,setShowCameraHelp]=useState(false);const[cameraCancelCount,setCameraCancelCount]=useState(0);const[showConfirmDeleteAll,setShowConfirmDeleteAll]=useState(false);const[deleteAllInput,setDeleteAllInput]=useState("");const[burstCtx,setBurstCtx]=useState(null);const[showDiag,setShowDiag]=useState(false);const[zipProgress,setZipProgress]=useState(null);
 // Templates personalizados do perito (salvos por matrícula)
 const[customTemplates,setCustomTemplates]=useState([]);
 const[showSaveTemplate,setShowSaveTemplate]=useState(false);
@@ -1554,59 +1554,69 @@ const cadCount=cadaveres.filter((_,ci)=>d[`c${ci}_fx`]||d[`c${ci}_dg`]||d[`c${ci
 const vestTotal=vestigios.filter(v=>v.desc).length+canvasVest.filter(v=>v.desc).length;
 const vestRecolhidos=[...vestigios.filter(v=>v.desc&&v.recolhido==="Sim"),...canvasVest.filter(v=>v.desc&&v.recolhido==="Sim")].length;
 // === RESUMO EXECUTIVO (DOCX) ===
-const cadDescDx=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"Sem cadáver";})();
-const instrumentoExecDx=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"—";})();
+// v234: valores vazios retornam "" em vez de placeholders ("Sem cadáver", "—", etc).
+// A função keepRow() mais abaixo filtra linhas vazias antes de gerar a tabela.
+const cadDescDx=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"";})();
+const instrumentoExecDx=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"";})();
 const woundsTotalDx=wounds.length;
-const agenteLbl=d.ag==="Outro"?(d.ag_outro||"—"):(d.ag||"—");
-const papiloLbl=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"—";
-const viaturaLbl=d.vt==="Outra"?(d.vt_outro||"—"):(d.vt||"—");
-const oicLbl=d.oic||"—";
+const agenteLbl=d.ag==="Outro"?(d.ag_outro||""):(d.ag||"");
+const papiloLbl=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"";
+const viaturaLbl=d.vt==="Outra"?(d.vt_outro||""):(d.vt||"");
+const oicLbl=d.oic||"";
 // Tipo do local (d.tp é array de strings)
-const tipoLocalLbl=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"—");
+const tipoLocalLbl=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"");
 // Recursos empregados (só os marcados "Sim")
 const recursos=[];
 if(d.drone==="Sim")recursos.push("Drone");
 if(d.scanner==="Sim")recursos.push("Scanner 3D");
 if(d.luminol==="Sim")recursos.push("Luminol");
 if(d.luz_forense==="Sim")recursos.push("Luz forense");
-const recursosLbl=recursos.length?recursos.join(", "):"—";
+const recursosLbl=recursos.length?recursos.join(", "):"";
 // Contadores
 const veicsComDataResumo=veiculos.filter((_,vi)=>d[`v${vi}_tipo`]||d[`v${vi}_placa`]).length;
 const edifsComData=edificacoes.filter(e=>e&&(e.tipo||e.material||e.andares||(e.comodos_list&&e.comodos_list.length)||(e.comodos_fato&&e.comodos_fato.length))).length;
 const trilhasComData=trilhas.filter(tr=>tr&&(tr.origem||tr.destino||tr.padrao||tr.comprimento||tr.obs)).length;
 // Construir array da tabela com grupos
-const resumoRows=[
+// v234: regra estrita — linha só aparece se tiver conteúdo útil.
+// Função 'kr' (keepRow): retorna [label,val] se val tem conteúdo, senão null.
+// Numéricos só aparecem se > 0.
+const kr=(label,val)=>{if(val===null||val===undefined||val==="")return null;const s=String(val).trim();if(!s||s==="—"||s==="0"||s==="0 total")return null;return [label,val];};
+const krNum=(label,n)=>(n>0?[label,String(n)]:null);
+const resumoRowsRaw=[
   {group:"Identificação"},
-  ["Ocorrência / DP",`${oc}/${ano} — ${dp}`],
-  ["Natureza",natLbl],
-  ["Vítima(s)",cadDescDx],
-  ["Instrumento / meio",instrumentoExecDx],
-  ["Exame Externo",oicLbl],
+  kr("Ocorrência / DP",(d.oc||d.ano||d.dp)?`${oc}/${ano} — ${dp}`:""),
+  kr("Natureza",natLbl),
+  kr("Vítima(s)",cadDescDx),
+  kr("Instrumento / meio",instrumentoExecDx),
+  kr("Exame Externo",oicLbl),
   {group:"Local"},
-  ["Endereço",d.end||"—"],
-  ["GPS",d.gps||"—"],
-  ["Tipo do local",tipoLocalLbl],
+  kr("Endereço",d.end),
+  kr("GPS",d.gps),
+  kr("Tipo do local",tipoLocalLbl),
   {group:"Datas"},
-  ["Data da solicitação",d.dt_sol||"—"],
-  ["Data do deslocamento",d.dt_des||"—"],
-  ["Data do atendimento",d.dt_che||"—"],
-  ["Data da finalização",d.dt_ter||"—"],
+  kr("Data da solicitação",d.dt_sol),
+  kr("Data do deslocamento",d.dt_des),
+  kr("Data do atendimento",d.dt_che),
+  kr("Data da finalização",d.dt_ter),
   {group:"Equipe"},
-  ["Perito(s) criminais",peritoLabel],
-  ["Agente",agenteLbl],
-  ["Papiloscopista",papiloLbl],
-  ["Viatura",viaturaLbl],
+  kr("Perito(s) criminais",peritoLabel),
+  kr("Agente",agenteLbl),
+  kr("Papiloscopista",papiloLbl),
+  kr("Viatura",viaturaLbl),
   recursos.length?["Recursos empregados",recursosLbl]:null,
   {group:"Achados"},
-  ["Diagnóstico",diagCad],
-  ["Cadáveres",String(cadCount)],
-  ["Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`],
-  woundsTotalDx>0?["Lesões documentadas",String(woundsTotalDx)]:null,
-  edifsComData>0?["Edificações examinadas",String(edifsComData)]:null,
-  veicsComDataResumo>0?["Veículos examinados",String(veicsComDataResumo)]:null,
-  trilhasComData>0?["Trilhas de sangue",String(trilhasComData)]:null,
-  ["Fotografias",String((fotos||[]).length)]
+  kr("Diagnóstico",diagCad),
+  krNum("Cadáveres",cadCount),
+  vestTotal>0?["Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`]:null,
+  krNum("Lesões documentadas",woundsTotalDx),
+  krNum("Edificações examinadas",edifsComData),
+  krNum("Veículos examinados",veicsComDataResumo),
+  krNum("Trilhas de sangue",trilhasComData),
+  krNum("Fotografias",(fotos||[]).length)
 ];
+// Remove grupos órfãos (sem nenhuma linha de dado abaixo deles antes do próximo grupo).
+const resumoRows=(()=>{const out=[];for(let i=0;i<resumoRowsRaw.length;i++){const item=resumoRowsRaw[i];if(!item)continue;if(item.group){// Verifica se há ao menos 1 linha de dado entre este grupo e o próximo
+let hasData=false;for(let j=i+1;j<resumoRowsRaw.length;j++){const next=resumoRowsRaw[j];if(!next)continue;if(next.group)break;hasData=true;break;}if(hasData)out.push(item);}else{out.push(item);}}return out;})();
 body+=Pp("⚖️ RESUMO DA OCORRÊNCIA",{bold:true,sz:24,center:true,caps:true,spBef:280,spAft:160,color:"FFFFFF",shd:"C9A961"});
 // Linha de leitura rápida (TL;DR — síntese em 1 linha pra leitura ágil)
 const tldrPartes=[];
@@ -1720,6 +1730,8 @@ if(woundsC.length){body+=Pp(`Foram observadas ${woundsC.length} lesão(ões):`,{
 body+=Pp("Fenômenos cadavéricos:",{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});
 body+=TBL_Z([["Cianose ungueais",d[cx+"cu"]],["Cianose labial",d[cx+"cl"]],["Rigidez mandíbula",d[cx+"rm"]],["Rigidez sup.",d[cx+"rs"]],["Rigidez inf.",d[cx+"ri"]],["Livores",d[cx+"lv"]],["Pos. livores",d[cx+"lp"]],["Compatível",d[cx+"lc"]],["Secr. nasal",d[cx+"sn"]],["Secr. oral",d[cx+"so"]],["Peniana/vaginal",d[cx+"sg"]],["Anal",d[cx+"sa"]],["Mancha verde abd.",d[cx+"mva"]],["Obs fenômenos",d[cx+"obs_peri"]]]);
 if(d[cx+"avancado_decomp"]){body+=Pp("Achados de decomposição avançada",{bold:true,sz:22,spBef:140,spAft:80,color:"A02020"});body+=TBL_Z([(d[cx+"dec_abio"]||[]).length?["Abióticos / transformação",(d[cx+"dec_abio"]||[]).join(", ")]:null,(d[cx+"dec_fauna"]||[]).length?["Fauna cadavérica",(d[cx+"dec_fauna"]||[]).join(", ")]:null,(d[cx+"dec_cons"]||[]).length?["Conservação alternativa",(d[cx+"dec_cons"]||[]).join(", ")]:null,(d[cx+"dec_amb"]||[]).length?["Achados ambientais",(d[cx+"dec_amb"]||[]).join(", ")]:null,d[cx+"dec_obs"]?["Observações",d[cx+"dec_obs"]]:null]);}
+// v234: 4.3.4 Observações gerais (livres)
+if(d[cx+"obs_geral"]){body+=H3_NUM(`${subCadBase}.4`,"Observações gerais");body+=PARA(d[cx+"obs_geral"]);}
 // 4.3.4 Exames de Medicina Legal — removido (informação complementada em laudo cadavérico específico)
 }});
 // ──── 5 CADEIA DE CUSTÓDIA DE VESTÍGIOS ────
@@ -1835,9 +1847,28 @@ zip.file("word/_rels/document.xml.rels",relsXml);
 /* v201: generateAsync sem mimeType (não é opção válida), download mais robusto p/ iOS */
 const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
 if(returnBlobOnly)return blob;
+/* v234: iOS Safari PWA standalone bloqueia <a download> com blob URL silenciosamente.
+   Detecta e usa Web Share API direto nesse caso. */
+const fileName=mkFileName("docx");
+const isStandalonePWA=(typeof navigator!=="undefined"&&navigator.standalone===true)||(typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+if(isStandalonePWA&&isIOS&&navigator.canShare){
+  // PWA iOS: usa share sheet (Files.app, AirDrop, etc)
+  try{
+    const file=new File([blob],fileName,{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    if(navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:`Xandroid — Oc. ${data.oc||"___"}/${(data.oc_ano||"").slice(-2)}`,text:`Croqui DOCX — Ocorrência ${data.oc||"___"}/${data.oc_ano||""}`});
+      showToast("✅ Compartilhado! Use 'Salvar em Arquivos' para salvar.");
+      return;
+    }
+  }catch(e){
+    if(e.name==="AbortError"){showToast("Cancelado");return;}
+    console.warn("Share fallback falhou, tentando download:",e);
+  }
+}
+// Fluxo padrão (browser comum, Android, desktop, navegador iOS não-standalone)
 const url=URL.createObjectURL(blob);
-const a=document.createElement("a");a.href=url;a.download=mkFileName("docx");a.rel="noopener";
-/* iOS Safari ignora `download` em alguns casos — abrir em nova aba também */
+const a=document.createElement("a");a.href=url;a.download=fileName;a.rel="noopener";
 document.body.appendChild(a);a.click();document.body.removeChild(a);
 setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){/* noop */}},10000);
 showToast("✅ Laudo gerado!");
@@ -1885,6 +1916,49 @@ const shareCroquiDocx=async()=>{
     showToast("❌ Erro: "+(e?.message||"falha desconhecida"));
   }
 };
+// v234: Botão "Baixar DOCX" inteligente — em PWA standalone (iOS/Android),
+// o <a download> falha silenciosamente (Safari standalone bloqueia navegação
+// para blob URL). Detecta o ambiente e usa Web Share API automaticamente.
+// Em desktop ou Safari não-standalone, mantém download direto.
+const smartSaveDocx=async()=>{
+  const isStandalone=(()=>{try{return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;}catch(_){return false;}})();
+  const canShareFiles=(()=>{try{return!!(navigator.canShare&&navigator.share);}catch(_){return false;}})();
+  // PWA mobile com Web Share -> usa share (que dá opção de "Salvar em Arquivos")
+  if(isStandalone&&canShareFiles){return shareCroquiDocx();}
+  // Caso contrário: download direto via saveCroquiDocx
+  return saveCroquiDocx();
+};
+// v234: idem para PDF — em PWA standalone iOS o download direto via blob URL
+// também falha. Faz share do blob existente (pdfDataUrl é base64 data URI).
+const smartSavePdf=async(dataUrl,title)=>{
+  if(!dataUrl){showToast("❌ PDF não disponível");return;}
+  const fileName=mkFileName("pdf",title==="RRV"?"RRV":"Croqui");
+  const isStandalone=(()=>{try{return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;}catch(_){return false;}})();
+  const canShareFiles=(()=>{try{return!!(navigator.canShare&&navigator.share);}catch(_){return false;}})();
+  if(isStandalone&&canShareFiles){
+    try{
+      // Converte data URI para Blob -> File
+      const base64=dataUrl.split(",")[1];
+      const bin=atob(base64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+      const blob=new Blob([bytes],{type:"application/pdf"});
+      const file=new File([blob],fileName,{type:"application/pdf"});
+      if(navigator.canShare({files:[file]})){
+        showToast("⏳ Abrindo opções de salvar…");
+        await navigator.share({files:[file],title:`Xandroid — ${title||"PDF"}`,text:`${title||"PDF"} — Oc. ${data.oc||"___"}/${data.oc_ano||""}`});
+        showToast("✅ Compartilhado!");
+        return;
+      }
+    }catch(e){
+      if(e.name==="AbortError"){showToast("Cancelado");return;}
+      console.warn("Share PDF falhou, tentando download:",e);
+    }
+  }
+  // Fallback: download direto
+  const a=document.createElement("a");a.href=dataUrl;a.download=fileName;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+};
 // Helper: gera blob PDF a partir de HTML (reusado por exportAllZip)
 // v232: ID único pra evitar colisão se duas chamadas concorrerem.
 // Timeout opcional (default 60s) — html2pdf pode travar em silêncio em iOS.
@@ -1893,30 +1967,27 @@ const uniqueId="pdf-export-tmp-"+Date.now()+"-"+Math.floor(Math.random()*100000)
 const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssText="position:fixed;top:-99999px;left:-99999px;width:800px;padding:24px 20px;color:#222;font-size:12px;line-height:1.5;background:#fff;font-family:-apple-system,Arial,sans-serif;";tempEl.innerHTML=html;document.body.appendChild(tempEl);try{const work=html2pdf().set({margin:[14,8,14,8],filename:mkFileName("pdf",title==="RRV"?"RRV":"Croqui"),image:{type:"jpeg",quality:0.95},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["avoid-all","css","legacy"]}}).from(tempEl).toPdf().get("pdf");const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout "+(timeoutMs/1000)+"s gerando "+title+" (html2pdf travou)")),timeoutMs));const pdfObj=await Promise.race([work,timer]);const totalPages=pdfObj.internal.getNumberOfPages();const pageW=pdfObj.internal.pageSize.getWidth();const pageH=pdfObj.internal.pageSize.getHeight();for(let i=1;i<=totalPages;i++){pdfObj.setPage(i);pdfObj.setFontSize(7);pdfObj.setTextColor(150);pdfObj.text(`Oc.: ${data.oc||"___"}/${data.oc_ano||""} | DP: ${data.dp||""} | Perito: ${data.p1||"___"}`,pageW/2,8,{align:"center"});pdfObj.text(`Página ${i} de ${totalPages}`,pageW/2,pageH-5,{align:"center"});}return pdfObj.output("blob");}finally{try{document.body.removeChild(tempEl);}catch(e){}}};
 
 // Exportar TUDO em ZIP + Web Share API
-// v232: blindado contra cliques múltiplos (exportingZipRef) e tolerante a
-// falhas individuais — se PDF Croqui ou RRV falhar (timeout, html2pdf travado,
-// etc.), o ZIP segue com o resto. Sem isso, um PDF travado matava o pacote
-// inteiro e o usuário ficava sem nada (e sem feedback claro).
-const exportAllZip=async(useShare=false)=>{if(exportingZipRef.current){showToast("⏳ Já está gerando — aguarde");haptic("warning");return;}exportingZipRef.current=true;let stage="iniciando";const failures=[];try{stage="prep";forceSaveCanvas();haptic("medium");showToast("⏳ Gerando arquivos…");stage="JSZip";const JSZip=await loadJSZip();const zip=new JSZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp||"___";const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
+// v234: modal de progresso visível durante toda a geração do ZIP.
+// Cada etapa atualiza setZipProgress({pct, stage, detail}) — UI separada renderiza modal cheio.
+const exportAllZip=async(useShare=false)=>{if(exportingZipRef.current){showToast("⏳ Já está gerando — aguarde");haptic("warning");return;}exportingZipRef.current=true;let stage="iniciando";const failures=[];const upd=(pct,st,detail)=>{stage=st;setZipProgress({pct,stage:st,detail:detail||""});};try{upd(2,"Preparando","Salvando canvas…");forceSaveCanvas();haptic("medium");upd(5,"Carregando bibliotecas","JSZip…");const JSZip=await loadJSZip();const zip=new JSZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp||"___";const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
 // 1) PDF Croqui (tolerante a falha)
-stage="PDF Croqui";showToast("📑 Gerando Croqui PDF…");try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",60000);zip.file(mkFileName("pdf","Croqui"),croquiBlob);}catch(e){console.error("[ZIP] Croqui PDF falhou:",e);failures.push("Croqui PDF");}
+upd(15,"Gerando Croqui PDF","Convertendo para PDF…");try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",60000);zip.file(mkFileName("pdf","Croqui"),croquiBlob);}catch(e){console.error("[ZIP] Croqui PDF falhou:",e);failures.push("Croqui PDF");}
 // 2) PDF RRV (tolerante a falha)
-stage="PDF RRV";showToast("📋 Gerando RRV…");try{const rrvBlob=await genPdfBlobFromHtml(bRRV(),"RRV",60000);zip.file(mkFileName("pdf","RRV"),rrvBlob);}catch(e){console.error("[ZIP] RRV PDF falhou:",e);failures.push("RRV PDF");}
+upd(35,"Gerando RRV PDF","Convertendo para PDF…");try{const rrvBlob=await genPdfBlobFromHtml(bRRV(),"RRV",60000);zip.file(mkFileName("pdf","RRV"),rrvBlob);}catch(e){console.error("[ZIP] RRV PDF falhou:",e);failures.push("RRV PDF");}
 // 3) DOCX (tolerante a falha)
-stage="DOCX";showToast("📄 Gerando DOCX…");try{const docxBlob=await saveCroquiDocx(true);if(docxBlob)zip.file(mkFileName("docx"),docxBlob);}catch(e){console.warn("DOCX falhou, continuando sem:",e);failures.push("DOCX");}
-// 4) JSON Backup (essencial — se isso falhar é problema sério)
-stage="JSON Backup";showToast("💾 Empacotando backup…");const backupObj={_v:APP_VERSION,dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};zip.file(mkFileName("json","Backup"),JSON.stringify(backupObj,null,2));
-// 5) Fotos individuais — todas na pasta /fotos/ (estrutura plana)
-// v231: fix — propriedade é f.dataUrl, não f.data (era bug silencioso, fotos nunca entravam no ZIP)
-if(fotos&&fotos.length>0){stage="fotos";showToast(`🖼️ Adicionando ${fotos.length} foto(s)…`);const fotosFolder=zip.folder("fotos");const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);for(let i=0;i<fotos.length;i++){const f=fotos[i];if(!f.dataUrl)continue;try{const m=f.dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);if(!m)continue;const seq=String(i+1).padStart(3,"0");const cat=tabToCat[fotoTab(f.ref)]||"outros";const fase=faseToShort[f.fase]||"sem_fase";const refSan=sanit(f.ref||"foto");const localShort=sanit(f.local||"");const descShort=sanit((f.desc||"").slice(0,30));const ctx=localShort||descShort;const nameParts=[seq,cat,fase,refSan,ctx].filter(Boolean);const safeName=nameParts.join("_")+".jpg";fotosFolder.file(safeName,m[1],{base64:true});}catch(e){console.warn("Foto skip:",e);}}}
+upd(55,"Gerando DOCX","Montando documento Word…");try{const docxBlob=await saveCroquiDocx(true);if(docxBlob)zip.file(mkFileName("docx"),docxBlob);}catch(e){console.warn("DOCX falhou, continuando sem:",e);failures.push("DOCX");}
+// 4) JSON Backup
+upd(70,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};zip.file(mkFileName("json","Backup"),JSON.stringify(backupObj,null,2));
+// 5) Fotos individuais
+if(fotos&&fotos.length>0){upd(75,"Adicionando fotos",`${fotos.length} foto(s)…`);const fotosFolder=zip.folder("fotos");const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);for(let i=0;i<fotos.length;i++){const f=fotos[i];if(!f.dataUrl)continue;try{const m=f.dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);if(!m)continue;const seq=String(i+1).padStart(3,"0");const cat=tabToCat[fotoTab(f.ref)]||"outros";const fase=faseToShort[f.fase]||"sem_fase";const refSan=sanit(f.ref||"foto");const localShort=sanit(f.local||"");const descShort=sanit((f.desc||"").slice(0,30));const ctx=localShort||descShort;const nameParts=[seq,cat,fase,refSan,ctx].filter(Boolean);const safeName=nameParts.join("_")+".jpg";fotosFolder.file(safeName,m[1],{base64:true});if(i%5===0)upd(75+Math.round((i/fotos.length)*10),"Adicionando fotos",`${i+1}/${fotos.length}`);}catch(e){console.warn("Foto skip:",e);}}}
 // 6) README
-stage="README";const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("pdf","RRV")} — Relatório RRV\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup completo (importável)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n`;zip.file("LEIA-ME.txt",readme);
-// Gerar ZIP final
-stage="compactando";showToast("📦 Compactando…");const zipBlob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
-// Web Share API se solicitado e disponível
-if(useShare){stage="share";try{const file=new File([zipBlob],zipName,{type:"application/zip"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:`Xandroid ${oc}/${ano}`,text:`Documentação forense — Ocorrência ${oc}/${ano}`});showToast(failures.length?`⚠️ Compartilhado parcial — falhou: ${failures.join(", ")}`:"✅ Compartilhado!");return;}else{showToast("⚠️ Compartilhamento não disponível, baixando…");}}catch(e){if(e.name==="AbortError"){showToast("Compartilhamento cancelado");return;}console.warn("Share falhou:",e);showToast("⚠️ Falhou — baixando arquivo");}}
+upd(86,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("pdf","RRV")} — Relatório RRV\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup completo (importável)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n`;zip.file("LEIA-ME.txt",readme);
+// Gerar ZIP final — generateAsync com onUpdate cobre 88-95%
+upd(88,"Compactando","Comprimindo arquivos…");const zipBlob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}},(meta)=>{if(meta&&typeof meta.percent==="number"){const pct=88+Math.round((meta.percent/100)*7);setZipProgress(p=>p?{...p,pct,detail:`${Math.round(meta.percent)}%`}:p);}});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
+// Web Share API
+if(useShare){upd(96,"Compartilhando","Abrindo opções…");try{const file=new File([zipBlob],zipName,{type:"application/zip"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:`Xandroid ${oc}/${ano}`,text:`Documentação forense — Ocorrência ${oc}/${ano}`});upd(100,"Concluído",failures.length?`Parcial — falhou: ${failures.join(", ")}`:"Compartilhado!");showToast(failures.length?`⚠️ Compartilhado parcial — falhou: ${failures.join(", ")}`:"✅ Compartilhado!");return;}else{showToast("⚠️ Compartilhamento não disponível, baixando…");}}catch(e){if(e.name==="AbortError"){upd(100,"Cancelado","");showToast("Compartilhamento cancelado");return;}console.warn("Share falhou:",e);showToast("⚠️ Falhou — baixando arquivo");}}
 // Fallback: download
-stage="download";const url=URL.createObjectURL(zipBlob);const a=document.createElement("a");a.href=url;a.download=zipName;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),8000);showToast(failures.length?`⚠️ ZIP gerado parcial (faltou: ${failures.join(", ")})`:`✅ ZIP gerado (${(zipBlob.size/1024/1024).toFixed(1)} MB)`);haptic(failures.length?"warning":"success");}catch(e){console.error("[ZIP] Erro fatal no estágio '"+stage+"':",e);console.error("[ZIP] Stack:",e&&e.stack);showToast("❌ "+stage+": "+(e&&e.message?e.message:String(e)).slice(0,60));haptic("error");}finally{exportingZipRef.current=false;}};
+upd(98,"Baixando","Iniciando download…");const url=URL.createObjectURL(zipBlob);const a=document.createElement("a");a.href=url;a.download=zipName;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),8000);upd(100,"Concluído",`${(zipBlob.size/1024/1024).toFixed(1)} MB`);showToast(failures.length?`⚠️ ZIP gerado parcial (faltou: ${failures.join(", ")})`:`✅ ZIP gerado (${(zipBlob.size/1024/1024).toFixed(1)} MB)`);haptic(failures.length?"warning":"success");}catch(e){console.error("[ZIP] Erro fatal no estágio '"+stage+"':",e);console.error("[ZIP] Stack:",e&&e.stack);setZipProgress({pct:0,stage:"❌ Erro em "+stage,detail:(e&&e.message?e.message:String(e)).slice(0,80),error:true});showToast("❌ "+stage+": "+(e&&e.message?e.message:String(e)).slice(0,60));haptic("error");}finally{exportingZipRef.current=false;setTimeout(()=>setZipProgress(null),2500);}};
 
 const copyHTML=(html,title)=>{const full=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${pCSS}</style></head><body>${html}</body></html>`;const fb=(t2)=>{const ta=document.createElement("textarea");ta.value=t2;ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");setCopyOk("HTML copiado!");}catch(e2){setCopyOk("Erro ao copiar.");}document.body.removeChild(ta);setTimeout(()=>setCopyOk(""),5000);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(full).then(()=>{setCopyOk("HTML copiado!");setTimeout(()=>setCopyOk(""),5000);}).catch(()=>fb(full));}else{fb(full);}};
   // ──────────────────────────────────────────
@@ -1927,7 +1998,7 @@ const copyHTML=(html,title)=>{const full=`<!DOCTYPE html><html><head><meta chars
 const sum=()=>{const d=data;const ln=(l,v)=>v?(Array.isArray(v)?v.length?`${l}: ${v.join(", ")}\n`:"":v?`${l}: ${v}\n`:""):"";let r="━━━ 1. HISTÓRICO / SOLICITAÇÃO ━━━\n"+ln("Oc.",d.oc)+ln("Ano",d.oc_ano)+ln("DP",d.dp)+ln("Natureza",d.nat==="Outros"&&d.nat_outro?`Outros: ${d.nat_outro}`:d.nat)+ln("Exame Externo",d.oic)+ln("Solicitação",d.dt_sol)+ln("Perito",d.p1?d.p1+(d.mat_p1?" (mat. "+d.mat_p1+")":""):"")+ln("2º Perito",d.p2?d.p2+(d.mat_p2?" (mat. "+d.mat_p2+")":""):"")+ln("Agente",d.ag==="Outro"?d.ag_outro||"Outro":d.ag)+ln("Papilo",d.pp==="Outro"?d.pp_outro||"Outro":d.pp)+ln("Mat. Papilo",d.mat_pp)+ln("Viatura",d.vt==="Outra"?d.vt_outro||"Outra":d.vt)+ln("Obs solicitação",d.obs_sol);r+="\n━━━ 2. ATENDIMENTO ━━━\n"+ln("Deslocamento",d.dt_des)+ln("Chegada",d.dt_che)+ln("Término",d.dt_ter);r+="\n━━━ 2.1 RECURSOS EMPREGADOS ━━━\n"+ln("Drone",d.drone)+ln("Scanner",d.scanner)+ln("Luminol",d.luminol)+ln("Luz forense",d.luz_forense);r+="\n━━━ 3. ISOLAMENTO DO LOCAL E PRESENÇA DE AGENTE ESTATAL ━━━\n"+ln("Isolamento",d.iso)+ln("Preservação",d.pres)+ln("Responsável",d.rp)+ln("Matrícula",d.mt)+ln("Órgão",d.org)+ln("Viatura isol.",d.vr)+ln("Obs",d.obs_i);r+="\n━━━ 4.1 DO LOCAL ━━━\n"+ln("Endereço",d.end)+ln("GPS",d.gps)+ln("Área",d.area)+ln("Destinação",d.dest)+ln("Tipo",tpStr(d.tp))+ln("Via",d.via)+ln("Iluminação",d.ilu)+ln("Ligada",d.ilul);if(tpHas(d.tp,"Via pública")){r+="\n━━━ 4.1.1 VIA PÚBLICA ━━━\n"+ln("Pavimento",d.vp_pav)+ln("Faixas",d.vp_faixas)+ln("Mão",d.vp_mao)+ln("Canteiro central",d.vp_canteiro)+(d.vp_canteiro==="Sim"?ln("Tipo canteiro",d.vp_canteiro_tipo):"")+ln("Meio-fio",d.vp_meiofio)+ln("Calçada",d.vp_calcada)+ln("Trânsito",d.vp_transito)+ln("Frenagem",d.vp_frenagem)+(d.vp_frenagem==="Sim"?ln("Comp. frenagem",d.vp_frenagem_comp):"")+ln("Derrapagem",d.vp_derrapagem)+ln("Debris",d.vp_debris)+(d.vp_debris==="Sim"?ln("Obs debris",d.vp_debris_obs):"")+ln("Obs características",d.vp_obs_caract)+ln("Obs condições",d.vp_obs_cond);const vpM=[...(d.vp_mr||[]),...(d.vp_mi||[]),...(d.vp_ma||[]),...(d.vp_mac||[]),...(d.vp_me||[]),...(d.vp_mo||[])];if(vpM.length)r+=ln("Manchas sangue via",vpM.join(", "));r+=ln("Obs manchas via",d.vp_obs_manchas);}if(d.dest==="Área verde"&&(d.av_veg||d.av_obs)){r+="\n━━━ 4.1.2 ÁREA VERDE ━━━\n"+ln("Vegetação",d.av_veg)+ln("Obs área verde",d.av_obs);}if(trilhas.length>0){r+="\n━━━ 4.1.3 TRILHAS DE SANGUE ━━━\n";trilhas.forEach((tr,ti)=>{r+=`  Trilha ${ti+1}:${tr.origem?" Origem: "+tr.origem:""}${tr.destino?" → Destino: "+tr.destino:""}${tr.comprimento?" | Comprimento: "+tr.comprimento+"m":""}${tr.padrao?" | Padrão: "+tr.padrao:""}${tr.continuidade?" | "+tr.continuidade:""}\n`;r+=`${tr.direcionamento?"    Direcionamento: "+tr.direcionamento+"\n":""}`;if(tr.acumulo_qtd)r+=`    Acúmulo: ${tr.acumulo_qtd}x ${tr.acumulo_vol||""} — ${tr.acumulo_local||""}\n`;const ind=[];if(tr.pegadas==="Sim")ind.push("Pegadas");if(tr.arrasto==="Sim")ind.push("Arrasto");if(tr.maos==="Sim")ind.push("Mãos");if(tr.satelite==="Sim")ind.push("Gotas satélite");if(tr.diminuicao==="Sim")ind.push("Diminuição progressiva");if(ind.length)r+=`    Indicadores: ${ind.join(", ")}\n`;if(tr.diluicao==="Sim")r+=`    Diluição: Sim\n`;if(tr.interferencia==="Sim")r+=`    Interferência: ${tr.interferencia_obs||"Sim"}\n`;if(tr.obs)r+=`    Obs: ${tr.obs}\n`;});}if(edificacoes.some(e=>e.tipo||e.nome)){r+="\n━━━ 4.1.4 EDIFICAÇÕES ━━━\n";edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){r+=`  Edificação ${ei+1}:${e.tipo?" "+e.tipo:""}${e.material?" | Material: "+e.material:""}${e.andares?" | Andares: "+e.andares:""}${e.cobertura?" | Cobertura: "+e.cobertura:""}${e.estado?" | Estado: "+e.estado:""}\n`;r+=`${e.muro||e.portao||e.acesso||e.n_entradas?"    ":""}${e.muro?"Perímetro: "+e.muro:""}${e.portao?" | Portão: "+e.portao:""}${e.acesso?" | Acesso: "+e.acesso:""}${e.n_entradas?" | Entradas: "+e.n_entradas:""}${e.muro||e.portao||e.acesso||e.n_entradas?"\n":""}`;r+=`${e.ilum_int||e.cameras?"    ":""}${e.ilum_int?"Iluminação interna: "+e.ilum_int:""}${e.cameras?" | Câmeras: "+e.cameras:""}${e.ilum_int||e.cameras?"\n":""}`;r+=`${e.vizinhanca?"    Vizinhança: "+e.vizinhanca+"\n":""}`;if(e.comodos_list&&e.comodos_list.length)r+=`    Cômodos: ${e.comodos_list.join(", ")}\n`;if(e.comodos_fato&&e.comodos_fato.length){r+=`    Cômodos do fato: ${e.comodos_fato.join(", ")}\n`;if(e.comodos_fato_det){e.comodos_fato.forEach(cf=>{const det=(e.comodos_fato_det||{})[cf];if(det){const allM=[...(det.mr||[]),...(det.mi||[]),...(det.ma||[]),...(det.mac||[]),...(det.me||[]),...(det.mo||[])];if(det.estado||allM.length)r+=`      📍 ${cf}: ${det.estado?"Estado: "+det.estado:""}${allM.length?" | Manchas: "+allM.join(", "):""}${det.obs_manchas?" | Obs: "+det.obs_manchas:""}${det.obs_comodo?" | Obs cômodo: "+det.obs_comodo:""}\n`;}});}}if(e.obs)r+=`    Obs: ${e.obs}\n`;}});}r+=ln("Obs local",d.obs_l);const allVS=[...vestigios.filter(v=>v.desc),...canvasVest.filter(v=>v.desc).map(v=>({...v,desc:`[${v.placa}] ${v.desc}`}))];const vsNR=allVS.filter(v=>v.recolhido!=="Sim");const vsRC=allVS.filter(v=>v.recolhido==="Sim"&&!(v.destino||"").includes("II"));const vsII=allVS.filter(v=>v.recolhido==="Sim"&&(v.destino||"").includes("II"));
 if(vsNR.length){r+="\n━━━ 5.1 VESTÍGIOS (não recolhidos) ━━━\n";vsNR.forEach((v,i)=>r+=`  ${i+1}. ${v.desc} [${supPlaca(v.suporte,v.placa)}]${v.obs?" — "+v.obs:""}\n`);}
 if(vsRC.length){r+="\n━━━ 5.2 VESTÍGIOS RECOLHIDOS ━━━\n";vsRC.forEach((v,i)=>r+=`  ${i+1}. ${v.desc} [${supPlaca(v.suporte,v.placa)}]${v.obs?" — "+v.obs:""}\n`);}
-r+=ln("Obs vestígios",d.obs_v);cadaveres.forEach((cad,ci)=>{const cx2=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx2+"fx"]||d[cx2+"et"]||d[cx2+"sx"]||woundsC.length>0||d[cx2+"dg"];if(hasCad){r+=`\n━━━ 4.3 DO CADÁVER${cadaveres.length>1?" "+(ci+1):""} ━━━\n`;r+=ln("Faixa",d[cx2+"fx"])+ln("Etnia",d[cx2+"et"])+ln("Sexo",d[cx2+"sx"])+ln("Compleição",d[cx2+"cp"])+ln("Posição",d[cx2+"pos"]);r+=ln("Diagnóstico",d[cx2+"dg"])+ln("Local evento",d[cx2+"le"])+ln("Instrumento",d[cx2+"ins"])+ln("Outro instr.",d[cx2+"ins_o"])+ln("Momento",d[cx2+"mom"]);if(d[cx2+"sui_tipo"]){r+=ln("Meio suicídio",d[cx2+"sui_tipo"]);if(d[cx2+"sui_tipo"]==="Forca"){r+=ln("Cadáver na forca",d[cx2+"forca_cad"])+ln("Suspensão",d[cx2+"forca_susp"])+ln("Instrumento",d[cx2+"forca_inst"])+ln("Ancoragem",d[cx2+"forca_anc"])+ln("Alt. ancoragem",d[cx2+"forca_alt_anc"])+ln("Alt. nó",d[cx2+"forca_alt_no"])+ln("Alt. pescoço",d[cx2+"forca_alt_pesc"])+ln("Caract. sulco",d[cx2+"forca_sulco"])+ln("Demais achados",d[cx2+"forca_achados"])+ln("Obs forca",d[cx2+"forca_obs"]);}if(d[cx2+"sui_tipo"]==="Arma de fogo"){r+=ln("AF no local",d[cx2+"af_local"])+ln("Modelo",d[cx2+"af_modelo"])+ln("Série",d[cx2+"af_serie"])+ln("Calibre",d[cx2+"af_calibre"])+ln("Sangue AF",d[cx2+"af_sangue"])+ln("Obs AF",d[cx2+"af_obs"]);}if(d[cx2+"sui_tipo"]==="Arma branca"){r+=ln("AB no local",d[cx2+"ab_local"])+ln("Cabo",d[cx2+"ab_cabo"])+ln("Lâmina",d[cx2+"ab_lamina"])+ln("Sangue AB",d[cx2+"ab_sangue"])+ln("Obs AB",d[cx2+"ab_obs"]);}if(d[cx2+"sui_tipo"]==="Projeção"){r+=ln("Altura",d[cx2+"proj_alt"])+ln("Local projeção",d[cx2+"proj_local"])+ln("Alt. parapeito",d[cx2+"proj_alt_parapeito"])+ln("Alt. obj. apoio",d[cx2+"proj_alt_apoio"])+ln("Obs projeção",d[cx2+"proj_obs"]);}if(d[cx2+"sui_tipo"]==="Medicamento"&&d[cx2+"meds"]){const meds2=d[cx2+"meds"].filter(m=>m.nome);if(meds2.length){r+="Medicamentos:\n";meds2.forEach((m,mi)=>r+=`  ${mi+1}. ${m.nome}${m.vazios?" | Espaços vazios: "+m.vazios:""}${m.comprimidos?" | Comprimidos: "+m.comprimidos:""}${m.obs?" | "+m.obs:""}\n`);}}if(d[cx2+"sui_tipo"]==="Outro")r+=ln("Obs",d[cx2+"sui_outro_obs"]);}if(woundsC.length){r+=`Lesões (${woundsC.length}):\n`;woundsC.forEach((w,wi)=>r+=`  ${wi+1}. ${w.regionLabel}${w.tipo?": "+w.tipo:""}${w.caract&&w.caract.length?" ["+w.caract.join(", ")+"]":""}${w.obs?" — "+w.obs:""}\n`);}r+=ln("Cianose ungueais",d[cx2+"cu"])+ln("Cianose labial",d[cx2+"cl"])+ln("Rigidez Mand.",d[cx2+"rm"])+ln("Rigidez Sup.",d[cx2+"rs"])+ln("Rigidez Inf.",d[cx2+"ri"])+ln("Livores",d[cx2+"lv"])+ln("Pos. livores",d[cx2+"lp"])+ln("Compatível",d[cx2+"lc"])+ln("Secr. nasal",d[cx2+"sn"])+ln("Secr. oral",d[cx2+"so"])+ln("Peniana/vaginal",d[cx2+"sg"])+ln("Anal",d[cx2+"sa"])+ln("Mancha verde abd.",d[cx2+"mva"])+ln("Obs fenômenos",d[cx2+"obs_peri"]);const vestesC=vestes.filter(v=>v.tipo&&(v.cadaver===undefined||v.cadaver===ci));if(vestesC.length){r+="Vestes:\n";vestesC.forEach((v,vi)=>r+=`  ${vi+1}. ${v.tipo} (${v.cor||""}) ${v.sujidades?" Sujidades: "+v.sujidades:""}${v.sangue?" Sangue: "+v.sangue:""}${v.bolsos?" Bolsos: "+v.bolsos:""} ${v.notas||""}\n`);}r+=ln("Pertences",d[cx2+"pert"]);}});const papAllS=[...vsII.map(v=>({desc:v.desc,local:supPlaca(v.suporte,v.placa)})),...papilos.filter(p=>p.desc)];if(papAllS.length){r+="\n━━━ 6.1 PAPILOSCOPIA ━━━\n";papAllS.forEach((p,i)=>r+=`  ${i+1}. ${p.desc} [${p.local||""}]\n`);r+=ln("Obs papiloscopia",d.obs_p);}veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(d[vx+"tipo"]||d[vx+"placa"]){r+=`\n━━━ 4.2 DO VEÍCULO${veiculos.length>1?" "+(vi+1):""} ━━━\n`;r+=ln("Categoria",d[vx+"cat"]||"Carro")+ln("Tipo",d[vx+"tipo"])+ln("Cor",d[vx+"cor"])+ln("Placa",d[vx+"placa"])+ln("Ano",d[vx+"ano"])+ln("Chassi",d[vx+"chassi"])+ln("Hodômetro",d[vx+"km"])+ln("Estado",d[vx+"estado"])+ln("Motor",d[vx+"motor"])+ln("Portas trav.",d[vx+"portas"])+ln("Vidros íntegros",d[vx+"vidros"])+ln("Chave",d[vx+"chave"])+ln("Obs",d[vx+"obs"]);}});if(fotos&&fotos.length){r+="\n━━━ FOTOGRAFIAS ━━━\n";fotos.forEach((f,i)=>r+=`  ${i+1}. ${f.desc||"Sem desc."} [${f.fase||""}] ${f.local||""} (${f.w}×${f.h}, ${f.sizeKB}KB)\n`);}if(veiVest.length){r+="\n━━━ 5.3 VESTÍGIOS VEICULARES ━━━\n";veiVest.forEach((v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";r+=`  ${i+1}. ${v.tipo||v.regionLabel} [${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}]${v.obs?" — "+v.obs:""}\n`;});}return r;};
+r+=ln("Obs vestígios",d.obs_v);cadaveres.forEach((cad,ci)=>{const cx2=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx2+"fx"]||d[cx2+"et"]||d[cx2+"sx"]||woundsC.length>0||d[cx2+"dg"];if(hasCad){r+=`\n━━━ 4.3 DO CADÁVER${cadaveres.length>1?" "+(ci+1):""} ━━━\n`;r+=ln("Faixa",d[cx2+"fx"])+ln("Etnia",d[cx2+"et"])+ln("Sexo",d[cx2+"sx"])+ln("Compleição",d[cx2+"cp"])+ln("Posição",d[cx2+"pos"]);r+=ln("Diagnóstico",d[cx2+"dg"])+ln("Local evento",d[cx2+"le"])+ln("Instrumento",d[cx2+"ins"])+ln("Outro instr.",d[cx2+"ins_o"])+ln("Momento",d[cx2+"mom"]);if(d[cx2+"sui_tipo"]){r+=ln("Meio suicídio",d[cx2+"sui_tipo"]);if(d[cx2+"sui_tipo"]==="Forca"){r+=ln("Cadáver na forca",d[cx2+"forca_cad"])+ln("Suspensão",d[cx2+"forca_susp"])+ln("Instrumento",d[cx2+"forca_inst"])+ln("Ancoragem",d[cx2+"forca_anc"])+ln("Alt. ancoragem",d[cx2+"forca_alt_anc"])+ln("Alt. nó",d[cx2+"forca_alt_no"])+ln("Alt. pescoço",d[cx2+"forca_alt_pesc"])+ln("Caract. sulco",d[cx2+"forca_sulco"])+ln("Demais achados",d[cx2+"forca_achados"])+ln("Obs forca",d[cx2+"forca_obs"]);}if(d[cx2+"sui_tipo"]==="Arma de fogo"){r+=ln("AF no local",d[cx2+"af_local"])+ln("Modelo",d[cx2+"af_modelo"])+ln("Série",d[cx2+"af_serie"])+ln("Calibre",d[cx2+"af_calibre"])+ln("Sangue AF",d[cx2+"af_sangue"])+ln("Obs AF",d[cx2+"af_obs"]);}if(d[cx2+"sui_tipo"]==="Arma branca"){r+=ln("AB no local",d[cx2+"ab_local"])+ln("Cabo",d[cx2+"ab_cabo"])+ln("Lâmina",d[cx2+"ab_lamina"])+ln("Sangue AB",d[cx2+"ab_sangue"])+ln("Obs AB",d[cx2+"ab_obs"]);}if(d[cx2+"sui_tipo"]==="Projeção"){r+=ln("Altura",d[cx2+"proj_alt"])+ln("Local projeção",d[cx2+"proj_local"])+ln("Alt. parapeito",d[cx2+"proj_alt_parapeito"])+ln("Alt. obj. apoio",d[cx2+"proj_alt_apoio"])+ln("Obs projeção",d[cx2+"proj_obs"]);}if(d[cx2+"sui_tipo"]==="Medicamento"&&d[cx2+"meds"]){const meds2=d[cx2+"meds"].filter(m=>m.nome);if(meds2.length){r+="Medicamentos:\n";meds2.forEach((m,mi)=>r+=`  ${mi+1}. ${m.nome}${m.vazios?" | Espaços vazios: "+m.vazios:""}${m.comprimidos?" | Comprimidos: "+m.comprimidos:""}${m.obs?" | "+m.obs:""}\n`);}}if(d[cx2+"sui_tipo"]==="Outro")r+=ln("Obs",d[cx2+"sui_outro_obs"]);}if(woundsC.length){r+=`Lesões (${woundsC.length}):\n`;woundsC.forEach((w,wi)=>r+=`  ${wi+1}. ${w.regionLabel}${w.tipo?": "+w.tipo:""}${w.caract&&w.caract.length?" ["+w.caract.join(", ")+"]":""}${w.obs?" — "+w.obs:""}\n`);}r+=ln("Cianose ungueais",d[cx2+"cu"])+ln("Cianose labial",d[cx2+"cl"])+ln("Rigidez Mand.",d[cx2+"rm"])+ln("Rigidez Sup.",d[cx2+"rs"])+ln("Rigidez Inf.",d[cx2+"ri"])+ln("Livores",d[cx2+"lv"])+ln("Pos. livores",d[cx2+"lp"])+ln("Compatível",d[cx2+"lc"])+ln("Secr. nasal",d[cx2+"sn"])+ln("Secr. oral",d[cx2+"so"])+ln("Peniana/vaginal",d[cx2+"sg"])+ln("Anal",d[cx2+"sa"])+ln("Mancha verde abd.",d[cx2+"mva"])+ln("Obs fenômenos",d[cx2+"obs_peri"]);const vestesC=vestes.filter(v=>v.tipo&&(v.cadaver===undefined||v.cadaver===ci));if(vestesC.length){r+="Vestes:\n";vestesC.forEach((v,vi)=>r+=`  ${vi+1}. ${v.tipo} (${v.cor||""}) ${v.sujidades?" Sujidades: "+v.sujidades:""}${v.sangue?" Sangue: "+v.sangue:""}${v.bolsos?" Bolsos: "+v.bolsos:""} ${v.notas||""}\n`);}r+=ln("Pertences",d[cx2+"pert"])+ln("Observações gerais",d[cx2+"obs_geral"]);}});const papAllS=[...vsII.map(v=>({desc:v.desc,local:supPlaca(v.suporte,v.placa)})),...papilos.filter(p=>p.desc)];if(papAllS.length){r+="\n━━━ 6.1 PAPILOSCOPIA ━━━\n";papAllS.forEach((p,i)=>r+=`  ${i+1}. ${p.desc} [${p.local||""}]\n`);r+=ln("Obs papiloscopia",d.obs_p);}veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(d[vx+"tipo"]||d[vx+"placa"]){r+=`\n━━━ 4.2 DO VEÍCULO${veiculos.length>1?" "+(vi+1):""} ━━━\n`;r+=ln("Categoria",d[vx+"cat"]||"Carro")+ln("Tipo",d[vx+"tipo"])+ln("Cor",d[vx+"cor"])+ln("Placa",d[vx+"placa"])+ln("Ano",d[vx+"ano"])+ln("Chassi",d[vx+"chassi"])+ln("Hodômetro",d[vx+"km"])+ln("Estado",d[vx+"estado"])+ln("Motor",d[vx+"motor"])+ln("Portas trav.",d[vx+"portas"])+ln("Vidros íntegros",d[vx+"vidros"])+ln("Chave",d[vx+"chave"])+ln("Obs",d[vx+"obs"]);}});if(fotos&&fotos.length){r+="\n━━━ FOTOGRAFIAS ━━━\n";fotos.forEach((f,i)=>r+=`  ${i+1}. ${f.desc||"Sem desc."} [${f.fase||""}] ${f.local||""} (${f.w}×${f.h}, ${f.sizeKB}KB)\n`);}if(veiVest.length){r+="\n━━━ 5.3 VESTÍGIOS VEICULARES ━━━\n";veiVest.forEach((v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";r+=`  ${i+1}. ${v.tipo||v.regionLabel} [${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}]${v.obs?" — "+v.obs:""}\n`;});}return r;};
 
 // Generate body silhouette SVG for PDF with wound markers
   // ──────────────────────────────────────────
@@ -2037,20 +2108,21 @@ const cadCount=cadaveres.filter((_,ci)=>d[`c${ci}_fx`]||d[`c${ci}_dg`]||d[`c${ci
 const vestTotal=vestigios.filter(v=>v.desc).length+canvasVest.filter(v=>v.desc).length;
 const vestRecolhidos=[...vestigios.filter(v=>v.desc&&v.recolhido==="Sim"),...canvasVest.filter(v=>v.desc&&v.recolhido==="Sim")].length;
 // === RESUMO DA OCORRÊNCIA UNIFICADO (dourado, com subtítulos) ===
-const cadDesc=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"Sem cadáver";})();
-const instrumentoExec=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"—";})();
+// v234: igual ao DOCX — valores vazios retornam "" para que ROW_GP os omita
+const cadDesc=(()=>{const partes=[];cadaveres.forEach((c,ci)=>{const cx2=`c${ci}_`;const fx=d[cx2+"fx"]||"";const sx=d[cx2+"sx"]||"";const et=d[cx2+"et"]||"";if(fx||sx){partes.push([sx,et,fx].filter(x=>x&&x!=="Prejudicado"&&x!=="Prejudicada").join(", ")||"Cadáver "+(ci+1));}});return partes.length?partes.join("; "):"";})();
+const instrumentoExec=(()=>{const ins=d.c0_ins||"";const insO=d.c0_ins_o||"";const sui=d.c0_sui_tipo||"";return [ins,insO,sui].filter(Boolean).filter(x=>x!=="Outro").join(" / ")||"";})();
 const woundsTotal=wounds.length;
-const agenteLblP=d.ag==="Outro"?(d.ag_outro||"—"):(d.ag||"—");
-const papiloLblP=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"—";
-const viaturaLblP=d.vt==="Outra"?(d.vt_outro||"—"):(d.vt||"—");
-const oicLblP=d.oic||"—";
-const tipoLocalLblP=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"—");
+const agenteLblP=d.ag==="Outro"?(d.ag_outro||""):(d.ag||"");
+const papiloLblP=d.pp?`${d.pp==="Outro"?(d.pp_outro||""):d.pp}${d.mat_pp?` (mat. ${d.mat_pp})`:""}`:"";
+const viaturaLblP=d.vt==="Outra"?(d.vt_outro||""):(d.vt||"");
+const oicLblP=d.oic||"";
+const tipoLocalLblP=Array.isArray(d.tp)&&d.tp.length?d.tp.join(", "):(d.tp||"");
 const recursosP=[];
 if(d.drone==="Sim")recursosP.push("Drone");
 if(d.scanner==="Sim")recursosP.push("Scanner 3D");
 if(d.luminol==="Sim")recursosP.push("Luminol");
 if(d.luz_forense==="Sim")recursosP.push("Luz forense");
-const recursosLblP=recursosP.length?recursosP.join(", "):"—";
+const recursosLblP=recursosP.length?recursosP.join(", "):"";
 const veicsComDataP=veiculos.filter((_,vi)=>d[`v${vi}_tipo`]||d[`v${vi}_placa`]).length;
 const edifsComDataP=edificacoes.filter(e=>e&&(e.tipo||e.material||e.andares||(e.comodos_list&&e.comodos_list.length)||(e.comodos_fato&&e.comodos_fato.length))).length;
 const trilhasComDataP=trilhas.filter(tr=>tr&&(tr.origem||tr.destino||tr.padrao||tr.comprimento||tr.obs)).length;
@@ -2070,40 +2142,54 @@ const ROW_GG=(title)=>`<tr style="page-break-inside:avoid;page-break-after:avoid
 let resumoZebra=false;
 const rg=(l,v)=>{const out=ROW_GP(l,v,resumoZebra);if(out)resumoZebra=!resumoZebra;return out;};
 const rgg=(t)=>{resumoZebra=false;return ROW_GG(t);};
+// v234: monta linhas em array e filtra grupos órfãos antes de gerar HTML.
+// kr() e krNum() são iguais aos do DOCX — retornam null para valores vazios.
+const krP=(label,val)=>{if(val===null||val===undefined||val==="")return null;const s=String(val).trim();if(!s||s==="—"||s==="0"||s==="0 total")return null;return {label,val:String(val)};};
+const krNumP=(label,n)=>(n>0?{label,val:String(n)}:null);
+const resumoBlocos=[
+  {group:"Identificação",rows:[
+    krP("Ocorrência / DP",(d.oc||d.oc_ano||d.dp)?`${d.oc||"___"}/${d.oc_ano||"____"} — ${d.dp||"___"}`:""),
+    krP("Natureza",natLbl),
+    krP("Vítima(s)",cadDesc),
+    krP("Instrumento / meio",instrumentoExec),
+    krP("Exame Externo",oicLblP),
+  ]},
+  {group:"Local",rows:[
+    krP("Endereço",d.end),
+    krP("GPS",d.gps),
+    krP("Tipo do local",tipoLocalLblP),
+  ]},
+  {group:"Datas",rows:[
+    krP("Data da solicitação",d.dt_sol),
+    krP("Data do deslocamento",d.dt_des),
+    krP("Data do atendimento",d.dt_che),
+    krP("Data da finalização",d.dt_ter),
+  ]},
+  {group:"Equipe",rows:[
+    krP("Perito(s) criminais",peritoLabel),
+    krP("Agente",agenteLblP),
+    krP("Papiloscopista",papiloLblP),
+    krP("Viatura",viaturaLblP),
+    recursosP.length?{label:"Recursos empregados",val:recursosLblP}:null,
+  ]},
+  {group:"Achados",rows:[
+    krP("Diagnóstico",diagCad),
+    krNumP("Cadáveres",cadCount),
+    vestTotal>0?{label:"Vestígios",val:`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`}:null,
+    krNumP("Lesões documentadas",woundsTotal),
+    krNumP("Edificações examinadas",edifsComDataP),
+    krNumP("Veículos examinados",veicsComDataP),
+    krNumP("Trilhas de sangue",trilhasComDataP),
+    krNumP("Fotografias",(fotos||[]).length),
+  ]},
+];
+let tableRowsHtml="";
+resumoBlocos.forEach(bloco=>{const rowsValidas=bloco.rows.filter(x=>x);if(!rowsValidas.length)return;tableRowsHtml+=rgg(bloco.group);rowsValidas.forEach(r=>{tableRowsHtml+=rg(r.label,r.val);});});
 h+=`<div style="border:2px solid #C9A961;border-radius:6px;padding:0;margin:0 0 20px;overflow:hidden;page-break-inside:avoid">
 <div style="background:#C9A961;color:#fff;padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:1.2px;text-align:center;text-transform:uppercase">⚖️ Resumo da Ocorrência</div>
-<div style="padding:8px 16px;background:#FFFCEF;font-size:12px;font-style:italic;text-align:center;color:#6B5326;border-bottom:1px solid #E8D9A8">${esc(tldrTextoP)}</div>
+${tldrTextoP?`<div style="padding:8px 16px;background:#FFFCEF;font-size:12px;font-style:italic;text-align:center;color:#6B5326;border-bottom:1px solid #E8D9A8">${esc(tldrTextoP)}</div>`:""}
 <table style="width:100%;border-collapse:collapse">
-${rgg("Identificação")}
-${rg("Ocorrência / DP",`${d.oc||"___"}/${d.oc_ano||"____"} — ${d.dp||"___"}`)}
-${rg("Natureza",natLbl)}
-${rg("Vítima(s)",cadDesc)}
-${rg("Instrumento / meio",instrumentoExec)}
-${rg("Exame Externo",oicLblP)}
-${rgg("Local")}
-${rg("Endereço",d.end||"—")}
-${rg("GPS",d.gps||"—")}
-${rg("Tipo do local",tipoLocalLblP)}
-${rgg("Datas")}
-${rg("Data da solicitação",d.dt_sol||"—")}
-${rg("Data do deslocamento",d.dt_des||"—")}
-${rg("Data do atendimento",d.dt_che||"—")}
-${rg("Data da finalização",d.dt_ter||"—")}
-${rgg("Equipe")}
-${rg("Perito(s) criminais",peritoLabel)}
-${rg("Agente",agenteLblP)}
-${rg("Papiloscopista",papiloLblP)}
-${rg("Viatura",viaturaLblP)}
-${recursosP.length?rg("Recursos empregados",recursosLblP):""}
-${rgg("Achados")}
-${rg("Diagnóstico",diagCad)}
-${rg("Cadáveres",String(cadCount))}
-${rg("Vestígios",`${vestTotal} total${vestRecolhidos?` (${vestRecolhidos} recolhidos)`:""}`)}
-${woundsTotal>0?rg("Lesões documentadas",String(woundsTotal)):""}
-${edifsComDataP>0?rg("Edificações examinadas",String(edifsComDataP)):""}
-${veicsComDataP>0?rg("Veículos examinados",String(veicsComDataP)):""}
-${trilhasComDataP>0?rg("Trilhas de sangue",String(trilhasComDataP)):""}
-${rg("Fotografias",String((fotos||[]).length))}
+${tableRowsHtml}
 </table>
 </div>`;
 // --- PREÂMBULO ---
@@ -2178,6 +2264,8 @@ if(woundsC.length){h+=para(`Foram observadas ${woundsC.length} lesão(ões):`);h
 h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Fenômenos cadavéricos</h5>`;
 h+=tblZ([d[cx+"cu"]?["Cianose ungueais",d[cx+"cu"]]:null,d[cx+"cl"]?["Cianose labial",d[cx+"cl"]]:null,d[cx+"rm"]?["Rigidez mandíbula",d[cx+"rm"]]:null,d[cx+"rs"]?["Rigidez sup.",d[cx+"rs"]]:null,d[cx+"ri"]?["Rigidez inf.",d[cx+"ri"]]:null,d[cx+"lv"]?["Livores",d[cx+"lv"]]:null,d[cx+"lp"]?["Pos. livores",d[cx+"lp"]]:null,d[cx+"lc"]?["Compatível",d[cx+"lc"]]:null,d[cx+"sn"]?["Secr. nasal",d[cx+"sn"]]:null,d[cx+"so"]?["Secr. oral",d[cx+"so"]]:null,d[cx+"sg"]?["Peniana/vaginal",d[cx+"sg"]]:null,d[cx+"sa"]?["Anal",d[cx+"sa"]]:null,d[cx+"mva"]?["Mancha verde abd.",d[cx+"mva"]]:null,d[cx+"obs_peri"]?["Obs fenômenos",d[cx+"obs_peri"]]:null]);
 if(d[cx+"avancado_decomp"]){h+=`<h4 style="font-size:12px;font-weight:700;color:#a02020;margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.5px"><AppIcon name="☠️" size={14} mr={4}/>Decomposição Avançada — Achados</h4>`;h+=tblZ([(d[cx+"dec_abio"]||[]).length?["Abióticos / transformação",(d[cx+"dec_abio"]||[]).join(", ")]:null,(d[cx+"dec_fauna"]||[]).length?["Fauna cadavérica",(d[cx+"dec_fauna"]||[]).join(", ")]:null,(d[cx+"dec_cons"]||[]).length?["Conservação alternativa",(d[cx+"dec_cons"]||[]).join(", ")]:null,(d[cx+"dec_amb"]||[]).length?["Achados ambientais",(d[cx+"dec_amb"]||[]).join(", ")]:null,d[cx+"dec_obs"]?["Observações",d[cx+"dec_obs"]]:null]);}
+// v234: 4.3.4 Observações gerais (livres)
+if(d[cx+"obs_geral"]){h+=sec3(`${subCadBase}.4`,"Observações gerais");h+=para(esc(d[cx+"obs_geral"]));}
 // 4.3.4 Exames de Medicina Legal — removido (informação complementada em laudo cadavérico específico)
 }});
 // --- 5 CADEIA DE CUSTÓDIA ---
@@ -2214,7 +2302,9 @@ const mkVeiSupR=(vv)=>{const vi3=vv.veiculo??0;const vx2="v"+vi3+"_";const tm=d[
 const vvIC=veiVest.filter(vv=>(vv.destino||"").includes("IC")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv)}));
 const vvII=veiVest.filter(vv=>(vv.destino||"").includes("II")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv)}));
 let h=`<h2 style="text-align:center;font-size:16px;margin:0 0 2px">REGISTRO DE RECOLHIMENTO DE VESTÍGIOS (RRV)</h2><div style="text-align:center;font-size:11px;color:#666;margin-bottom:16px">Conforme OS nº 01 do DPT, de 17/02/2014</div>`;h+=`<div style="margin-bottom:12px;font-size:12px">Oc.: <b>${esc(d.oc)||"___"}/${esc(d.oc_ano)||"___"}</b> | DP: <b>${esc(d.dp)||"___"}</b> | Data: <b>${d.dt_che||new Date().toLocaleDateString(LOCALE)}</b><br>Equipe: <b>Seção de Crimes Contra a Pessoa (SCPe)</b></div>`;const mkTh="border:1px solid #999;padding:6px 8px;background:#e8e8ed;font-size:11px;font-weight:700;text-align:center;height:28px";const mkTd="border:1px solid #999;padding:6px 8px;font-size:11px;height:28px;vertical-align:middle";const mk=(items,title,dest)=>{if(!items.length)return"";let t2=`<h3 style="font-size:12px;margin:12px 0 6px">${title}</h3><table style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:8%"/><col style="width:50%"/><col style="width:27%"/><col style="width:15%"/></colgroup><tr><th style="${mkTh}">Nº</th><th style="${mkTh}">Vestígio</th><th style="${mkTh}">Suporte</th><th style="${mkTh}">Destino</th></tr>`;items.forEach((item,i)=>{t2+=`<tr><td style="${mkTd};text-align:center">${i+1}</td><td style="${mkTd}">${esc(item.desc)}</td><td style="${mkTd}">${esc(item.suporte||item.local||"")}</td><td style="${mkTd};text-align:center;font-weight:600">${dest||item.destino||""}</td></tr>`;});return t2+`</table>`;};h+=mk([...vr,...vvIC],"Vestígios — Instituto de Criminalística","IC")+mk([...vi2,...vvII,...pr.map(p=>({desc:p.desc,suporte:supPlaca(p.local,p.placa),destino:"II"}))],"Vestígios — Instituto de Identificação","II");/* RRV: 2º perito não assina aqui — apenas perito principal e papiloscopista */
-h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:50px;font-size:11px;text-align:center"><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(d.p1)||"___"}</b><br>Perito Criminal<br>Matrícula: ${esc(d.mat_p1)||"___"}</div><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(d.pp)||"___"}</b><br>Papiloscopista Policial<br>Matrícula: ${esc(d.mat_pp)||"___"}</div></div>`;return h;};
+/* v234: papiloscopista pode ser 'Outro' — pegar nome digitado em pp_outro */
+const ppNomeRRV=d.pp==="Outro"?(d.pp_outro||"___"):(d.pp||"___");
+h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:50px;font-size:11px;text-align:center"><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(d.p1)||"___"}</b><br>Perito Criminal<br>Matrícula: ${esc(d.mat_p1)||"___"}</div><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(ppNomeRRV)}</b><br>Papiloscopista Policial<br>Matrícula: ${esc(d.mat_pp)||"___"}</div></div>`;return h;};
 
 // Body SVGs
   // ──────────────────────────────════════════
@@ -2850,6 +2940,8 @@ if(tab===TAB_CADAVER)return(<><Cd_ styles={ST} title="Cadáveres" aria-label="Ca
 <button style={abtn} onClick={()=>setVestes([...vestes,{id:uid(),cadaver:cadaverIdx,tipo:"",cor:"",sujidades:"",sangue:"",bolsos:"",notas:""}])}>+ Veste</button>
 <div style={{marginTop:12}}><F_ k={cx+"pert"} label="Pertences" type="textarea" val={g(cx+"pert")} onChange={s} styles={ST}/></div>
 </Cd_>
+{/* v234: Observações gerais por cadáver (livre, separado do obs_peri de fenômenos) */}
+<Cd_ styles={ST} title="Observações Gerais do Cadáver" aria-label="Observações Gerais" icon="📝" variant="info"><F_ k={cx+"obs_geral"} label="Anotações livres sobre este cadáver (qualquer observação relevante para a perícia que não se encaixe nos outros campos)" type="textarea" val={g(cx+"obs_geral")} onChange={s} styles={ST}/></Cd_>
 </div>{navBtns()}</>);
 
   // ╔════════════════════════════════════════╗
@@ -2960,7 +3052,7 @@ ctx.font="10px sans-serif";ctx.fillText("(escala de referência — "+Math.round
   // ║  ABA 6 — EXPORTAR (PDF, DOCX, JSON)     ║
   // ╚════════════════════════════════════════╝
 if(tab===TAB_EXPORTAR){if(exportView==="pdf"||exportView==="rrv")return(<div style={{background:"#fff",minHeight:"80vh",margin:"-16px",padding:0}}><div style={{position:"sticky",top:"calc(88px + env(safe-area-inset-top))",zIndex:50,background:"#f0f0f5",borderBottom:"2px solid #007aff",padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}><span style={{fontWeight:700,fontSize:15,color:"#222"}}>{pdfTitle}</span><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{pdfReady==="fail"?<button style={{...bt,background:"#999",color:"#fff",padding:"10px 20px",fontSize:14,cursor:"pointer"}} title="Biblioteca PDF não carregou. Toque para tentar de novo." aria-label="Biblioteca PDF não carregou. Toque para tentar de novo." onClick={async()=>{setPdfReady("loading");try{await loadH2P();setPdfReady("ok");showToast("✅ Biblioteca PDF carregada");}catch(e){setPdfReady("fail");showToast("❌ Sem rede — tente conectar e retentar");}}}><AppIcon name="📄" size={14} mr={4}/>PDF indisponível ↻</button>:<button style={{...bt,background:"#ff3b30",color:"#fff",padding:"10px 20px",fontSize:14,opacity:pdfBusy||pdfReady==="loading"?0.6:1}} disabled={pdfBusy||pdfReady==="loading"} onClick={()=>savePDF(pdfTitle)}>{pdfBusy?"⏳ Gerando…":(pdfReady==="loading"?"⏳ Carregando lib…":"📄 Baixar PDF")}</button>}
-<button style={{...bt,background:t.ac,color:"#fff",padding:"10px 16px",fontSize:13}} onClick={saveCroquiDocx}><AppIcon name="📝" size={14} mr={4}/>Baixar DOCX</button><button style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,padding:"10px 16px",fontSize:13}} onClick={()=>copyHTML(pdfHTML,pdfTitle)}><AppIcon name="📋" size={14} mr={4}/>Copiar HTML</button><button style={{...bt,background:"#e5e5ea",color:"#333",padding:"8px 16px",fontSize:13}} onClick={()=>{if(pdfDataUrl)try{URL.revokeObjectURL(pdfDataUrl);}catch(e){console.warn("CQ:",e);}setExportView(null);setPdfHTML("");setPdfDataUrl(null);setPdfViewOpen(false);}}>← Voltar</button></div></div>{copyOk&&<div style={{background:"#34c759",color:"#fff",padding:"10px 14px",fontSize:12,fontWeight:600,textAlign:"center",borderRadius:0}}>{copyOk}</div>}{pdfDataUrl&&<div style={{background:"#d4edda",padding:"16px",textAlign:"center",borderBottom:"1px solid #28a745"}}><button style={{display:"block",width:"100%",background:"#28a745",color:"#fff",textAlign:"center",padding:"14px 20px",borderRadius:10,fontSize:16,fontWeight:700,border:"none",cursor:"pointer",marginBottom:8}} onClick={()=>{const w=window.open("");if(w){w.document.write(`<html><head><title>${pdfTitle}</title><style>body{margin:0;}</style></head><body><embed src="${pdfDataUrl}" type="application/pdf" width="100%" height="100%" style="position:fixed;top:0;left:0;width:100%;height:100%;"/></body></html>`);w.document.close();}else{setPdfViewOpen(true);}}}><AppIcon name="📥" size={14} mr={4}/>VISUALIZAR PDF</button><button style={{display:"block",width:"100%",background:"#007aff",color:"#fff",textAlign:"center",padding:"12px 20px",borderRadius:10,fontSize:14,fontWeight:600,border:"none",cursor:"pointer",marginBottom:8}} onClick={()=>{const a=document.createElement("a");a.href=pdfDataUrl;a.download=mkFileName("pdf",pdfTitle==="RRV"?"RRV":"Croqui");document.body.appendChild(a);a.click();document.body.removeChild(a);}}><AppIcon name="💾" size={14} mr={4}/>BAIXAR ARQUIVO PDF</button><p style={{fontSize:11,color:"#155724",margin:0}}>Se "Visualizar" não abrir nova aba, o PDF será exibido aqui mesmo com botão de fechar.</p></div>}{pdfViewOpen&&pdfDataUrl&&<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:9999,background:"#000",display:"flex",flexDirection:"column"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",background:"#1a1a1a",borderBottom:"1px solid #333"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>{pdfTitle}</span><button style={{background:"#ff3b30",color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:15,fontWeight:700,cursor:"pointer"}} onClick={()=>setPdfViewOpen(false)}><AppIcon name="✕" size={14} mr={4}/>FECHAR</button></div><iframe src={pdfDataUrl} style={{flex:1,border:"none",width:"100%"}} title="PDF Preview" aria-label="PDF Preview"/></div>}{/* SEGURANÇA: pdfHTML é gerado internamente por bPDF()/bRRV() com esc() em todos os campos do usuário. NÃO usar setPdfHTML() com conteúdo externo não-sanitizado. */}<div id="pdf-preview" style={{padding:"24px 20px",maxWidth:800,margin:"0 auto",color:"#222",fontSize:12,lineHeight:1.5,background:"#fff"}} dangerouslySetInnerHTML={{__html:pdfHTML}}/></div>);
+<button style={{...bt,background:t.ac,color:"#fff",padding:"10px 16px",fontSize:13}} onClick={smartSaveDocx}><AppIcon name="📝" size={14} mr={4}/>Baixar DOCX</button><button style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,padding:"10px 16px",fontSize:13}} onClick={()=>copyHTML(pdfHTML,pdfTitle)}><AppIcon name="📋" size={14} mr={4}/>Copiar HTML</button><button style={{...bt,background:"#e5e5ea",color:"#333",padding:"8px 16px",fontSize:13}} onClick={()=>{if(pdfDataUrl)try{URL.revokeObjectURL(pdfDataUrl);}catch(e){console.warn("CQ:",e);}setExportView(null);setPdfHTML("");setPdfDataUrl(null);setPdfViewOpen(false);}}>← Voltar</button></div></div>{copyOk&&<div style={{background:"#34c759",color:"#fff",padding:"10px 14px",fontSize:12,fontWeight:600,textAlign:"center",borderRadius:0}}>{copyOk}</div>}{pdfDataUrl&&<div style={{background:"#d4edda",padding:"16px",textAlign:"center",borderBottom:"1px solid #28a745"}}><button style={{display:"block",width:"100%",background:"#28a745",color:"#fff",textAlign:"center",padding:"14px 20px",borderRadius:10,fontSize:16,fontWeight:700,border:"none",cursor:"pointer",marginBottom:8}} onClick={()=>{const w=window.open("");if(w){w.document.write(`<html><head><title>${pdfTitle}</title><style>body{margin:0;}</style></head><body><embed src="${pdfDataUrl}" type="application/pdf" width="100%" height="100%" style="position:fixed;top:0;left:0;width:100%;height:100%;"/></body></html>`);w.document.close();}else{setPdfViewOpen(true);}}}><AppIcon name="📥" size={14} mr={4}/>VISUALIZAR PDF</button><button style={{display:"block",width:"100%",background:"#007aff",color:"#fff",textAlign:"center",padding:"12px 20px",borderRadius:10,fontSize:14,fontWeight:600,border:"none",cursor:"pointer",marginBottom:8}} onClick={()=>smartSavePdf(pdfDataUrl,pdfTitle)}><AppIcon name="💾" size={14} mr={4}/>BAIXAR ARQUIVO PDF</button><p style={{fontSize:11,color:"#155724",margin:0}}>Se "Visualizar" não abrir nova aba, o PDF será exibido aqui mesmo com botão de fechar.</p></div>}{pdfViewOpen&&pdfDataUrl&&<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:9999,background:"#000",display:"flex",flexDirection:"column"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",background:"#1a1a1a",borderBottom:"1px solid #333"}}><span style={{color:"#fff",fontWeight:700,fontSize:14}}>{pdfTitle}</span><button style={{background:"#ff3b30",color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:15,fontWeight:700,cursor:"pointer"}} onClick={()=>setPdfViewOpen(false)}><AppIcon name="✕" size={14} mr={4}/>FECHAR</button></div><iframe src={pdfDataUrl} style={{flex:1,border:"none",width:"100%"}} title="PDF Preview" aria-label="PDF Preview"/></div>}{/* SEGURANÇA: pdfHTML é gerado internamente por bPDF()/bRRV() com esc() em todos os campos do usuário. NÃO usar setPdfHTML() com conteúdo externo não-sanitizado. */}<div id="pdf-preview" style={{padding:"24px 20px",maxWidth:800,margin:"0 auto",color:"#222",fontSize:12,lineHeight:1.5,background:"#fff"}} dangerouslySetInnerHTML={{__html:pdfHTML}}/></div>);
 return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}`,borderRadius:12,padding:14,marginBottom:12,display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>{[["📋",data.oc?`Oc.${data.oc}/${(data.oc_ano||"").slice(-2)}`:"—"],["🏢",data.dp||"—"],["🧪",`${vestigios.filter(v=>v.desc).length} vest.`],["💀",`${cadaveres.filter((_,ci)=>{const cx2="c"+ci+"_";return data[cx2+"fx"]||data[cx2+"dg"]||data[cx2+"sx"]||wounds.some(w=>w.cadaver===ci);}).length} cad.`],["📷",`${fotos.length} fotos`],["🚗",`${veiculos.filter((_,i)=>data["v"+i+"_tipo"]||data["v"+i+"_placa"]).length} veíc.`],["🩸",`${trilhas.length} trilhas`]].map(([ic,tx],i)=><span key={i} style={{display:"inline-flex",alignItems:"center",fontSize:12,color:t.tx,fontWeight:600,padding:"6px 11px",borderRadius:100,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)"}`,letterSpacing:-0.1}}><AppIcon name={ic} size={16} mr={5}/>{tx}</span>)}</div>{(()=>{const warns=checkCampos();if(!warns.length)return null;const byAba={};warns.forEach(w=>{if(!byAba[w.aba])byAba[w.aba]=[];byAba[w.aba].push(w.campo);});return(<div style={{background:t.warningBg,border:`1.5px solid ${t.warningBd}`,borderRadius:12,padding:14,marginBottom:12}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:18}}>⚠️</span><span style={{fontSize:14,fontWeight:700,color:dark?"#ffcc00":"#856404"}}>{warns.length} campo{warns.length>1?"s":""} não preenchido{warns.length>1?"s":""}</span></div>{Object.entries(byAba).map(([aba,campos])=>(<div key={aba} style={{marginBottom:6}}><span style={{fontSize:12,fontWeight:700,color:dark?"#ffcc00":"#856404"}}>{aba}:</span><span style={{fontSize:12,color:dark?"#ddd":"#664400",marginLeft:4}}>{campos.join(", ")}</span></div>))}</div>);})()}{(()=>{const fotoKB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0);let dadosKB=0;try{dadosKB=Math.round(new Blob([JSON.stringify({dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,ppm})]).size/1024);}catch(e){dadosKB=0;}const totalKB=fotoKB+dadosKB;const limitKB=quotaKB;const pct=Math.min(100,Math.round(totalKB/limitKB*100));const warn=pct>=90;const mid=pct>=70&&!warn;const barColor=warn?t.no:(mid?"#ff9500":t.ok);const fmtMB=(kb)=>kb>=1048576?(kb/1048576).toFixed(2)+" GB":kb>=1024?(kb/1024).toFixed(2)+" MB":kb+" KB";return(<div style={{background:t.cd,borderRadius:14,padding:"14px 18px",marginBottom:14,boxShadow:dark?"0 1px 3px rgba(0,0,0,0.4),0 0 0 0.5px rgba(255,255,255,0.05)":"0 1px 3px rgba(0,0,0,0.06),0 0 0 0.5px rgba(0,0,0,0.04)"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:8}}><HardDrive size={16} color={t.t2}/><span style={{fontSize:14,fontWeight:700,color:t.tx}}>Armazenamento</span></div><span style={{fontSize:13,fontWeight:600,color:barColor}}>{fmtMB(totalKB)} <span style={{color:t.t3,fontWeight:500}}>/ {fmtMB(quotaKB)}</span></span></div><div style={{height:8,background:t.bg3,borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:pct+"%",height:"100%",background:barColor,transition:"width 0.3s"}}/></div><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:t.t2}}><span><AppIcon name="📝" size={14} mr={4}/>Dados: <b style={{color:t.tx}}>{fmtMB(dadosKB)}</b></span><span><AppIcon name="📷" size={14} mr={4}/>Fotos: <b style={{color:t.tx}}>{fmtMB(fotoKB)}</b> ({fotos.length})</span><span style={{color:barColor,fontWeight:600}}>{pct}%</span></div>{warn&&<p style={{fontSize:11,color:t.no,margin:"8px 0 0",lineHeight:1.4}}>⚠️ Próximo do limite. Considere baixar backup e iniciar um novo croqui, ou desligar <b>alta qualidade</b> (📷✨) antes de tirar mais fotos.</p>}{mid&&!warn&&<p style={{fontSize:11,color:"#b26a00",margin:"8px 0 0",lineHeight:1.4}}>💡 Uso moderado. Ainda cabem fotos, mas já dá pra pensar em backup preventivo.</p>}</div>);})()}
 <Cd_ styles={ST} title="Exportar Documentos" aria-label="Exportar Documentos" icon="💾" variant="success"><div style={{background:t.infoBgS,borderRadius:10,padding:14,marginBottom:14,border:`1px solid ${t.infoBd}`}}><p style={{fontSize:13,fontWeight:600,color:t.tx,margin:"0 0 6px"}}><AppIcon name="📄" size={14} mr={4}/>Como funciona:</p><p style={{fontSize:12,color:t.t2,margin:0,lineHeight:1.6}}>1. Clique em "Croqui" ou "RRV"<br/>2. Confira o documento<br/>3. "📄 Baixar PDF" gera o PDF<br/>4. Toque no link amarelo para baixar</p></div>
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{(()=>{const pend=checkCampos().length;return(<span style={{position:"relative",display:"inline-flex"}}><button style={{...bt,background:t.ac,color:"#fff"}} onClick={()=>{forceSaveCanvas();setPdfHTML(bPDF());setPdfTitle("Croqui de Levantamento de Local");setExportView("pdf");}}><AppIcon name="📑" size={14} mr={4}/>Croqui</button>{pend>0&&<span title={`${pend} campo${pend>1?"s":""} pendente${pend>1?"s":""}`} style={{position:"absolute",top:-6,right:-6,background:"#ff9500",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:10,minWidth:20,textAlign:"center",lineHeight:1.2,boxShadow:"0 1px 4px rgba(0,0,0,0.3)",border:"2px solid "+t.cd}}>{pend}</span>}</span>);})()}<button style={{...bt,background:"#ff9500",color:"#fff"}} onClick={()=>{forceSaveCanvas();setPdfHTML(bRRV());setPdfTitle("RRV");setExportView("rrv");}}><AppIcon name="📋" size={14} mr={4}/>RRV</button>
@@ -2987,6 +3079,8 @@ return(<div key={si} style={{background:isActive?(dark?"#1a2a1a":"#e8f5e9"):(dar
 <button style={{...bt,background:t.warningBg,color:t.tx,border:`1.5px solid ${t.warningBd}`,padding:"10px 14px",fontSize:12,fontWeight:600}} onClick={async()=>{const ok=window.confirm(`Apagar SOMENTE o Slot ${slotIdx+1} (ativo)?\n\nIsso libera memória mas mantém os outros slots intactos.\n\nSugestão: baixe o backup JSON antes!`);if(!ok)return;try{await deleteFullSlot("cq_"+loginMat+"_"+slotIdx);setSavedSlots(prev=>prev.filter(s=>s.slot!==slotIdx));resetAll(true);haptic("medium");showToast("🗑️ Slot "+(slotIdx+1)+" limpo");}catch(e){showToast("❌ Erro: "+e.message);}}}><AppIcon name="🗑️" size={14} mr={4}/>Limpar slot ATIVO ({slotIdx+1})</button>
 <button style={{...bt,background:t.dangerBg,color:t.no,border:`1.5px solid ${t.no}`,padding:"10px 14px",fontSize:12,fontWeight:700}} onClick={()=>{setDeleteAllInput("");setShowConfirmDeleteAll(true);}}><AppIcon name="🔥" size={14} mr={4}/>Apagar TODOS os slots</button>
 </div></Cd_>
+{/* v234: versão discreta no rodapé da aba Exportar */}
+<div style={{textAlign:"center",fontSize:10,color:t.t3,marginTop:18,marginBottom:8,letterSpacing:0.3,fontVariantNumeric:"tabular-nums",opacity:0.7}}>Xandroid · {APP_VERSION}</div>
 {navBtns()}</>);}
 return null;};
 
@@ -3010,6 +3104,8 @@ if(!loggedIn){const isPink=accent==="pink";const bgLogin=isPink?"radial-gradient
 <div style={{marginBottom:24}}><label style={{...lb,color:"rgba(255,255,255,0.85)",fontWeight:600}}>Matrícula</label><input autoComplete="off" autoCorrect="off" spellCheck={false} className="login-input-focus" style={{...inp,fontSize:16,background:"rgba(0,0,0,0.3)",color:"#fff",border:"1.5px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"13px 14px"}} value={loginMat} onChange={e=>setLoginMat(e.target.value)} placeholder="Ex.: 000.000-0" onKeyDown={e=>{if(e.key==="Enter")doLogin();}} autoFocus/>{(()=>{const det=lookupPerito(loginMat);if(det)return <div style={{marginTop:10,padding:"10px 12px",background:"rgba(52,199,89,0.12)",border:"1px solid rgba(52,199,89,0.35)",borderRadius:10,fontSize:13,color:"#fff",display:"flex",alignItems:"center",gap:6}}><AppIcon name="👤" size={16} mr={0}/><b>{det}</b></div>;if(loginMat&&loginMat.trim().length>=3)return <div style={{marginTop:10,padding:"10px 12px",background:"rgba(255,204,0,0.1)",border:"1px solid rgba(255,204,0,0.35)",borderRadius:10,fontSize:12,color:"rgba(255,255,255,0.8)",lineHeight:1.5,display:"flex",alignItems:"flex-start",gap:6}}><AppIcon name="⚠" size={14} mr={0}/><span>Matrícula não cadastrada. Você poderá preencher seu nome no campo "Perito 1" da Solicitação.</span></div>;return null;})()}</div>
 <button className="login-btn-sheen" style={{...bt,background:btnGrad,color:"#fff",width:"100%",textAlign:"center",padding:"15px",fontSize:16,fontWeight:700,borderRadius:12,border:"none",boxShadow:btnShadow,cursor:"pointer",letterSpacing:0.3}} onClick={doLogin}>Entrar</button>
 <p style={{fontSize:11,color:"rgba(255,255,255,0.5)",textAlign:"center",marginTop:18,lineHeight:1.7,display:"flex",alignItems:"center",justifyContent:"center",flexWrap:"wrap",gap:5}}><AppIcon name="💾" size={14} mr={0}/>Seus dados ficam salvos automaticamente<br/>vinculados à sua matrícula</p>
+{/* v234: versão discreta no rodapé do login */}
+<p style={{fontSize:10,color:"rgba(255,255,255,0.28)",textAlign:"center",marginTop:14,letterSpacing:0.3,fontVariantNumeric:"tabular-nums"}}>{APP_VERSION}</p>
 </div></div>);}
 
 return(<><style dangerouslySetInnerHTML={{__html:`html,body{overflow-x:hidden!important;max-width:100vw;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"kern" 1,"liga" 1,"calt" 1,"ss01" 1;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
@@ -3092,6 +3188,7 @@ return(<div key={slot} style={{background:dark?"#1c2a1c":"#f0faf0",border:`2px s
 {savedSlots.length===0&&<p style={{fontSize:12,color:t.t3,textAlign:"center",fontStyle:"italic"}}>Nenhum croqui salvo encontrado.</p>}
 </div></div>}
 {burstCtx&&<BurstModal rk={burstCtx.rk} fotoHQ={fotoHQ} onClose={()=>setBurstCtx(null)} onConfirm={(novas)=>{setFotos(p=>[...p,...novas]);haptic("heavy");showToast("📷 "+novas.length+" foto"+(novas.length>1?"s":"")+" adicionada"+(novas.length>1?"s":""));setBurstCtx(null);}} utils={{uid,mkAutoLegend,captureGPS,haptic}}/>}
+{zipProgress&&(()=>{const isErr=zipProgress.error;const pct=Math.max(0,Math.min(100,zipProgress.pct||0));const isDone=zipProgress.stage==="Concluído"||zipProgress.stage==="Cancelado";return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(4px)"}}><div style={{background:t.cd,borderRadius:18,padding:28,maxWidth:440,width:"100%",boxShadow:"0 12px 48px rgba(0,0,0,0.4)",border:`1.5px solid ${isErr?t.no:t.ac}`}}><div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:48,marginBottom:8}}>{isErr?"❌":isDone?"✅":"📦"}</div><div style={{fontSize:18,fontWeight:800,color:isErr?t.no:t.tx,letterSpacing:-0.3,marginBottom:4}}>{isErr?"Erro ao gerar ZIP":isDone?"Pronto!":"Gerando pacote ZIP"}</div><div style={{fontSize:13,color:t.t2,marginBottom:2}}>{zipProgress.stage}</div>{zipProgress.detail&&<div style={{fontSize:11,color:t.t3,fontFamily:"monospace"}}>{zipProgress.detail}</div>}</div>{!isErr&&<><div style={{height:14,background:t.bg3,borderRadius:10,overflow:"hidden",marginBottom:8,border:`1px solid ${t.bd}`}}><div style={{height:"100%",width:pct+"%",background:`linear-gradient(90deg,${t.ac} 0%,${t.ac}dd 100%)`,transition:"width 0.4s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:`0 0 8px ${t.ac}88`}}/></div><div style={{textAlign:"center",fontSize:13,fontWeight:700,color:t.ac,fontVariantNumeric:"tabular-nums"}}>{pct}%</div></>}{!isDone&&!isErr&&<div style={{textAlign:"center",fontSize:11,color:t.t3,marginTop:14,lineHeight:1.5}}>Aguarde — pode levar de 10 segundos a 2 minutos<br/>dependendo do tamanho dos arquivos.<br/><b>Não feche o app durante a geração.</b></div>}{isErr&&<button style={{...bt,background:t.ac,color:"#fff",width:"100%",textAlign:"center",marginTop:12}} onClick={()=>setZipProgress(null)}>Fechar</button>}</div></div>);})()}
 {showDiag&&(()=>{const errs=(typeof window!=="undefined"&&window.__xandroidErrors)||[];const cacheKeys=(()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith("cq_lib_"));}catch(_){return[];}})();const libs=[];try{libs.push("html2pdf:"+(typeof window.html2pdf==="function"?"OK (função)":typeof window.html2pdf==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}try{libs.push("JSZip:"+(typeof window.JSZip==="function"?"OK (função)":typeof window.JSZip==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}const fullText=`Xandroid Diagnóstico — ${new Date().toLocaleString("pt-BR")}\nVersão: ${APP_VERSION}\nUserAgent: ${navigator.userAgent}\nLibs: ${libs.join(" | ")}\nCache libs: ${cacheKeys.join(", ")||"(vazio)"}\n\n=== Últimos ${errs.length} erros ===\n${errs.map((e,i)=>`[${i+1}] ${e.t}\nTipo: ${e.type}\nMsg: ${e.msg}\nExtra: ${e.extra}\nStack: ${e.stack}\n`).join("\n---\n")||"Nenhum erro registrado."}`;return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:14,padding:20,maxWidth:600,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}><div style={{fontSize:18,fontWeight:800,color:t.ac,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><AppIcon name="🔍" size={20} mr={0}/>Diagnóstico</div><p style={{fontSize:11,color:t.t2,margin:"0 0 12px",lineHeight:1.4}}>Estado interno do app, bibliotecas carregadas, e últimos erros. Útil para reportar problemas.</p><div style={{flex:1,overflowY:"auto",background:t.bg3,padding:12,borderRadius:8,fontFamily:"monospace",fontSize:11,color:t.tx,whiteSpace:"pre-wrap",lineHeight:1.5}}>{fullText}</div><div style={{display:"flex",gap:8,marginTop:12}}><button style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={()=>{const fb=()=>{const ta=document.createElement("textarea");ta.value=fullText;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");showToast("✅ Diagnóstico copiado!");}catch(e){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(()=>showToast("✅ Diagnóstico copiado!")).catch(fb);}else{fb();}}}><AppIcon name="📋" size={14} mr={4}/>Copiar tudo</button><button style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,textAlign:"center"}} onClick={()=>setShowDiag(false)}>Fechar</button></div></div></div>);})()}
 {toast&&(()=>{const isOK=toast.startsWith("✅")||toast.includes("Salvo")||toast.includes("Copiado");const isErr=toast.startsWith("❌")||toast.startsWith("⚠");const isCam=toast.startsWith("📷");const bg=isOK?"linear-gradient(180deg,#34c759,#28a745)":isErr?"linear-gradient(180deg,#ff453a,#d12822)":isCam?"linear-gradient(180deg,#ff9500,#cc7700)":"linear-gradient(180deg,#0a84ff,#0066cc)";return(<div className="di-toast" style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 8px)",left:"50%",transform:"translateX(-50%)",background:bg,color:"#fff",padding:"10px 18px",borderRadius:24,fontSize:14,fontWeight:600,letterSpacing:-0.2,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,0.35),0 0 0 0.5px rgba(255,255,255,0.15) inset",maxWidth:"90vw",textAlign:"center",pointerEvents:"none",display:"inline-flex",alignItems:"center",gap:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><IconText text={toast} size={16}/></div>);})()}
 {editFotoId&&(()=>{const efIdx=fotos.findIndex(f=>f.id===editFotoId);const ef=fotos[efIdx];if(!ef)return null;const goPrev=()=>{if(efIdx>0)setEditFotoId(fotos[efIdx-1].id);};const goNext=()=>{if(efIdx<fotos.length-1)setEditFotoId(fotos[efIdx+1].id);};return(<div key={editFotoId} className="modal-overlay" style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.8)",zIndex:2300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:16,padding:20,maxWidth:420,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
