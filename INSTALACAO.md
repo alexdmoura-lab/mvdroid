@@ -1,4 +1,4 @@
-# 🛠️ MVDroiD v219 — Diagramação corrigida + Largura removida
+# 🛠️ Xandroid v219 — Diagramação corrigida + Largura removida
 
 > Continuação do v218.
 
@@ -36,7 +36,7 @@ Nas trilhas agora aparece: Origem, Destino, Comprimento (m), GPS Início/Fim, Pa
 ## 📦 Pacote completo
 
 ```
-mvdroid-v219/
+xandroid-v219/
 ├── src/App.jsx          ← SUBSTITUIR (todas as correções)
 ├── src/main.jsx         ← (igual v213+)
 └── public/

@@ -1,4 +1,4 @@
-# MVDroiD
+# Xandroid
 
 App PWA mobile-first para perícia de local de crime — usado pela equipe da
 **SCPe / PCDF** (Seção de Crimes Contra a Pessoa, Polícia Civil do Distrito Federal).

@@ -1,10 +1,10 @@
 # ════════════════════════════════════════════════════════════════
-# MVDroiD — Configuração do Netlify
+# Xandroid — Configuração do Netlify
 # ════════════════════════════════════════════════════════════════
 # Este arquivo configura como o Netlify serve o app:
 #  • Headers de cache (imagens carregam instantâneo em recargas)
 #  • Headers de segurança (impede outros sites de embedar/abusar)
-#  • Permissions-Policy explícita (câmera/mic/GPS só funcionam no MVDroiD)
+#  • Permissions-Policy explícita (câmera/mic/GPS só funcionam no Xandroid)
 #  • Redirect SPA (qualquer URL volta pro index.html)
 #
 # Como funciona: basta arrastar este arquivo junto com o resto pro Netlify.
@@ -16,7 +16,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # Impede outros sites de carregar o MVDroiD dentro de iframe
+    # Impede outros sites de carregar o Xandroid dentro de iframe
     # (proteção contra clickjacking, importante p/ app forense)
     X-Frame-Options = "DENY"
 
@@ -24,13 +24,13 @@
     # (proteção contra MIME confusion attacks)
     X-Content-Type-Options = "nosniff"
 
-    # Quando o usuário sai do MVDroiD pra outro site, não revela
+    # Quando o usuário sai do Xandroid pra outro site, não revela
     # a URL completa (que pode conter dados sensíveis)
     Referrer-Policy = "strict-origin-when-cross-origin"
 
     # Restringe quais APIs do navegador outros sites embedados
     # podem usar. Como bloqueamos iframe, isso é defesa em profundidade.
-    # Câmera, microfone e geolocalização só funcionam no próprio MVDroiD.
+    # Câmera, microfone e geolocalização só funcionam no próprio Xandroid.
     Permissions-Policy = "camera=(self), microphone=(self), geolocation=(self), accelerometer=(), gyroscope=()"
 
     # Força HTTPS por 1 ano (HSTS — strict transport security)
@@ -91,7 +91,7 @@
 
 # ───────── SPA FALLBACK ─────────
 # Qualquer URL que não exista vai pro index.html.
-# Útil porque o MVDroiD é single-page (não tem rotas de servidor).
+# Útil porque o Xandroid é single-page (não tem rotas de servidor).
 [[redirects]]
   from = "/*"
   to = "/index.html"

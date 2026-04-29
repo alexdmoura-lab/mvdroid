@@ -14,7 +14,7 @@
 - **Linhas-monstro quebradas**: maior linha caiu de 18.392 → 6.189 chars
 - **Cabeçalho enxuto**: histórico v115-v200 movido para CHANGELOG.md
 
-# Changelog — MVDroiD
+# Changelog — Xandroid
 
 Histórico de versões do app de documentação forense.
 
