@@ -1,0 +1,31 @@
+{
+  "_comment": "Lista de peritos da SCPe/PCDF. O Xandroid carrega este arquivo no boot. Pra adicionar/remover/renomear: edite, faça push pra main, e em ~3 min a Vercel atualiza. Não precisa abrir PR pra mudar nomes. Nomes em Title Case (1ª letra maiúscula).",
+  "peritos": {
+    "226.823-X": "Kellen Maia",
+    "238.826-X": "Victor Costa",
+    "238.838-3": "Renata",
+    "244.597-2": "Menegoi",
+    "244.600-6": "Jaqueline",
+    "244.601-4": "Gabriel Marques",
+    "244.627-8": "Laura",
+    "244.628-6": "Cachuté",
+    "244.633-2": "Patrício",
+    "244.644-8": "Leonardo Guedes",
+    "244.646-4": "Allan Fernandes",
+    "244.648-0": "Bomtempo",
+    "244.649-9": "Alexandre Moura",
+    "244.654-5": "Muria",
+    "244.666-9": "André Ventura",
+    "244.667-7": "Gabriela",
+    "244.668-5": "Lucinda",
+    "244.671-5": "Ana Fraiz",
+    "244.708-8": "Camargos",
+    "244.713-4": "Lia Guazzelli",
+    "244.753-3": "Mauricio Rocha",
+    "244.754-1": "Fabio Rodrigues",
+    "244.832-7": "Borduqui",
+    "1.699.460-4": "Carvalho",
+    "1.699.469-8": "Goulart",
+    "1.707.648-X": "Camilo"
+  }
+}
