@@ -1,7 +1,9 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v10 (v241 — HOTFIX: reintroduz JSZip que
-//   saveCroquiDocx precisa; remoção precoce na v240 quebraria o DOCX)
+// CACHE_VERSION: xandroid-v11 (acompanha App v242 — Pacote 2:
+//   bugs graves resolvidos. Banner sticky quando fotos não salvam,
+//   beforeunload força alerta nesse caso, GPS distingue 3 erros,
+//   2 window.confirm migrados pro modal custom, DOMPurify no pdf-preview)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -25,7 +27,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v10';
+const CACHE_VERSION = 'xandroid-v11';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
