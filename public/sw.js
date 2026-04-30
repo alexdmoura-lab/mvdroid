@@ -1,12 +1,11 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v17 (App v248 — fix Croqui PDF falhando no ZIP +
-//   reset defensivo de lock preso. Removidas opções suspeitas do html2canvas
-//   que introduzi na v246 (removeContainer, letterRendering, imageTimeout) —
-//   algumas versões da lib rejeitavam silenciosamente e quebravam Croqui PDF.
-//   Reset defensivo: se exportingZipRef ficou preso há mais de 6 min, libera
-//   automaticamente. Logs detalhados em window.__xandroidErrors quando algo
-//   falhar — visível em "Aba Exportar > Avançado > Diagnóstico".)
+// CACHE_VERSION: xandroid-v18 (App v249 — modal de erro persistente + retry
+//   automático no Croqui PDF. Modal de progresso ZIP agora NÃO fecha
+//   sozinho quando há falhas parciais (antes sumia em 3s, usuário perdia).
+//   Mostra lista das falhas, botão "Ver detalhes técnicos" → Diagnóstico,
+//   botão "Entendi" pra fechar. Croqui PDF: 2 tentativas — 1ª scale 1.4
+//   timeout 90s; 2ª (se 1ª falhar) scale 1.0 quality 0.7 timeout 60s.)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -30,7 +29,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v17';
+const CACHE_VERSION = 'xandroid-v18';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
