@@ -1,10 +1,12 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v14 (App v245 — Pacote 4: canvas + exports.
-//   Canvas: stampSz/hitTol dinâmicos baseados em getBoundingClientRect
-//   (44pt iOS HIG mínimo no celular), upgrader pra stamps antigos,
-//   haptic ao selecionar, bounding box mais grosso. Exports: aviso
-//   pré-ZIP com 250+ fotos, "Compartilhar DOCX" virou "Enviar DOCX")
+// CACHE_VERSION: xandroid-v15 (App v246 — fix botões canvas + ZIP rápido.
+//   Canvas: renderOverlay e onD agora usam o MESMO hf e hR — botões
+//   delete/rotate/resize aparecem onde o app procura (antes desalinhado:
+//   apareciam em hf=+14 mas onD procurava em hf=+46). Botão circular
+//   também escala no celular (mín 32 → ~48px no canvas, ~44pt na tela).
+//   ZIP: html2canvas scale 2 → 1.4 + timeout 60s → 25-30s + setTimeout(30)
+//   antes de cada render = ZIP de croqui mínimo cai de 2 min pra ~20-30s.)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -28,7 +30,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v14';
+const CACHE_VERSION = 'xandroid-v15';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
