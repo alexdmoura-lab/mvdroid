@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v266-Xandroid";
+const APP_VERSION="v267-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -337,19 +337,24 @@ const glowShadow=accent?`${baseShadow},0 0 16px ${accent}22,-2px 0 10px ${accent
 return(<div className="ios-card" style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:glowShadow,position:"relative",transition:"box-shadow 0.3s ease"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<AppIcon name={iconKey} size={30} mr={0}/>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
 // EmptyState ilustrativo (estilo iOS / Apple Health)
 const EmptyState=({icon,title,hint,accent="#007aff",dark:isDark})=>{const grad=`url(#emptyGrad-${accent.replace("#","")})`;return(<div style={{padding:"28px 20px",textAlign:"center",background:isDark?"linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%)":"linear-gradient(180deg,rgba(0,0,0,0.015) 0%,transparent 100%)",borderRadius:14,marginBottom:10,border:`1.5px dashed ${accent}33`}}><svg width="64" height="64" viewBox="0 0 64 64" style={{marginBottom:10,filter:`drop-shadow(0 2px 6px ${accent}30)`}}><defs><linearGradient id={`emptyGrad-${accent.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity="0.18"/><stop offset="100%" stopColor={accent} stopOpacity="0.04"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill={grad} stroke={accent+"55"} strokeWidth="1.2"/><text x="32" y="42" textAnchor="middle" fontSize="28">{icon}</text></svg><div style={{fontSize:15,fontWeight:700,color:isDark?"#fff":"#000",letterSpacing:-0.3,marginBottom:4}}>{title}</div>{hint&&<div style={{fontSize:12,color:isDark?"#999":"#666",lineHeight:1.5}}>{hint}</div>}</div>);};
-// v260: estilo "pílula" — retângulo do tamanho da palavra centralizado no alvo (x+w/2, y+h/2).
-// Não cobre a imagem; apenas indica a região com texto legível e clicável.
-// Fonte fixa 16px, negrito 800. Altura ~28 (mais alta que letra para facilitar toque).
-// Tag inclui margem de toque invisível para click ainda funcionar mesmo se chip pequeno.
-const Rg_=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=16;const txt=n||"";
+// v267: estilo "pílula" — agora aceita props opcionais lx,ly para posicionar a label
+// fora do hitbox (com linha tracejada conectando ao alvo). Útil em regiões pequenas
+// que se sobrepõem (lábios, nariz, etc.) — a pílula sai da face e a linha aponta.
+const Rg_=({id,x,y,w,h,n,count,onClick,lx,ly})=>{const c=count;const fs=16;const txt=n||"";
 const tagW=Math.max(36,txt.length*fs*0.58+18);const tagH=fs+12;
-const cxC=x+w/2;const cyC=y+h/2;const tagX=cxC-tagW/2;const tagY=cyC-tagH/2;
+const cxC=x+w/2;const cyC=y+h/2;
+const labelCX=lx!==undefined?lx:cxC;const labelCY=ly!==undefined?ly:cyC;
+const tagX=labelCX-tagW/2;const tagY=labelCY-tagH/2;
+const hasOffset=(lx!==undefined||ly!==undefined)&&(labelCX!==cxC||labelCY!==cyC);
 return(<g onClick={()=>onClick(id)} style={{cursor:"pointer"}}>
-{/* hitbox transparente preserva área de toque generosa */}
+{/* hitbox transparente preserva área de toque generosa na região anatômica */}
 <rect x={x} y={y} width={w} height={h} fill="transparent" rx="4"/>
+{/* linha tracejada do alvo até a pílula quando label está deslocada */}
+{hasOffset&&<line x1={cxC} y1={cyC} x2={labelCX} y2={labelCY} stroke={c?"#cc0000":"#3355aa"} strokeWidth="1.5" strokeDasharray="3 2" opacity="0.7"/>}
+{hasOffset&&<circle cx={cxC} cy={cyC} r="3" fill={c?"#cc0000":"#3355aa"}/>}
 {/* pílula visível */}
 <rect x={tagX} y={tagY} width={tagW} height={tagH} fill={c?"rgba(255,59,48,0.85)":"rgba(255,255,255,0.92)"} stroke={c?"#cc0000":"#3355aa"} strokeWidth={c?1.5:1.5} rx={tagH/2}/>
-{txt&&<text x={cxC} y={cyC+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#fff":"#112"} style={{letterSpacing:"-0.2px",pointerEvents:"none"}}>{txt}</text>}
+{txt&&<text x={labelCX} y={labelCY+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#fff":"#112"} style={{letterSpacing:"-0.2px",pointerEvents:"none"}}>{txt}</text>}
 {c>0&&<><circle cx={tagX+tagW-2} cy={tagY+2} r="9" fill="#cc0000" stroke="#fff" strokeWidth="1.5"/><text x={tagX+tagW-2} y={tagY+6} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff" style={{pointerEvents:"none"}}>{c}</text></>}
 </g>);};
 // Vehicle SVG region — mesma lógica
@@ -3089,16 +3094,16 @@ const BLat=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaver
 const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:1400}}>
 <image href={I.cabeca} x="0" y="0" width="800" height="540" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="572" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">CABEÇA — 5 vistas {fem?"♀":"♂"}</text>
-{/* === Vista 1: FACE (FRENTE) === */}
-<Rg_ id="h_frontal" x={150} y={20} w={120} h={55} n="Testa" count={wc("h_frontal")} onClick={aw}/>
-<Rg_ id="h_orbit_d" x={148} y={78} w={62} h={32} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
-<Rg_ id="h_orbit_e" x={210} y={78} w={62} h={32} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
-<Rg_ id="h_nasal" x={183} y={108} w={55} h={50} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
-<Rg_ id="h_labial_sup" x={172} y={158} w={75} h={18} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
-<Rg_ id="h_labial_inf" x={172} y={176} w={75} h={18} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={178} y={196} w={62} h={26} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
-<Rg_ id="h_auricular_d" x={108} y={88} w={42} h={70} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
-<Rg_ id="h_auricular_e" x={272} y={88} w={42} h={70} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
+{/* === Vista 1: FACE (FRENTE) — labels internos minimizados; nariz/lábios/queixo movidos para fora à direita === */}
+<Rg_ id="h_frontal" x={150} y={20} w={120} h={48} n="Testa" count={wc("h_frontal")} onClick={aw}/>
+<Rg_ id="h_orbit_d" x={148} y={70} w={62} h={26} lx={170} ly={68} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
+<Rg_ id="h_orbit_e" x={210} y={70} w={62} h={26} lx={250} ly={68} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
+<Rg_ id="h_nasal" x={183} y={108} w={55} h={50} lx={368} ly={120} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={172} y={158} w={75} h={18} lx={368} ly={148} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={172} y={176} w={75} h={18} lx={368} ly={176} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={178} y={196} w={62} h={26} lx={368} ly={204} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={108} y={88} w={42} h={70} lx={50} ly={120} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={272} y={88} w={42} h={70} lx={368} ly={232} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
 {/* === Vista 2: REGIÃO POSTERIOR (NUCA) === */}
 <Rg_ id="h_vertex" x={510} y={20} w={170} h={50} n="Vértex" count={wc("h_vertex")} onClick={aw}/>
 <Rg_ id="h_parietal_d" x={478} y={70} w={108} h={68} n="Pariet D" count={wc("h_parietal_d")} onClick={aw}/>
@@ -3106,15 +3111,15 @@ const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverId
 <Rg_ id="h_occipital" x={510} y={140} w={170} h={68} n="Occip" count={wc("h_occipital")} onClick={aw}/>
 <Rg_ id="h_auricular_d" x={448} y={92} w={32} h={58} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
 <Rg_ id="h_auricular_e" x={702} y={92} w={32} h={58} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
-{/* === Vista 3: FACE DIREITA — perfil olha pra direita === */}
-<Rg_ id="h_temporal_d" x={75} y={295} w={130} h={55} n="Temp D" count={wc("h_temporal_d")} onClick={aw}/>
-<Rg_ id="h_orbit_d" x={195} y={340} w={55} h={32} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
-<Rg_ id="h_auricular_d" x={55} y={350} w={68} h={68} n="Orelha D" count={wc("h_auricular_d")} onClick={aw}/>
-<Rg_ id="h_occipital" x={20} y={300} w={50} h={90} n="Occip" count={wc("h_occipital")} onClick={aw}/>
-<Rg_ id="h_nasal" x={235} y={365} w={36} h={42} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
-<Rg_ id="h_labial_sup" x={210} y={408} w={50} h={16} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
-<Rg_ id="h_labial_inf" x={210} y={424} w={50} h={16} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={195} y={440} w={62} h={32} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
+{/* === Vista 3: FACE DIREITA — labels detalhados (nariz/lábios/queixo) movidos para a direita do perfil === */}
+<Rg_ id="h_temporal_d" x={75} y={295} w={130} h={55} lx={130} ly={282} n="Temp D" count={wc("h_temporal_d")} onClick={aw}/>
+<Rg_ id="h_orbit_d" x={195} y={340} w={55} h={32} lx={300} ly={345} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={55} y={350} w={68} h={68} lx={45} ly={490} n="Orelha D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_occipital" x={20} y={300} w={50} h={90} lx={36} ly={278} n="Occip" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_nasal" x={235} y={365} w={36} h={42} lx={300} ly={372} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={210} y={408} w={50} h={16} lx={300} ly={400} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={210} y={424} w={50} h={16} lx={300} ly={428} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={195} y={440} w={62} h={32} lx={300} ly={460} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
 {/* === Vista 4: VISTO DE CIMA — frente embaixo, nuca em cima === */}
 <Rg_ id="h_occipital" x={330} y={278} w={120} h={28} n="Occ ↑" count={wc("h_occipital")} onClick={aw}/>
 <Rg_ id="h_parietal_d" x={310} y={306} w={75} h={160} n="ParD ↑" count={wc("h_parietal_d")} onClick={aw}/>
@@ -3123,15 +3128,15 @@ const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverId
 <Rg_ id="h_frontal" x={335} y={466} w={120} h={36} n="Testa" count={wc("h_frontal")} onClick={aw}/>
 <Rg_ id="h_auricular_d" x={278} y={345} w={32} h={62} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
 <Rg_ id="h_auricular_e" x={482} y={345} w={32} h={62} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
-{/* === Vista 5: FACE ESQUERDA — perfil olha pra esquerda === */}
-<Rg_ id="h_temporal_e" x={595} y={295} w={130} h={55} n="Temp E" count={wc("h_temporal_e")} onClick={aw}/>
-<Rg_ id="h_orbit_e" x={550} y={340} w={55} h={32} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
-<Rg_ id="h_auricular_e" x={677} y={350} w={68} h={68} n="Orelha E" count={wc("h_auricular_e")} onClick={aw}/>
-<Rg_ id="h_occipital" x={730} y={300} w={50} h={90} n="Occip" count={wc("h_occipital")} onClick={aw}/>
-<Rg_ id="h_nasal" x={530} y={365} w={36} h={42} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
-<Rg_ id="h_labial_sup" x={540} y={408} w={50} h={16} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
-<Rg_ id="h_labial_inf" x={540} y={424} w={50} h={16} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={543} y={440} w={62} h={32} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
+{/* === Vista 5: FACE ESQUERDA — labels detalhados (nariz/lábios/queixo) movidos para a esquerda do perfil === */}
+<Rg_ id="h_temporal_e" x={595} y={295} w={130} h={55} lx={665} ly={282} n="Temp E" count={wc("h_temporal_e")} onClick={aw}/>
+<Rg_ id="h_orbit_e" x={550} y={340} w={55} h={32} lx={500} ly={345} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={677} y={350} w={68} h={68} lx={760} ly={490} n="Orelha E" count={wc("h_auricular_e")} onClick={aw}/>
+<Rg_ id="h_occipital" x={730} y={300} w={50} h={90} lx={765} ly={278} n="Occip" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_nasal" x={530} y={365} w={36} h={42} lx={500} ly={372} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={540} y={408} w={50} h={16} lx={500} ly={400} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={540} y={424} w={50} h={16} lx={500} ly={428} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={543} y={440} w={62} h={32} lx={500} ly={460} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
 </svg>);};
   // ══════════════════════════════════════════
   // SVGs DAS MÃOS — Palma e Dorso (D e E)
