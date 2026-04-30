@@ -1,12 +1,11 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v20 (App v251 — bypass html2pdf em iOS via AirPrint.
-//   Diagnóstico do usuário em v250 mostrou que MESMO com pré-load de imagens
-//   + xLight + timeout 120s, html2pdf trava em iOS 18.7. Bug do WebKit
-//   recente. Solução: em iOS, ZIP NÃO inclui Croqui PDF — inclui o HTML.
-//   Botão novo "🖨 Imprimir/PDF (iOS)" abre nova aba com print stylesheet
-//   pronto pra AirPrint. AirPrint do iOS oferece "Salvar em Arquivos" como
-//   PDF nativo (sem html2canvas, sem timeout, qualidade alta).)
+// CACHE_VERSION: xandroid-v21 (App v252 — AirPrint vira caminho ÚNICO em iOS.
+//   Pesquisa profunda confirmou bug oficial em jsPDF#3876, html2canvas#3053,
+//   html2pdf.js#481/#601 + WebKit Bug 195325 (canvas memory cap 224MB).
+//   Solução: em iOS, próprios botões "Croqui PDF" e "RRV PDF" abrem direto
+//   o AirPrint (label "🖨 Croqui PDF · AirPrint"). Sem mais html2pdf em iOS.
+//   Aviso azul didático com tutorial 4 passos. Botão duplicado removido.)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -30,7 +29,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v20';
+const CACHE_VERSION = 'xandroid-v21';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
