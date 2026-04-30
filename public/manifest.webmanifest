@@ -46,21 +46,21 @@
       "short_name": "Nova cena",
       "description": "Iniciar levantamento de uma cena nova",
       "url": "/?action=new&source=shortcut",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/shortcut-new.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Capturar foto",
       "short_name": "Foto",
       "description": "Abrir câmera direto",
       "url": "/?action=capture&source=shortcut",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/shortcut-camera.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Exportar última cena",
       "short_name": "Exportar",
       "description": "Ir direto para a aba Exportar",
       "url": "/?action=export&source=shortcut",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/shortcut-export.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }
