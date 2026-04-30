@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v256-Xandroid";
+const APP_VERSION="v257-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -337,9 +337,12 @@ const glowShadow=accent?`${baseShadow},0 0 16px ${accent}22,-2px 0 10px ${accent
 return(<div className="ios-card" style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:glowShadow,position:"relative",transition:"box-shadow 0.3s ease"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<AppIcon name={iconKey} size={30} mr={0}/>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
 // EmptyState ilustrativo (estilo iOS / Apple Health)
 const EmptyState=({icon,title,hint,accent="#007aff",dark:isDark})=>{const grad=`url(#emptyGrad-${accent.replace("#","")})`;return(<div style={{padding:"28px 20px",textAlign:"center",background:isDark?"linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%)":"linear-gradient(180deg,rgba(0,0,0,0.015) 0%,transparent 100%)",borderRadius:14,marginBottom:10,border:`1.5px dashed ${accent}33`}}><svg width="64" height="64" viewBox="0 0 64 64" style={{marginBottom:10,filter:`drop-shadow(0 2px 6px ${accent}30)`}}><defs><linearGradient id={`emptyGrad-${accent.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity="0.18"/><stop offset="100%" stopColor={accent} stopOpacity="0.04"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill={grad} stroke={accent+"55"} strokeWidth="1.2"/><text x="32" y="42" textAnchor="middle" fontSize="28">{icon}</text></svg><div style={{fontSize:15,fontWeight:700,color:isDark?"#fff":"#000",letterSpacing:-0.3,marginBottom:4}}>{title}</div>{hint&&<div style={{fontSize:12,color:isDark?"#999":"#666",lineHeight:1.5}}>{hint}</div>}</div>);};
-const Rg_=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(6,Math.min(9,w/((n||"").length||1)*1.5));return(<g onClick={()=>onClick(id)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.25)":"rgba(0,80,220,0.09)"} stroke={c?"#ff3b30":"#7788aa"} strokeWidth={c?2:0.9} strokeDasharray={c?"":"4,2"} rx="3"/>{n&&<text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="600" fill={c?"#cc0000":"#335"}>{n}</text>}{c>0&&<><circle cx={x+w-6} cy={y+6} r="7" fill="#ff3b30"/><text x={x+w-6} y={y+9.5} textAnchor="middle" fontSize="7" fontWeight="700" fill="#fff">{c}</text></>}</g>);};
-// Vehicle SVG region
-const VRg=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(6.5,Math.min(9.5,w/n.length*1.6));return(<g onClick={()=>onClick(id,n)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.25)":"rgba(0,80,220,0.09)"} stroke={c?"#ff3b30":"#7788aa"} strokeWidth={c?2:0.9} strokeDasharray={c?"":"4,2"} rx="3"/><text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="600" fill={c?"#cc0000":"#335"}>{n}</text>{c>0&&<><circle cx={x+w-7} cy={y+7} r="8" fill="#ff3b30"/><text x={x+w-7} y={y+10.5} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#fff">{c}</text></>}</g>);};
+// v257: fonte maior e mais negrita para legibilidade (min 11 max 18)
+// Stroke da região mais espesso quando vazio (1.6 em vez de 0.9) para destacar
+// Texto com sombra/contorno branco para contraste sobre a imagem
+const Rg_=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(11,Math.min(18,w/((n||"").length||1)*2));return(<g onClick={()=>onClick(id)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.30)":"rgba(0,80,220,0.10)"} stroke={c?"#ff3b30":"#3355aa"} strokeWidth={c?2.4:1.6} strokeDasharray={c?"":"5,3"} rx="4"/>{n&&<text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#cc0000":"#112"} stroke="#fff" strokeWidth="2.5" paintOrder="stroke" style={{letterSpacing:"-0.2px"}}>{n}</text>}{c>0&&<><circle cx={x+w-9} cy={y+9} r="10" fill="#ff3b30" stroke="#fff" strokeWidth="1.5"/><text x={x+w-9} y={y+13} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{c}</text></>}</g>);};
+// Vehicle SVG region — mesma melhoria
+const VRg=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(11,Math.min(18,w/n.length*2));return(<g onClick={()=>onClick(id,n)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.30)":"rgba(0,80,220,0.10)"} stroke={c?"#ff3b30":"#3355aa"} strokeWidth={c?2.4:1.6} strokeDasharray={c?"":"5,3"} rx="4"/><text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#cc0000":"#112"} stroke="#fff" strokeWidth="2.5" paintOrder="stroke" style={{letterSpacing:"-0.2px"}}>{n}</text>{c>0&&<><circle cx={x+w-9} cy={y+9} r="10" fill="#ff3b30" stroke="#fff" strokeWidth="1.5"/><text x={x+w-9} y={y+13} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{c}</text></>}</g>);};
 
 
 // ════════════════════════════════════════════════════════════════
@@ -3076,38 +3079,55 @@ const BLat=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaver
   // SVGs DA CABEÇA — 4 vistas com imagens
   // Frente, Atrás, Perfil E, Perfil D
   // ══════════════════════════════════════════
-// v256: HS unificado — 1 imagem com 5 vistas (frente, nuca, perfil D, vista de cima, perfil E)
-// gender-aware via cx_sx
-const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 560" style={{width:"100%",maxWidth:560}}>
+// v257: HS recalibrado — 5 vistas em 1 imagem (800x560)
+// quadrantes da imagem: TL=frente (x≈100-310,y≈10-220), TR=nuca (x≈460-720,y≈10-220),
+// BL=face D (x≈40-260,y≈285-490), BC=cima (x≈285-490,y≈275-510), BR=face E (x≈540-770,y≈285-490)
+const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:950}}>
 <image href={I.cabeca} x="0" y="0" width="800" height="540" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="556" textAnchor="middle" fontSize="11" fontWeight="600" fill="#999">CABEÇA — 5 vistas {fem?"♀":"♂"}</text>
-{/* === Vista 1: FACE (FRENTE) — quadrante superior esquerdo (centro x≈210, y≈110) === */}
-<Rg_ id="h_frontal" x={120} y={20} w={180} h={62} n="Testa" count={wc("h_frontal")} onClick={aw}/>
-<Rg_ id="h_orbit_d" x={130} y={82} w={76} h={36} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
-<Rg_ id="h_orbit_e" x={210} y={82} w={76} h={36} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
-<Rg_ id="h_nasal" x={170} y={118} w={80} h={50} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
-<Rg_ id="h_labial_sup" x={160} y={168} w={100} h={20} n="L. sup" count={wc("h_labial_sup")} onClick={aw}/>
-<Rg_ id="h_labial_inf" x={160} y={188} w={100} h={20} n="L. inf" count={wc("h_labial_inf")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={170} y={208} w={80} h={30} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
-{/* === Vista 2: REGIÃO POSTERIOR (NUCA) — quadrante superior direito (centro x≈590, y≈110) === */}
-<Rg_ id="h_vertex" x={500} y={20} w={180} h={50} n="Vértex" count={wc("h_vertex")} onClick={aw}/>
-<Rg_ id="h_parietal_d" x={490} y={70} w={100} h={60} n="Par. D" count={wc("h_parietal_d")} onClick={aw}/>
-<Rg_ id="h_parietal_e" x={590} y={70} w={100} h={60} n="Par. E" count={wc("h_parietal_e")} onClick={aw}/>
-<Rg_ id="h_occipital" x={500} y={130} w={180} h={84} n="Occ." count={wc("h_occipital")} onClick={aw}/>
-<Rg_ id="h_auricular_d" x={460} y={120} w={50} h={50} n="Or. D" count={wc("h_auricular_d")} onClick={aw}/>
-<Rg_ id="h_auricular_e" x={680} y={120} w={50} h={50} n="Or. E" count={wc("h_auricular_e")} onClick={aw}/>
-{/* === Vista 3: FACE DIREITA — quadrante inferior esquerdo (centro x≈140, y≈400) === */}
-<Rg_ id="h_temporal_d" x={50} y={290} w={170} h={70} n="Temp. D" count={wc("h_temporal_d")} onClick={aw}/>
-<Rg_ id="h_auricular_d" x={30} y={360} w={70} h={70} n="Orelha D" count={wc("h_auricular_d")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={140} y={420} w={120} h={50} n="Queixo D" count={wc("h_mentoniana")} onClick={aw}/>
-{/* === Vista 4: VISTO DE CIMA — quadrante inferior centro (centro x≈390, y≈400) === */}
-<Rg_ id="h_vertex" x={290} y={290} w={200} h={140} n="Calota" count={wc("h_vertex")} onClick={aw}/>
-<Rg_ id="h_parietal_d" x={290} y={290} w={100} h={140} n="Par.D ↑" count={wc("h_parietal_d")} onClick={aw}/>
-<Rg_ id="h_parietal_e" x={390} y={290} w={100} h={140} n="Par.E ↑" count={wc("h_parietal_e")} onClick={aw}/>
-{/* === Vista 5: FACE ESQUERDA — quadrante inferior direito (centro x≈670, y≈400) === */}
-<Rg_ id="h_temporal_e" x={580} y={290} w={170} h={70} n="Temp. E" count={wc("h_temporal_e")} onClick={aw}/>
-<Rg_ id="h_auricular_e" x={700} y={360} w={70} h={70} n="Orelha E" count={wc("h_auricular_e")} onClick={aw}/>
-<Rg_ id="h_mentoniana" x={540} y={420} w={120} h={50} n="Queixo E" count={wc("h_mentoniana")} onClick={aw}/>
+<text x="400" y="572" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">CABEÇA — 5 vistas {fem?"♀":"♂"}</text>
+{/* === Vista 1: FACE (FRENTE) === */}
+<Rg_ id="h_frontal" x={150} y={20} w={120} h={55} n="Testa" count={wc("h_frontal")} onClick={aw}/>
+<Rg_ id="h_orbit_d" x={148} y={78} w={62} h={32} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
+<Rg_ id="h_orbit_e" x={210} y={78} w={62} h={32} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
+<Rg_ id="h_nasal" x={183} y={108} w={55} h={50} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={172} y={158} w={75} h={18} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={172} y={176} w={75} h={18} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={178} y={196} w={62} h={26} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={108} y={88} w={42} h={70} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={272} y={88} w={42} h={70} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
+{/* === Vista 2: REGIÃO POSTERIOR (NUCA) === */}
+<Rg_ id="h_vertex" x={510} y={20} w={170} h={50} n="Vértex" count={wc("h_vertex")} onClick={aw}/>
+<Rg_ id="h_parietal_d" x={478} y={70} w={108} h={68} n="Pariet D" count={wc("h_parietal_d")} onClick={aw}/>
+<Rg_ id="h_parietal_e" x={596} y={70} w={108} h={68} n="Pariet E" count={wc("h_parietal_e")} onClick={aw}/>
+<Rg_ id="h_occipital" x={510} y={140} w={170} h={68} n="Occip" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={448} y={92} w={32} h={58} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={702} y={92} w={32} h={58} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
+{/* === Vista 3: FACE DIREITA — perfil olha pra direita === */}
+<Rg_ id="h_temporal_d" x={75} y={295} w={130} h={55} n="Temp D" count={wc("h_temporal_d")} onClick={aw}/>
+<Rg_ id="h_orbit_d" x={195} y={340} w={55} h={32} n="Olho D" count={wc("h_orbit_d")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={55} y={350} w={68} h={68} n="Orelha D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_occipital" x={20} y={300} w={50} h={90} n="Occip" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_nasal" x={235} y={365} w={36} h={42} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={210} y={408} w={50} h={16} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={210} y={424} w={50} h={16} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={195} y={440} w={62} h={32} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
+{/* === Vista 4: VISTO DE CIMA — frente embaixo, nuca em cima === */}
+<Rg_ id="h_occipital" x={330} y={278} w={120} h={28} n="Occ ↑" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_parietal_d" x={310} y={306} w={75} h={160} n="ParD ↑" count={wc("h_parietal_d")} onClick={aw}/>
+<Rg_ id="h_vertex" x={385} y={306} w={20} h={160} n="Vért" count={wc("h_vertex")} onClick={aw}/>
+<Rg_ id="h_parietal_e" x={405} y={306} w={75} h={160} n="ParE ↑" count={wc("h_parietal_e")} onClick={aw}/>
+<Rg_ id="h_frontal" x={335} y={466} w={120} h={36} n="Testa" count={wc("h_frontal")} onClick={aw}/>
+<Rg_ id="h_auricular_d" x={278} y={345} w={32} h={62} n="Or D" count={wc("h_auricular_d")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={482} y={345} w={32} h={62} n="Or E" count={wc("h_auricular_e")} onClick={aw}/>
+{/* === Vista 5: FACE ESQUERDA — perfil olha pra esquerda === */}
+<Rg_ id="h_temporal_e" x={595} y={295} w={130} h={55} n="Temp E" count={wc("h_temporal_e")} onClick={aw}/>
+<Rg_ id="h_orbit_e" x={550} y={340} w={55} h={32} n="Olho E" count={wc("h_orbit_e")} onClick={aw}/>
+<Rg_ id="h_auricular_e" x={677} y={350} w={68} h={68} n="Orelha E" count={wc("h_auricular_e")} onClick={aw}/>
+<Rg_ id="h_occipital" x={730} y={300} w={50} h={90} n="Occip" count={wc("h_occipital")} onClick={aw}/>
+<Rg_ id="h_nasal" x={530} y={365} w={36} h={42} n="Nariz" count={wc("h_nasal")} onClick={aw}/>
+<Rg_ id="h_labial_sup" x={540} y={408} w={50} h={16} n="Lábio S" count={wc("h_labial_sup")} onClick={aw}/>
+<Rg_ id="h_labial_inf" x={540} y={424} w={50} h={16} n="Lábio I" count={wc("h_labial_inf")} onClick={aw}/>
+<Rg_ id="h_mentoniana" x={543} y={440} w={62} h={32} n="Queixo" count={wc("h_mentoniana")} onClick={aw}/>
 </svg>);};
   // ══════════════════════════════════════════
   // SVGs DAS MÃOS — Palma e Dorso (D e E)
@@ -3122,9 +3142,9 @@ const MSvg=({side})=>{const p=side==="D"?"md":"me";const img=side==="D"?IMG_MAO_
 // Para mao-d: vista1 (esq) = palma; vista2 (dir) = dorso
 // Para mao-e: vista1 (esq) = dorso; vista2 (dir) = palma
 const v1=side==="D"?"palma":"dorso";const v2=side==="D"?"dorso":"palma";
-return(<svg viewBox="0 0 800 600" style={{width:"100%",maxWidth:600}}>
+return(<svg viewBox="0 0 800 600" style={{width:"100%",maxWidth:760}}>
 <image href={img} x="0" y="0" width="800" height="580" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="595" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">MÃO {side} — palma + dorso</text>
+<text x="400" y="595" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MÃO {side} — palma + dorso</text>
 {/* === Vista 1 (lado esquerdo da imagem, x≈0-400) === */}
 <Rg_ id={p+"_"+v1} x={120} y={260} w={170} h={170} n={v1==="palma"?"Palma":"Dorso"} count={wc(p+"_"+v1)} onClick={aw}/>
 <Rg_ id={p+"_punho"} x={120} y={430} w={170} h={130} n="Punho" count={wc(p+"_punho")} onClick={aw}/>
@@ -3151,9 +3171,9 @@ return(<svg viewBox="0 0 800 600" style={{width:"100%",maxWidth:600}}>
 // pe-e.png: peito E (esq) | sola E (dir)
 const FootSvg=({side})=>{const p=side==="D"?"pd":"pe";const img=side==="D"?IMG_PE_D:IMG_PE_E;
 const v1plant=side==="D";  // pé D mostra sola na esq, peito na dir; pé E é o oposto
-return(<svg viewBox="0 0 800 550" style={{width:"100%",maxWidth:600}}>
+return(<svg viewBox="0 0 800 550" style={{width:"100%",maxWidth:760}}>
 <image href={img} x="0" y="0" width="800" height="530" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="546" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">PÉ {side} — sola + peito</text>
+<text x="400" y="546" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">PÉ {side} — sola + peito</text>
 {/* === Vista 1 (lado esquerdo) === */}
 {v1plant?<>
 <Rg_ id={p+"_planta"} x={100} y={120} w={200} h={260} n="Planta" count={wc(p+"_planta")} onClick={aw}/>
@@ -3203,86 +3223,80 @@ return(<svg viewBox="0 0 800 550" style={{width:"100%",maxWidth:600}}>
 // regions: array de {id, x, y, w, h, n}. count e handler vêm do escopo.
 const VeiImg=({src,label,viewBox,regions,addVV,vwc})=>(<svg viewBox={viewBox} style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width={viewBox.split(" ")[2]} height={parseFloat(viewBox.split(" ")[3])-20} preserveAspectRatio="xMidYMid meet"/>
-<text x={parseFloat(viewBox.split(" ")[2])/2} y={parseFloat(viewBox.split(" ")[3])-4} textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{label}</text>
+<text x={parseFloat(viewBox.split(" ")[2])/2} y={parseFloat(viewBox.split(" ")[3])-4} textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{label}</text>
 {regions.map(r=><VRg key={r.id+(r.tag||"")} id={r.id} x={r.x} y={r.y} w={r.w} h={r.h} n={r.n} count={vwc(r.id)} onClick={addVV}/>)}
 </svg>);
 
 // v256: VLatSvg agora image-based, aceita `tipo` (sedan/hatch/suv/caminhonete).
 // Para lateral D: frente do carro à direita (x grande). Para lateral E: frente à esquerda.
 // IDs RVE/RVD preservados para compatibilidade com backups antigos.
+// v257: VLatSvg — áreas reduzidas (~35% menores) para não cobrir tanto a imagem.
+// Regiões posicionadas sobre os elementos visíveis na imagem em vez de cobrir tudo.
 const VLatSvg=({side,tipo="sedan"})=>{const R=side==="E"?RVE:RVD;const label=`${tipo.toUpperCase()} — ${side==="E"?"LATERAL ESQUERDA":"LATERAL DIREITA"}`;const src=IMG_VEI[tipo]?.[side==="E"?"latE":"latD"];const isE=side==="E";
-// Coordenadas para LATERAL DIREITA (frente à direita). Para E, espelhamos via flag.
-// viewBox 0 0 800 400 (proporção ~2:1)
-const ant=(x)=>isE?800-x:x;  // x do "lado dianteiro"
 return(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{label}</text>
-{/* Porta anterior (próxima da frente) */}
-<VRg id={R[0].id} x={isE?180:430} y={130} w={190} h={140} n="Porta ant." count={vwc(R[0].id)} onClick={addVV}/>
-{/* Porta posterior */}
-<VRg id={R[1].id} x={isE?370:230} w={200} y={130} h={140} n="Porta pos." count={vwc(R[1].id)} onClick={addVV}/>
-{/* Vidro anterior (porta da frente) */}
-<VRg id={R[2].id} x={isE?180:430} y={70} w={190} h={60} n="Vidro ant." count={vwc(R[2].id)} onClick={addVV}/>
-{/* Vidro posterior */}
-<VRg id={R[3].id} x={isE?370:230} y={70} w={200} h={60} n="Vidro pos." count={vwc(R[3].id)} onClick={addVV}/>
-{/* Retrovisor lateral (próximo do farol) */}
-<VRg id={R[4].id} x={isE?20:710} y={140} w={70} h={40} n="Retrov." count={vwc(R[4].id)} onClick={addVV}/>
-{/* Para-lama anterior (acima da roda dianteira) */}
-<VRg id={R[5].id} x={isE?60:570} y={170} w={170} h={80} n="P-lama ant." count={vwc(R[5].id)} onClick={addVV}/>
-{/* Para-lama posterior */}
-<VRg id={R[6].id} x={isE?570:60} y={170} w={170} h={80} n="P-lama pos." count={vwc(R[6].id)} onClick={addVV}/>
-{/* Para-choque anterior (extremo dianteiro) */}
-<VRg id={R[7].id} x={isE?0:720} y={230} w={80} h={70} n="P-chq ant." count={vwc(R[7].id)} onClick={addVV}/>
-{/* Para-choque posterior */}
-<VRg id={R[8].id} x={isE?720:0} y={230} w={80} h={70} n="P-chq pos." count={vwc(R[8].id)} onClick={addVV}/>
-{/* Roda anterior (mais clicável que pneu) */}
-<VRg id={R[9].id} x={isE?80:560} y={260} w={160} h={100} n="Roda ant." count={vwc(R[9].id)} onClick={addVV}/>
-{/* Roda posterior */}
-<VRg id={R[10].id} x={isE?560:80} y={260} w={160} h={100} n="Roda pos." count={vwc(R[10].id)} onClick={addVV}/>
-{/* Pneu anterior — colocado dentro da roda como sub-clique fino */}
-<VRg id={R[11].id} x={isE?100:580} y={335} w={120} h={30} n="Pneu A" count={vwc(R[11].id)} onClick={addVV}/>
-<VRg id={R[12].id} x={isE?580:100} y={335} w={120} h={30} n="Pneu P" count={vwc(R[12].id)} onClick={addVV}/>
-{/* Soleira (entre rodas, parte baixa) */}
-<VRg id={R[13].id} x={250} y={300} w={300} h={30} n="Soleira" count={vwc(R[13].id)} onClick={addVV}/>
-{/* Colunas (A perto da frente, B no meio, C atrás) */}
-<VRg id={R[14].id} x={isE?170:610} y={50} w={30} h={100} n="Col.A" count={vwc(R[14].id)} onClick={addVV}/>
-<VRg id={R[15].id} x={385} y={40} w={30} h={120} n="Col.B" count={vwc(R[15].id)} onClick={addVV}/>
-<VRg id={R[16].id} x={isE?600:170} y={50} w={30} h={100} n="Col.C" count={vwc(R[16].id)} onClick={addVV}/>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{label}</text>
+{/* Vidros (parte alta das portas) */}
+<VRg id={R[2].id} x={isE?200:440} y={90} w={140} h={50} n="Vidro A" count={vwc(R[2].id)} onClick={addVV}/>
+<VRg id={R[3].id} x={isE?380:240} y={90} w={140} h={50} n="Vidro P" count={vwc(R[3].id)} onClick={addVV}/>
+{/* Portas (centro do veículo) */}
+<VRg id={R[0].id} x={isE?210:450} y={150} w={130} h={90} n="Porta A" count={vwc(R[0].id)} onClick={addVV}/>
+<VRg id={R[1].id} x={isE?390:240} y={150} w={130} h={90} n="Porta P" count={vwc(R[1].id)} onClick={addVV}/>
+{/* Colunas (A=frente, B=meio, C=trás) */}
+<VRg id={R[14].id} x={isE?188:585} y={80} w={20} h={70} n="A" count={vwc(R[14].id)} onClick={addVV}/>
+<VRg id={R[15].id} x={isE?345:445} y={80} w={20} h={70} n="B" count={vwc(R[15].id)} onClick={addVV}/>
+<VRg id={R[16].id} x={isE?580:195} y={80} w={20} h={70} n="C" count={vwc(R[16].id)} onClick={addVV}/>
+{/* Retrovisor (próximo do farol/coluna A) */}
+<VRg id={R[4].id} x={isE?40:710} y={150} w={50} h={30} n="Retrov" count={vwc(R[4].id)} onClick={addVV}/>
+{/* Para-lamas (acima das rodas) */}
+<VRg id={R[5].id} x={isE?100:600} y={200} w={100} h={50} n="P-lama A" count={vwc(R[5].id)} onClick={addVV}/>
+<VRg id={R[6].id} x={isE?600:100} y={200} w={100} h={50} n="P-lama P" count={vwc(R[6].id)} onClick={addVV}/>
+{/* Para-choques (extremos) */}
+<VRg id={R[7].id} x={isE?10:720} y={240} w={70} h={50} n="P-chq A" count={vwc(R[7].id)} onClick={addVV}/>
+<VRg id={R[8].id} x={isE?720:10} y={240} w={70} h={50} n="P-chq P" count={vwc(R[8].id)} onClick={addVV}/>
+{/* Soleira (parte baixa entre rodas) */}
+<VRg id={R[13].id} x={280} y={258} w={240} h={20} n="Soleira" count={vwc(R[13].id)} onClick={addVV}/>
+{/* Rodas (círculos visíveis) */}
+<VRg id={R[9].id} x={isE?100:600} y={280} w={100} h={80} n="Roda A" count={vwc(R[9].id)} onClick={addVV}/>
+<VRg id={R[10].id} x={isE?600:100} y={280} w={100} h={80} n="Roda P" count={vwc(R[10].id)} onClick={addVV}/>
+{/* Pneus (faixa de borracha das rodas) */}
+<VRg id={R[11].id} x={isE?110:610} y={355} w={80} h={20} n="Pneu A" count={vwc(R[11].id)} onClick={addVV}/>
+<VRg id={R[12].id} x={isE?610:110} y={355} w={80} h={20} n="Pneu P" count={vwc(R[12].id)} onClick={addVV}/>
 </svg>);};
 
 // v256: Frente — image-based, aceita tipo (sedan/hatch/suv/caminhonete)
-const VFrenteSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.ant;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:760}}>
+const VFrenteSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.ant;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:950}}>
 <image href={src} x="0" y="0" width="800" height="420" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="436" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{tipo.toUpperCase()} — FRENTE</text>
-<VRg id="ve_parabrisa" x={210} y={50} w={380} h={120} n="Para-brisa" count={vwc("ve_parabrisa")} onClick={addVV}/>
-<VRg id="ve_capo" x={150} y={170} w={500} h={100} n="Capô" count={vwc("ve_capo")} onClick={addVV}/>
-<VRg id="ve_farol_e" x={130} y={250} w={130} h={70} n="Farol E" count={vwc("ve_farol_e")} onClick={addVV}/>
-<VRg id="ve_farol_d" x={540} y={250} w={130} h={70} n="Farol D" count={vwc("ve_farol_d")} onClick={addVV}/>
-<VRg id="ve_grade" x={300} y={250} w={200} h={70} n="Grade" count={vwc("ve_grade")} onClick={addVV}/>
-<VRg id="ve_parachoque_d_e" x={120} y={320} w={150} h={50} n="P-chq DE" count={vwc("ve_parachoque_d_e")} onClick={addVV}/>
-<VRg id="ve_parachoque_d_c" x={300} y={320} w={200} h={50} n="P-chq DC" count={vwc("ve_parachoque_d_c")} onClick={addVV}/>
-<VRg id="ve_parachoque_d_d" x={530} y={320} w={150} h={50} n="P-chq DD" count={vwc("ve_parachoque_d_d")} onClick={addVV}/>
-<VRg id="ve_placa_d" x={310} y={310} w={180} h={32} n="Placa diant." count={vwc("ve_placa_d")} onClick={addVV}/>
+<text x="400" y="436" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{tipo.toUpperCase()} — FRENTE</text>
+<VRg id="ve_parabrisa" x={240} y={60} w={320} h={90} n="Para-brisa" count={vwc("ve_parabrisa")} onClick={addVV}/>
+<VRg id="ve_capo" x={200} y={170} w={400} h={70} n="Capô" count={vwc("ve_capo")} onClick={addVV}/>
+<VRg id="ve_farol_e" x={150} y={250} w={110} h={50} n="Farol E" count={vwc("ve_farol_e")} onClick={addVV}/>
+<VRg id="ve_farol_d" x={540} y={250} w={110} h={50} n="Farol D" count={vwc("ve_farol_d")} onClick={addVV}/>
+<VRg id="ve_grade" x={320} y={250} w={160} h={50} n="Grade" count={vwc("ve_grade")} onClick={addVV}/>
+<VRg id="ve_parachoque_d_e" x={150} y={310} w={130} h={40} n="P-chq E" count={vwc("ve_parachoque_d_e")} onClick={addVV}/>
+<VRg id="ve_parachoque_d_d" x={520} y={310} w={130} h={40} n="P-chq D" count={vwc("ve_parachoque_d_d")} onClick={addVV}/>
+<VRg id="ve_placa_d" x={320} y={310} w={160} h={28} n="Placa" count={vwc("ve_placa_d")} onClick={addVV}/>
+<VRg id="ve_parachoque_d_c" x={290} y={342} w={220} h={28} n="P-chq centro" count={vwc("ve_parachoque_d_c")} onClick={addVV}/>
 </svg>);};
 
 // v256: Traseira — image-based
-const VTrasSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.pos;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:760}}>
+const VTrasSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.pos;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:950}}>
 <image href={src} x="0" y="0" width="800" height="420" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="436" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{tipo.toUpperCase()} — TRASEIRA</text>
-<VRg id="ve_vidro_tras" x={210} y={50} w={380} h={130} n="Vidro tras." count={vwc("ve_vidro_tras")} onClick={addVV}/>
-<VRg id="ve_portamalas" x={150} y={180} w={500} h={100} n="Tampa P-malas" count={vwc("ve_portamalas")} onClick={addVV}/>
-<VRg id="ve_lanterna_e" x={130} y={210} w={120} h={70} n="Lant. E" count={vwc("ve_lanterna_e")} onClick={addVV}/>
-<VRg id="ve_lanterna_d" x={550} y={210} w={120} h={70} n="Lant. D" count={vwc("ve_lanterna_d")} onClick={addVV}/>
-<VRg id="ve_parachoque_t_e" x={120} y={320} w={150} h={50} n="P-chq TE" count={vwc("ve_parachoque_t_e")} onClick={addVV}/>
-<VRg id="ve_parachoque_t_c" x={300} y={320} w={200} h={50} n="P-chq TC" count={vwc("ve_parachoque_t_c")} onClick={addVV}/>
-<VRg id="ve_parachoque_t_d" x={530} y={320} w={150} h={50} n="P-chq TD" count={vwc("ve_parachoque_t_d")} onClick={addVV}/>
-<VRg id="ve_placa_t" x={310} y={250} w={180} h={32} n="Placa tras." count={vwc("ve_placa_t")} onClick={addVV}/>
+<text x="400" y="436" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{tipo.toUpperCase()} — TRASEIRA</text>
+<VRg id="ve_vidro_tras" x={240} y={60} w={320} h={100} n="Vidro tras." count={vwc("ve_vidro_tras")} onClick={addVV}/>
+<VRg id="ve_portamalas" x={200} y={180} w={400} h={70} n="Tampa P-malas" count={vwc("ve_portamalas")} onClick={addVV}/>
+<VRg id="ve_lanterna_e" x={150} y={210} w={100} h={50} n="Lant. E" count={vwc("ve_lanterna_e")} onClick={addVV}/>
+<VRg id="ve_lanterna_d" x={550} y={210} w={100} h={50} n="Lant. D" count={vwc("ve_lanterna_d")} onClick={addVV}/>
+<VRg id="ve_placa_t" x={320} y={245} w={160} h={28} n="Placa" count={vwc("ve_placa_t")} onClick={addVV}/>
+<VRg id="ve_parachoque_t_e" x={150} y={310} w={130} h={40} n="P-chq E" count={vwc("ve_parachoque_t_e")} onClick={addVV}/>
+<VRg id="ve_parachoque_t_d" x={520} y={310} w={130} h={40} n="P-chq D" count={vwc("ve_parachoque_t_d")} onClick={addVV}/>
+<VRg id="ve_parachoque_t_c" x={290} y={310} w={220} h={40} n="P-chq centro" count={vwc("ve_parachoque_t_c")} onClick={addVV}/>
 </svg>);};
 
 // v256: Teto / vista superior — image-based, aceita tipo
 const VTetoSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.sup;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width="800" height="420" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="436" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{tipo.toUpperCase()} — VISTA SUPERIOR</text>
+<text x="400" y="436" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{tipo.toUpperCase()} — VISTA SUPERIOR</text>
 {/* Frente do carro fica à direita; ANT = direita, POS = esquerda */}
 <VRg id="ve_teto_ant_d" x={400} y={60} w={300} h={150} n="Teto ant. D" count={vwc("ve_teto_ant_d")} onClick={addVV}/>
 <VRg id="ve_teto_ant_e" x={400} y={210} w={300} h={150} n="Teto ant. E" count={vwc("ve_teto_ant_e")} onClick={addVV}/>
@@ -3294,7 +3308,7 @@ const VTetoSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.sup;return(<svg viewB
 // Compartilhado entre Sedan/Hatch/SUV (mesmas imagens).
 const VIntSvg=({vista="sup"})=>{const src=IMG_VEI.interior[vista];const lbl=vista==="sup"?"INTERIOR — VISTA SUPERIOR":vista==="d"?"INTERIOR — LATERAL DIREITA":"INTERIOR — LATERAL ESQUERDA";return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width="800" height="420" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="436" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{lbl}</text>
+<text x="400" y="436" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{lbl}</text>
 {vista==="sup"?<>
 {/* Vista superior: frente à direita; volante na direita */}
 <VRg id="vi_volante" x={580} y={140} w={120} h={140} n="Volante" count={vwc("vi_volante")} onClick={addVV}/>
@@ -3334,7 +3348,7 @@ const VIntSvg=({vista="sup"})=>{const src=IMG_VEI.interior[vista];const lbl=vist
 // v256: Moto — laterais (1 imagem D+E), frente+atrás (1), superior (1)
 const MotoLatSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.moto.laterais} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">MOTO — LATERAIS (D + E)</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MOTO — LATERAIS (D + E)</text>
 {/* Lado E (esquerdo da imagem) */}
 <VRg id="mle_guidao" x={40} y={130} w={80} h={50} n="Guidão E" count={vwc("mle_guidao")} onClick={addVV}/>
 <VRg id="mle_tanque" x={120} y={170} w={100} h={60} n="Tanque E" count={vwc("mle_tanque")} onClick={addVV}/>
@@ -3353,7 +3367,7 @@ const MotoLatSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:7
 // Frente+Tras combinada
 const MotoFrenteSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.moto.frenteTras} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">MOTO — FRENTE + TRASEIRA</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MOTO — FRENTE + TRASEIRA</text>
 {/* Frente (lado esquerdo) */}
 <VRg id="mf_farol" x={130} y={70} w={130} h={70} n="Farol" count={vwc("mf_farol")} onClick={addVV}/>
 <VRg id="mf_retrov_e" x={50} y={50} w={70} h={50} n="Retro E" count={vwc("mf_retrov_e")} onClick={addVV}/>
@@ -3367,7 +3381,7 @@ const MotoFrenteSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidt
 // Vista superior moto (substitui MotoTrasSvg na exportação - não é mais traseira)
 const MotoTrasSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.moto.sup} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">MOTO — VISTA SUPERIOR</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MOTO — VISTA SUPERIOR</text>
 <VRg id="ms_guidao" x={400} y={70} w={300} h={70} n="Guidão" count={vwc("ms_guidao")} onClick={addVV}/>
 <VRg id="ms_tanque" x={250} y={150} w={150} h={100} n="Tanque" count={vwc("ms_tanque")} onClick={addVV}/>
 <VRg id="ms_assento" x={400} y={150} w={150} h={100} n="Assento" count={vwc("ms_assento")} onClick={addVV}/>
@@ -3376,7 +3390,7 @@ const MotoTrasSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:
 // Bicicleta — lateral (D+E em uma imagem), frente+tras, superior
 const BiciLatSvg=()=>(<svg viewBox="0 0 800 250" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.bici.lateral} x="0" y="0" width="800" height="230" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="246" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">BICICLETA — LATERAIS (D + E)</text>
+<text x="400" y="246" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">BICICLETA — LATERAIS (D + E)</text>
 {/* Lado E (esq) */}
 <VRg id="ble_guidao" x={250} y={20} w={100} h={50} n="Guidão E" count={vwc("ble_guidao")} onClick={addVV}/>
 <VRg id="ble_quadro" x={120} y={70} w={200} h={80} n="Quadro E" count={vwc("ble_quadro")} onClick={addVV}/>
@@ -3393,7 +3407,7 @@ const BiciLatSvg=()=>(<svg viewBox="0 0 800 250" style={{width:"100%",maxWidth:7
 // Bicicleta frente+tras
 const BiciFrenteTrasSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.bici.frenteTras} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">BICICLETA — FRENTE + TRASEIRA</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">BICICLETA — FRENTE + TRASEIRA</text>
 <VRg id="bf_guidao" x={50} y={20} w={300} h={70} n="Guidão F" count={vwc("bf_guidao")} onClick={addVV}/>
 <VRg id="bf_roda" x={150} y={150} w={150} h={220} n="Roda F" count={vwc("bf_roda")} onClick={addVV}/>
 <VRg id="bt_assento" x={500} y={20} w={150} h={80} n="Selim T" count={vwc("bt_assento")} onClick={addVV}/>
@@ -3402,7 +3416,7 @@ const BiciFrenteTrasSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",max
 // Bicicleta superior
 const BiciSupSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.bici.sup} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">BICICLETA — VISTA SUPERIOR</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">BICICLETA — VISTA SUPERIOR</text>
 <VRg id="bs_guidao" x={550} y={70} w={250} h={250} n="Guidão" count={vwc("bs_guidao")} onClick={addVV}/>
 <VRg id="bs_quadro" x={250} y={150} w={300} h={100} n="Quadro" count={vwc("bs_quadro")} onClick={addVV}/>
 <VRg id="bs_assento" x={150} y={120} w={120} h={150} n="Selim" count={vwc("bs_assento")} onClick={addVV}/>
@@ -3412,7 +3426,7 @@ const BiciSupSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:7
 // Ônibus
 const BusLatSvg=({side})=>{const pfx=side==="E"?"bse_":"bsd_";const src=side==="E"?IMG_VEI.onibus.latE:IMG_VEI.onibus.latD;const lbl=side==="E"?"LATERAL ESQUERDA":"LATERAL DIREITA";return(<svg viewBox="0 0 800 360" style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width="800" height="340" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="356" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">{`ÔNIBUS — ${lbl}`}</text>
+<text x="400" y="356" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{`ÔNIBUS — ${lbl}`}</text>
 <VRg id={pfx+"frente"} x={side==="D"?620:20} y={50} w={170} h={200} n="Frente" count={vwc(pfx+"frente")} onClick={addVV}/>
 <VRg id={pfx+"meio"} x={210} y={50} w={380} h={200} n="Meio" count={vwc(pfx+"meio")} onClick={addVV}/>
 <VRg id={pfx+"tras"} x={side==="D"?20:620} y={50} w={170} h={200} n="Traseira" count={vwc(pfx+"tras")} onClick={addVV}/>
@@ -3422,7 +3436,7 @@ const BusLatSvg=({side})=>{const pfx=side==="E"?"bse_":"bsd_";const src=side==="
 // Ônibus frente+tras
 const BusFrenteSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth:760}}>
 <image href={IMG_VEI.onibus.frenteTras} x="0" y="0" width="800" height="380" preserveAspectRatio="xMidYMid meet"/>
-<text x="400" y="396" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">ÔNIBUS — FRENTE + TRASEIRA</text>
+<text x="400" y="396" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">ÔNIBUS — FRENTE + TRASEIRA</text>
 {/* Frente (esq) */}
 <VRg id="bf_parabrisa" x={50} y={50} w={300} h={150} n="Para-brisa F" count={vwc("bf_parabrisa")} onClick={addVV}/>
 <VRg id="bf_farol_e" x={50} y={250} w={120} h={100} n="Farol E" count={vwc("bf_farol_e")} onClick={addVV}/>
@@ -3437,7 +3451,7 @@ const BusFrenteSvg=()=>(<svg viewBox="0 0 800 400" style={{width:"100%",maxWidth
 const BusTrasSvg=BusFrenteSvg; // alias para compatibilidade (frente+tras combina ambos)
 const BusIntSvg=()=>(<svg viewBox="0 0 400 800" style={{width:"100%",maxWidth:400}}>
 <image href={IMG_VEI.onibus.interior} x="0" y="0" width="400" height="780" preserveAspectRatio="xMidYMid meet"/>
-<text x="200" y="796" textAnchor="middle" fontSize="11" fontWeight="600" fill="#888">ÔNIBUS — INTERIOR (vista superior)</text>
+<text x="200" y="796" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">ÔNIBUS — INTERIOR (vista superior)</text>
 <VRg id="bi_motorista" x={50} y={20} w={120} h={100} n="Motorista" count={vwc("bi_motorista")} onClick={addVV}/>
 <VRg id="bi_painel" x={170} y={20} w={180} h={100} n="Painel" count={vwc("bi_painel")} onClick={addVV}/>
 <VRg id="bi_porta_frente" x={170} y={120} w={180} h={50} n="Porta F" count={vwc("bi_porta_frente")} onClick={addVV}/>
