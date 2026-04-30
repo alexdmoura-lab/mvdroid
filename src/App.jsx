@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v274-Xandroid";
+const APP_VERSION="v275-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -468,14 +468,6 @@ const TEMPLATES=[
     data:{nat:"Suicídio",c0_dg:"Suicídio",c0_le:"Local examinado",c0_mom:"Recente",c0_sui_tipo:"Projeção"},
     vestigios:[],
     forceLocal:"apartamento"
-  },
-  {
-    id:"afogamento",
-    icon:"💧",
-    label:"Afogamento",
-    description:"Meio líquido — rio, piscina, banheira",
-    data:{nat:"Cadáver encontrado",c0_dg:"Afogamento",c0_le:"A esclarecer",c0_mom:"A esclarecer"},
-    vestigios:[]
   },
   {
     id:"man",
@@ -3338,14 +3330,23 @@ const VTrasSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.pos;return(<svg viewB
 </svg>);};
 
 // v256: Teto / vista superior — image-based, aceita tipo
+// v275: VTetoSvg — vista superior agora tem 8 áreas (capô D/E, teto ant D/E, teto pos D/E, p-malas D/E)
+// Frente do carro à direita da imagem. Lado D = parte de cima; Lado E = parte de baixo.
 const VTetoSvg=({tipo="sedan"})=>{const src=IMG_VEI[tipo]?.sup;return(<svg viewBox="0 0 800 440" style={{width:"100%",maxWidth:760}}>
 <image href={src} x="0" y="0" width="800" height="420" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="436" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">{tipo.toUpperCase()} — VISTA SUPERIOR</text>
-{/* Frente do carro fica à direita; ANT = direita, POS = esquerda */}
-<VRg id="ve_teto_ant_d" x={400} y={60} w={300} h={150} n="Teto ant. D" count={vwc("ve_teto_ant_d")} onClick={addVV}/>
-<VRg id="ve_teto_ant_e" x={400} y={210} w={300} h={150} n="Teto ant. E" count={vwc("ve_teto_ant_e")} onClick={addVV}/>
-<VRg id="ve_teto_pos_d" x={100} y={60} w={300} h={150} n="Teto pos. D" count={vwc("ve_teto_pos_d")} onClick={addVV}/>
-<VRg id="ve_teto_pos_e" x={100} y={210} w={300} h={150} n="Teto pos. E" count={vwc("ve_teto_pos_e")} onClick={addVV}/>
+{/* CAPÔ — extrema direita (frente do carro) */}
+<VRg id="ve_capo_d" x={620} y={70} w={160} h={140} n="Capô D" count={vwc("ve_capo_d")} onClick={addVV}/>
+<VRg id="ve_capo_e" x={620} y={210} w={160} h={140} n="Capô E" count={vwc("ve_capo_e")} onClick={addVV}/>
+{/* TETO ANTERIOR — perto do para-brisa */}
+<VRg id="ve_teto_ant_d" x={440} y={70} w={180} h={140} n="Teto ant. D" count={vwc("ve_teto_ant_d")} onClick={addVV}/>
+<VRg id="ve_teto_ant_e" x={440} y={210} w={180} h={140} n="Teto ant. E" count={vwc("ve_teto_ant_e")} onClick={addVV}/>
+{/* TETO POSTERIOR — perto do vidro traseiro */}
+<VRg id="ve_teto_pos_d" x={240} y={70} w={200} h={140} n="Teto pos. D" count={vwc("ve_teto_pos_d")} onClick={addVV}/>
+<VRg id="ve_teto_pos_e" x={240} y={210} w={200} h={140} n="Teto pos. E" count={vwc("ve_teto_pos_e")} onClick={addVV}/>
+{/* PORTA-MALAS — extrema esquerda (traseira do carro) */}
+<VRg id="ve_portamalas_d" x={40} y={70} w={200} h={140} n="P-malas D" count={vwc("ve_portamalas_d")} onClick={addVV}/>
+<VRg id="ve_portamalas_e" x={40} y={210} w={200} h={140} n="P-malas E" count={vwc("ve_portamalas_e")} onClick={addVV}/>
 </svg>);};
 
 // v256: Interior — image-based. vista="sup"|"d"|"e".
@@ -3366,23 +3367,57 @@ const VIntSvg=({vista="sup"})=>{const src=IMG_VEI.interior[vista];const lbl=vist
 <VRg id="vi_assoalho_ant" x={400} y={50} w={20} h={400} n="Assoalho A" count={vwc("vi_assoalho_ant")} onClick={addVV}/>
 <VRg id="vi_assoalho_pos" x={50} y={50} w={80} h={400} n="Assoalho P" count={vwc("vi_assoalho_pos")} onClick={addVV}/>
 </>:vista==="d"?<>
-{/* Lateral direita: vê-se motorista (em RHD seria diferente, mas aqui é volante à esq do BR padrão na imagem) */}
-<VRg id="vi_volante" x={50} y={100} w={170} h={150} n="Volante" count={vwc("vi_volante")} onClick={addVV}/>
-<VRg id="vi_painel" x={50} y={50} w={200} h={50} n="Painel" count={vwc("vi_painel")} onClick={addVV}/>
-<VRg id="vi_banco_mot" x={250} y={170} w={170} h={200} n="Bc.Motor." count={vwc("vi_banco_mot")} onClick={addVV}/>
-<VRg id="vi_banco_tras_e" x={500} y={170} w={140} h={150} n="Bc.Tr.E" count={vwc("vi_banco_tras_e")} onClick={addVV}/>
-<VRg id="vi_porta_int_ant_e" x={400} y={50} w={250} h={120} n="Pt.int.AE" count={vwc("vi_porta_int_ant_e")} onClick={addVV}/>
-<VRg id="vi_retrovisor_int" x={250} y={50} w={150} h={50} n="Retrov.int" count={vwc("vi_retrovisor_int")} onClick={addVV}/>
-<VRg id="vi_assoalho_ant" x={50} y={350} w={400} h={70} n="Assoalho A" count={vwc("vi_assoalho_ant")} onClick={addVV}/>
+{/* v275: INTERIOR LATERAL DIREITA — vista de dentro do veículo, painel à direita.
+     Esquerda da imagem = banco traseiro; centro = bancos dianteiros; direita = painel/volante */}
+{/* Banco traseiro (canto sup esq da imagem) */}
+<VRg id="vi_banco_tras_e" x={20} y={140} w={130} h={120} n="Bc.Tras.E" count={vwc("vi_banco_tras_e")} onClick={addVV}/>
+<VRg id="vi_banco_tras_d" x={150} y={140} w={130} h={120} n="Bc.Tras.D" count={vwc("vi_banco_tras_d")} onClick={addVV}/>
+{/* Bancos dianteiros (centro da imagem) — vê-se o ENCOSTO de costas pra observação */}
+<VRg id="vi_banco_mot" x={290} y={130} w={130} h={220} n="Bc.Motor." count={vwc("vi_banco_mot")} onClick={addVV}/>
+<VRg id="vi_banco_pass" x={420} y={140} w={120} h={210} n="Bc.Pass." count={vwc("vi_banco_pass")} onClick={addVV}/>
+{/* Apoios de cabeça */}
+<VRg id="vi_apoio_cab_mot" x={300} y={100} w={70} h={40} n="Apoio cab." count={vwc("vi_apoio_cab_mot")} onClick={addVV}/>
+{/* Para-brisa + retrovisor interno (cima centro/dir) */}
+<VRg id="vi_parabrisa_int" x={350} y={20} w={200} h={70} n="Pára-brisa" count={vwc("vi_parabrisa_int")} onClick={addVV}/>
+<VRg id="vi_retrovisor_int" x={500} y={50} w={70} h={50} n="Retrov." count={vwc("vi_retrovisor_int")} onClick={addVV}/>
+{/* Painel à direita */}
+<VRg id="vi_volante" x={620} y={130} w={130} h={130} n="Volante" count={vwc("vi_volante")} onClick={addVV}/>
+<VRg id="vi_painel" x={550} y={90} w={220} h={50} n="Painel" count={vwc("vi_painel")} onClick={addVV}/>
+{/* Porta-luvas (lado passageiro = direita extrema da imagem) */}
+<VRg id="vi_porta_luvas" x={690} y={250} w={90} h={70} n="Porta-luvas" count={vwc("vi_porta_luvas")} onClick={addVV}/>
+{/* Console central / câmbio */}
+<VRg id="vi_console" x={550} y={260} w={100} h={70} n="Console" count={vwc("vi_console")} onClick={addVV}/>
+{/* Cinto de segurança visível */}
+<VRg id="vi_cinto_seg" x={400} y={130} w={20} h={150} n="Cinto" count={vwc("vi_cinto_seg")} onClick={addVV}/>
+{/* Assoalho */}
+<VRg id="vi_assoalho_pos" x={20} y={350} w={250} h={70} n="Assoalho P" count={vwc("vi_assoalho_pos")} onClick={addVV}/>
+<VRg id="vi_assoalho_ant" x={350} y={350} w={300} h={70} n="Assoalho A" count={vwc("vi_assoalho_ant")} onClick={addVV}/>
+{/* Forro do teto */}
+<VRg id="vi_forro_teto" x={140} y={20} w={210} h={50} n="Forro teto" count={vwc("vi_forro_teto")} onClick={addVV}/>
 </>:<>
-{/* Lateral esquerda */}
-<VRg id="vi_volante" x={580} y={100} w={170} h={150} n="Volante" count={vwc("vi_volante")} onClick={addVV}/>
-<VRg id="vi_painel" x={550} y={50} w={200} h={50} n="Painel" count={vwc("vi_painel")} onClick={addVV}/>
-<VRg id="vi_banco_pass" x={380} y={170} w={170} h={200} n="Bc.Passag." count={vwc("vi_banco_pass")} onClick={addVV}/>
-<VRg id="vi_banco_tras_d" x={150} y={170} w={140} h={150} n="Bc.Tr.D" count={vwc("vi_banco_tras_d")} onClick={addVV}/>
-<VRg id="vi_porta_int_ant_d" x={150} y={50} w={250} h={120} n="Pt.int.AD" count={vwc("vi_porta_int_ant_d")} onClick={addVV}/>
-<VRg id="vi_retrovisor_int" x={400} y={50} w={150} h={50} n="Retrov.int" count={vwc("vi_retrovisor_int")} onClick={addVV}/>
-<VRg id="vi_assoalho_ant" x={350} y={350} w={400} h={70} n="Assoalho A" count={vwc("vi_assoalho_ant")} onClick={addVV}/>
+{/* v275: INTERIOR LATERAL ESQUERDA — espelhado: painel à ESQUERDA da imagem */}
+{/* Painel à esquerda */}
+<VRg id="vi_volante" x={50} y={130} w={130} h={130} n="Volante" count={vwc("vi_volante")} onClick={addVV}/>
+<VRg id="vi_painel" x={30} y={90} w={220} h={50} n="Painel" count={vwc("vi_painel")} onClick={addVV}/>
+<VRg id="vi_porta_luvas" x={20} y={250} w={90} h={70} n="Porta-luvas" count={vwc("vi_porta_luvas")} onClick={addVV}/>
+<VRg id="vi_console" x={150} y={260} w={100} h={70} n="Console" count={vwc("vi_console")} onClick={addVV}/>
+{/* Para-brisa + retrovisor */}
+<VRg id="vi_parabrisa_int" x={250} y={20} w={200} h={70} n="Pára-brisa" count={vwc("vi_parabrisa_int")} onClick={addVV}/>
+<VRg id="vi_retrovisor_int" x={230} y={50} w={70} h={50} n="Retrov." count={vwc("vi_retrovisor_int")} onClick={addVV}/>
+{/* Bancos dianteiros (centro) */}
+<VRg id="vi_banco_pass" x={260} y={140} w={120} h={210} n="Bc.Pass." count={vwc("vi_banco_pass")} onClick={addVV}/>
+<VRg id="vi_banco_mot" x={380} y={130} w={130} h={220} n="Bc.Motor." count={vwc("vi_banco_mot")} onClick={addVV}/>
+<VRg id="vi_apoio_cab_mot" x={430} y={100} w={70} h={40} n="Apoio cab." count={vwc("vi_apoio_cab_mot")} onClick={addVV}/>
+{/* Banco traseiro (direita da imagem) */}
+<VRg id="vi_banco_tras_d" x={520} y={140} w={130} h={120} n="Bc.Tras.D" count={vwc("vi_banco_tras_d")} onClick={addVV}/>
+<VRg id="vi_banco_tras_e" x={650} y={140} w={130} h={120} n="Bc.Tras.E" count={vwc("vi_banco_tras_e")} onClick={addVV}/>
+{/* Cinto */}
+<VRg id="vi_cinto_seg" x={380} y={130} w={20} h={150} n="Cinto" count={vwc("vi_cinto_seg")} onClick={addVV}/>
+{/* Assoalho */}
+<VRg id="vi_assoalho_ant" x={150} y={350} w={300} h={70} n="Assoalho A" count={vwc("vi_assoalho_ant")} onClick={addVV}/>
+<VRg id="vi_assoalho_pos" x={530} y={350} w={250} h={70} n="Assoalho P" count={vwc("vi_assoalho_pos")} onClick={addVV}/>
+{/* Forro */}
+<VRg id="vi_forro_teto" x={450} y={20} w={210} h={50} n="Forro teto" count={vwc("vi_forro_teto")} onClick={addVV}/>
 </>}
 </svg>);};
 
@@ -3534,9 +3569,9 @@ const renderTab=()=>{
   // ╔════════════════════════════════════════╗
   // ║  ABA 0 — SOLICITAÇÃO                   ║
   // ╚════════════════════════════════════════╝
-if(tab===TAB_SOLICITACAO)return(<><Cd_ styles={ST} title="Solicitação" aria-label="Solicitação" icon="📄" variant="primary"><div style={{display:"flex",flexDirection:"column",gap:12}}><F_ k="oc" label="Nº Ocorrência" val={g("oc")} onChange={s} styles={ST}/><div style={{display:"grid",gridTemplateColumns:"1.6fr 1fr",gap:12}}><div><label style={lb}>DP</label><select style={sel} value={g("dp")} onChange={e=>s("dp",e.target.value)}><option value=""></option><option>1ª DP</option><option>2ª DP</option><option>3ª DP</option><option>4ª DP</option><option>5ª DP</option><option>6ª DP</option><option>7ª DP</option><option>8ª DP</option><option>9ª DP</option><option>10ª DP</option><option>11ª DP</option><option>12ª DP</option><option>13ª DP</option><option>14ª DP</option><option>15ª DP</option><option>16ª DP</option><option>17ª DP</option><option>18ª DP</option><option>19ª DP</option><option>20ª DP</option><option>21ª DP</option><option>22ª DP</option><option>23ª DP</option><option>24ª DP</option><option>25ª DP</option><option>26ª DP</option><option>27ª DP</option><option>28ª DP</option><option>29ª DP</option><option>30ª DP</option><option>31ª DP</option><option>32ª DP</option><option>33ª DP</option><option>34ª DP</option><option>35ª DP</option><option>36ª DP</option><option>37ª DP</option><option>38ª DP</option><option>DEAM</option><option>DEAM II</option><option>DCA</option><option>DCA II</option><option>Outro</option></select>{g("dp")==="Outro"&&<TX_ value={g("dp_outro")} placeholder="Digite a DP" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("dp_outro",val)}/>}</div><div><label style={lb}>Ano</label>{(()=>{const yNow=new Date().getFullYear();const yCur=parseInt(g("oc_ano")||""+yNow,10)||yNow;const opts=[];for(let yy=yNow-3;yy<=yNow+1;yy++)opts.push(yy);return(<select style={sel} value={String(yCur)} onChange={e=>s("oc_ano",e.target.value)}>{opts.map(yy=><option key={yy} value={String(yy)}>{String(yy).slice(-2)}</option>)}</select>);})()}</div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}><div><label style={lb}>Natureza</label>{(()=>{const v=g("nat");const isFem=v==="Feminicídio"||v==="Tentativa de feminicídio";const sty={...sel,background:isFem?(dark?"rgba(255,55,95,0.15)":"rgba(255,55,95,0.08)"):sel.background,borderColor:isFem?"#FF375F":sel.borderColor,color:isFem?"#FF375F":sel.color,fontWeight:isFem?700:sel.fontWeight};return(<select style={sty} value={v} onChange={e=>s("nat",e.target.value)}><option value=""></option><option value="Homicídio">🔫 Homicídio</option><option value="Feminicídio">♀ Feminicídio</option><option value="Tentativa de feminicídio">♀ Tentativa de feminicídio</option><option value="Tentativa de homicídio">🔫 Tentativa de homicídio</option><option value="Lesão corporal">🩹 Lesão corporal</option><option value="Suicídio">☠ Suicídio</option><option value="Cadáver encontrado">💀 Cadáver encontrado</option><option value="Estupro">⚠ Estupro</option><option value="Complementar">📝 Complementar</option><option value="Pátio">🅿 Pátio</option><option value="Outros">❓ Outros</option></select>);})()}{g("nat")==="Outros"&&<TX_ value={g("nat_outro")} inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("nat_outro",val)}/>}</div><F_ k="oic" label="Exame Externo" val={g("oic")} onChange={s} styles={ST}/></div><div style={{marginTop:12}}><Nw_ k="dt_sol" label="Data/Hora Solicitação" val={g("dt_sol")} onChange={s} styles={ST}/></div></Cd_>
+if(tab===TAB_SOLICITACAO)return(<><Cd_ styles={ST} title="Solicitação" aria-label="Solicitação" icon="📄" variant="primary"><div style={{display:"flex",flexDirection:"column",gap:12}}><F_ k="oc" label="Nº Ocorrência" val={g("oc")} onChange={s} styles={ST}/><div style={{display:"grid",gridTemplateColumns:"1.6fr 1fr",gap:12}}><div><label style={lb}>DP</label><select style={sel} value={g("dp")} onChange={e=>s("dp",e.target.value)}><option value=""></option><option>1ª DP</option><option>2ª DP</option><option>3ª DP</option><option>4ª DP</option><option>5ª DP</option><option>6ª DP</option><option>7ª DP</option><option>8ª DP</option><option>9ª DP</option><option>10ª DP</option><option>11ª DP</option><option>12ª DP</option><option>13ª DP</option><option>14ª DP</option><option>15ª DP</option><option>16ª DP</option><option>17ª DP</option><option>18ª DP</option><option>19ª DP</option><option>20ª DP</option><option>21ª DP</option><option>22ª DP</option><option>23ª DP</option><option>24ª DP</option><option>25ª DP</option><option>26ª DP</option><option>27ª DP</option><option>28ª DP</option><option>29ª DP</option><option>30ª DP</option><option>31ª DP</option><option>32ª DP</option><option>33ª DP</option><option>34ª DP</option><option>35ª DP</option><option>36ª DP</option><option>37ª DP</option><option>38ª DP</option><option>DEAM</option><option>DEAM II</option><option>DCA</option><option>DCA II</option><option>Outro</option></select>{g("dp")==="Outro"&&<TX_ value={g("dp_outro")} placeholder="Digite a DP" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("dp_outro",val)}/>}</div><div><label style={lb}>Ano</label>{(()=>{const yNow=new Date().getFullYear();const yCur=parseInt(g("oc_ano")||""+yNow,10)||yNow;const opts=[];for(let yy=yNow-3;yy<=yNow+1;yy++)opts.push(yy);return(<select style={sel} value={String(yCur)} onChange={e=>s("oc_ano",e.target.value)}>{opts.map(yy=><option key={yy} value={String(yy)}>{String(yy).slice(-2)}</option>)}</select>);})()}</div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}><div><label style={lb}>Natureza</label>{(()=>{const v=g("nat");const isFem=v==="Feminicídio"||v==="Tentativa de feminicídio";const sty={...sel,background:isFem?(dark?"rgba(255,55,95,0.15)":"rgba(255,55,95,0.08)"):sel.background,borderColor:isFem?"#FF375F":sel.borderColor,color:isFem?"#FF375F":sel.color,fontWeight:isFem?700:sel.fontWeight};return(<select style={sty} value={v} onChange={e=>s("nat",e.target.value)}><option value=""></option><option value="Homicídio">Homicídio</option><option value="Feminicídio">Feminicídio</option><option value="Tentativa de feminicídio">Tentativa de feminicídio</option><option value="Tentativa de homicídio">Tentativa de homicídio</option><option value="Lesão corporal">Lesão corporal</option><option value="Suicídio">Suicídio</option><option value="Cadáver encontrado">Cadáver encontrado</option><option value="Afogamento">Afogamento</option><option value="Estupro">Estupro</option><option value="Complementar">Complementar</option><option value="Pátio">Pátio</option><option value="Outros">Outros</option></select>);})()}{g("nat")==="Outros"&&<TX_ value={g("nat_outro")} inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("nat_outro",val)}/>}</div><F_ k="oic" label="Exame Externo" val={g("oic")} onChange={s} styles={ST}/></div><div style={{marginTop:12}}><Nw_ k="dt_sol" label="Data/Hora Solicitação" val={g("dt_sol")} onChange={s} styles={ST}/></div></Cd_>
 <Cd_ styles={ST} title="Atendimento" aria-label="Atendimento" icon="🚗" variant="teal"><div style={{display:"flex",flexDirection:"column",gap:12}}><Nw_ k="dt_des" label="Deslocamento" val={g("dt_des")} onChange={s} styles={ST}/><Nw_ k="dt_che" label="Chegada" val={g("dt_che")} onChange={s} styles={ST}/><Nw_ k="dt_ter" label="Término" val={g("dt_ter")} onChange={s} styles={ST}/></div></Cd_>
-<Cd_ styles={ST} title="Equipe" aria-label="Equipe" icon="👥" variant="info"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={lb}>2º Perito</label>{(()=>{const p2=g("p2");const p2InList=p2&&PERITOS_LIST.some(pl=>pl.nome===p2);const showOutro=(p2&&!p2InList)||g("p2_m")==="1";const selectVal=showOutro?"__outro__":(p2InList?p2:"");return(<><select style={sel} value={selectVal} onChange={e=>{const v=e.target.value;if(v==="__outro__"){setData(prev=>({...prev,p2_m:"1"}));}else if(v===""){setData(prev=>({...prev,p2:"",mat_p2:"",p2_m:""}));}else{const found=PERITOS_LIST.find(pl=>pl.nome===v);setData(prev=>({...prev,p2:v,mat_p2:found?found.mat:"",p2_m:""}));}}}><option value=""></option>{PERITOS_LIST.map(pl=><option key={pl.mat} value={pl.nome}>{pl.nome}</option>)}<option value="__outro__">Outro (digitar)</option></select>{p2InList&&!showOutro&&<div style={{marginTop:6,padding:"6px 10px",background:t.successBgS,border:`1px solid ${t.ok}`,borderRadius:6,fontSize:13,color:t.tx}}>👤 <b>{p2}</b> — Mat.: <b>{g("mat_p2")||"—"}</b></div>}{showOutro&&<div style={{marginTop:6,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}><TX_ value={p2} placeholder="Nome" inputStyle={{...inp,fontSize:13}} onCommit={(val)=>s("p2",toTitleCase(val))}/><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:13}} defaultValue={g("mat_p2")} placeholder="Matrícula" onBlur={e=>s("mat_p2",e.target.value)}/></div>}</>);})()}</div><div><label style={lb}>Agente</label><select style={sel} value={g("ag")} onChange={e=>s("ag",e.target.value)}><option value=""></option><option>Ana Paula</option><option>Claudomir</option><option>Fernando</option><option>Hieda</option><option>Manzam</option><option>Roberto Carlos</option><option>Walter</option><option>Outro</option></select>{g("ag")==="Outro"&&<TX_ value={g("ag_outro")} placeholder="Digite o nome" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("ag_outro",val)}/>}</div><div><label style={lb}>Papiloscopista</label><select style={sel} value={g("pp")} onChange={e=>s("pp",e.target.value)}><option value=""></option><option>Altair</option><option>Bruna</option><option>Carla</option><option>Edevandro</option><option>Felipe</option><option>Guilherme</option><option>Mariane</option><option>Rafael</option><option>Rafaela</option><option>Outro</option></select>{g("pp")==="Outro"&&<TX_ value={g("pp_outro")} placeholder="Digite o nome" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("pp_outro",val)}/>}</div><F_ k="mat_pp" label="Matrícula Papilo." val={g("mat_pp")} onChange={s} styles={ST}/><div><label style={lb}>Viatura</label><select style={sel} value={g("vt")} onChange={e=>s("vt",e.target.value)}><option value=""></option><option>T-118</option><option>T-120</option><option>T-130</option><option>Outra</option></select>{g("vt")==="Outra"&&<TX_ value={g("vt_outro")} placeholder="Digite a viatura" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("vt_outro",val)}/>}</div></div></Cd_>
+<Cd_ styles={ST} title="Equipe" aria-label="Equipe" icon="👥" variant="info"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><label style={lb}>2º Perito</label>{(()=>{const p2=g("p2");const p2InList=p2&&PERITOS_LIST.some(pl=>pl.nome===p2);const showOutro=(p2&&!p2InList)||g("p2_m")==="1";const selectVal=showOutro?"__outro__":(p2InList?p2:"");return(<><select style={sel} value={selectVal} onChange={e=>{const v=e.target.value;if(v==="__outro__"){setData(prev=>({...prev,p2_m:"1"}));}else if(v===""){setData(prev=>({...prev,p2:"",mat_p2:"",p2_m:""}));}else{const found=PERITOS_LIST.find(pl=>pl.nome===v);setData(prev=>({...prev,p2:v,mat_p2:found?found.mat:"",p2_m:""}));}}}><option value=""></option>{PERITOS_LIST.map(pl=><option key={pl.mat} value={pl.nome}>{pl.nome}</option>)}<option value="__outro__">Outro (digitar)</option></select>{p2InList&&!showOutro&&<div style={{marginTop:6,padding:"6px 10px",background:t.successBgS,border:`1px solid ${t.ok}`,borderRadius:6,fontSize:13,color:t.tx}}>👤 <b>{p2}</b> — Mat.: <b>{g("mat_p2")||"—"}</b></div>}{showOutro&&<div style={{marginTop:6,display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}><TX_ value={p2} placeholder="Nome" inputStyle={{...inp,fontSize:13}} onCommit={(val)=>s("p2",toTitleCase(val))}/><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:13}} defaultValue={g("mat_p2")} placeholder="Matrícula" onBlur={e=>s("mat_p2",e.target.value)}/></div>}</>);})()}</div><div><label style={lb}>Agente</label><select style={sel} value={g("ag")} onChange={e=>s("ag",e.target.value)}><option value=""></option><option>Ana Paula</option><option>Clodomir</option><option>Fernando</option><option>Hieda</option><option>Manzam</option><option>Roberto Carlos</option><option>Walter</option><option>Outro</option></select>{g("ag")==="Outro"&&<TX_ value={g("ag_outro")} placeholder="Digite o nome" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("ag_outro",val)}/>}</div><div><label style={lb}>Papiloscopista</label><select style={sel} value={g("pp")} onChange={e=>s("pp",e.target.value)}><option value=""></option><option>Altair</option><option>Bruna</option><option>Carla</option><option>Edevandro</option><option>Felipe</option><option>Guilherme</option><option>Larissa</option><option>Mariane</option><option>Rafael</option><option>Rafaela</option><option>Outro</option></select>{g("pp")==="Outro"&&<TX_ value={g("pp_outro")} placeholder="Digite o nome" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("pp_outro",val)}/>}</div><F_ k="mat_pp" label="Matrícula Papilo." val={g("mat_pp")} onChange={s} styles={ST}/><div><label style={lb}>Viatura</label><select style={sel} value={g("vt")} onChange={e=>s("vt",e.target.value)}><option value=""></option><option>T-118</option><option>T-120</option><option>T-130</option><option>Outra</option></select>{g("vt")==="Outra"&&<TX_ value={g("vt_outro")} placeholder="Digite a viatura" inputStyle={{...inp,marginTop:6}} onCommit={(val)=>s("vt_outro",val)}/>}</div></div></Cd_>
 <Cd_ styles={ST} title="Observações" aria-label="Observações" icon="📝"><F_ k="obs_sol" label="Observações — Solicitação / Histórico" type="textarea" val={g("obs_sol")} onChange={s} styles={ST}/></Cd_>
 {navBtns()}</>);
   // ╔════════════════════════════════════════╗
