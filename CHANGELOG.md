@@ -1,3 +1,14 @@
+## v278 — Auditoria de saneamento (rodada 1)
+
+- **Versões sincronizadas**: `APP_VERSION` e `CACHE_VERSION` do Service Worker agora andam juntas (`v278` em ambos). A partir de agora, cada bump do App precisa bumpar o SW também — caso contrário usuários ficam presos no cache antigo e não recebem a versão nova.
+- **Cabeçalho do `App.jsx` enxuto**: removido o histórico v201-v210 que estava duplicando o `CHANGELOG.md` e desorientando.
+- **Termo "laudo" trocado por "Croqui"** nas mensagens do app, no DOCX e no PDF — alinha com a nomenclatura oficial (App gera Croqui de Levantamento + RRV; laudo é outra coisa).
+- **`exportAllZip` removido** (~600 linhas mortas): a função "Pacote Completo" foi descontinuada em v254 mas o código ficou. Junto saíram `zipProgress`, `zipNowTick`, `exportingZipRef`, `zipCancelRef`, `zipProgressTimerRef`, `zipStartedAtRef` e o modal de progresso.
+- **Service Worker mais leve**: removidas 8 entradas de pré-cache para imagens `body-*.jpg` e `head-*.jpg` que não são mais usadas (o app usa `h-*` e `m-*` desde a v256). Os arquivos físicos também foram apagados (~2-3 MB economizados).
+- **Ícones duplicados na raiz removidos**: `icon-180.png`, `icon-192.png`, `icon-512.png` e `icon.svg` existiam tanto em `/raiz` quanto em `/public`. Vite só serve o que está em `/public`, então os da raiz eram lixo.
+- **Imports do `fflate` enxugados**: removidos `zip as fflateZip` e `strToU8` que só eram usados pelo `exportAllZip`. Mantidos apenas `unzipSync` e `strFromU8` (usados na importação de backup ZIP).
+- **Deduplicação dos helpers DOCX (`Pp`, `SPACER`, `ROW_GOLD_GROUP`, `esc2`, `header1Xml`)** ficou para a próxima rodada — exige cuidado com regex de control chars que pode corromper o arquivo se manipulado por scripts.
+
 ## v255 — Burst nativo (picker em loop), nomenclatura de fotos refeita, header limpo
 
 - **Burst de fotos reescrito**: agora usa o **picker nativo do iOS em loop** em vez de `getUserMedia`+canvas. Cada foto abre a câmera nativa do iPhone com **0.5×, 1×, 2×, 3×, flash, HDR, modo noite, foco/exposição automática** — tudo do iPhone.
