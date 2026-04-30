@@ -1,26 +1,15 @@
 // ════════════════════════════════════════════════════════════════
-// Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v21 (App v252 — AirPrint vira caminho ÚNICO em iOS.
-//   Pesquisa profunda confirmou bug oficial em jsPDF#3876, html2canvas#3053,
-//   html2pdf.js#481/#601 + WebKit Bug 195325 (canvas memory cap 224MB).
-//   Solução: em iOS, próprios botões "Croqui PDF" e "RRV PDF" abrem direto
-//   o AirPrint (label "🖨 Croqui PDF · AirPrint"). Sem mais html2pdf em iOS.
-//   Aviso azul didático com tutorial 4 passos. Botão duplicado removido.)
+// Xandroid — Service Worker (atualização silenciosa)
 // ════════════════════════════════════════════════════════════════
-// IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
-// O bloco de activate (mais abaixo) limpa caches antigos com prefixo
-// "mvdroid-" automaticamente, então usuários da versão MVDroiD não
-// ficam com lixo cacheado.
+// IMPORTANTE: o número do CACHE_VERSION acompanha 1:1 a APP_VERSION
+// definida em src/App.jsx. Sempre que o App ganhar uma versão nova,
+// bumpe aqui também — caso contrário usuários ficam presos no cache
+// antigo, sem receber a versão nova do App.
 //
-// v232: rebrand para Xandroid e correções importantes no Pacote ZIP:
-//  - Guard contra cliques duplos em "Compartilhar ZIP" / "Baixar ZIP"
-//    (antes, dois cliques rápidos rodavam em paralelo e travavam)
-//  - Timeout de 60s por PDF (html2pdf às vezes trava em silêncio no iOS)
-//  - Tolerância individual: se o PDF do Croqui ou do RRV falhar, o ZIP
-//    é gerado com o que sobrou (DOCX, JSON, fotos) + aviso no LEIA-ME
-//  - ID único do container temporário (evita colisão entre PDFs)
+// O bloco de activate limpa caches antigos com prefixo "mvdroid-" ou
+// "xandroid-" automaticamente.
 //
-// Estratégia (sem mudanças):
+// Estratégia:
 //  • HTML / index: NETWORK-FIRST (sempre busca novo, fallback offline)
 //  • Assets versionados (.js/.css com hash): cache-first eterno
 //  • Imagens anatômicas e ícones PWA: cache-first
@@ -29,7 +18,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v21';
+const CACHE_VERSION = 'xandroid-v278';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -39,15 +28,6 @@ const PRECACHE_URLS = [
   '/icon-192.png',
   '/icon-512.png',
   '/og-preview.jpg',
-  // Imagens anatômicas (críticas pro croqui funcionar offline)
-  '/img/anatomy/body-front.jpg',
-  '/img/anatomy/body-back.jpg',
-  '/img/anatomy/body-left.jpg',
-  '/img/anatomy/body-right.jpg',
-  '/img/anatomy/head-front.jpg',
-  '/img/anatomy/head-back.jpg',
-  '/img/anatomy/head-left.jpg',
-  '/img/anatomy/head-right.jpg',
 ];
 
 self.addEventListener('install', (event) => {

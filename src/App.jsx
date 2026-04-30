@@ -2,58 +2,15 @@
 // ║                    Xandroid — PCDF / SCPe                     ║
 // ║       App de documentação forense para cenas de crime         ║
 // ║       Seção de Criminalística e Perícia — Polícia Civil DF    ║
-// ╠══════════════════════════════════════════════════════════════╣
-// ║  ⚠️  HISTÓRICO DE VERSÕES movido para CHANGELOG.md            ║
 // ║                                                                ║
-// ║  Versão atual: v210 — FIX DEFINITIVO da "tela em branco/azul"  ║
-// ║                                                                ║
-// ║  CAUSA REAL (que demorei 4 versões pra achar):                 ║
-// ║  • Variável "ei" usada na label da Edificação não existia      ║
-// ║    no escopo do .map() — devia ser "i"                         ║
-// ║  • ReferenceError mata o render → ErrorBoundary captura        ║
-// ║    → tela vazia                                                ║
-// ║                                                                ║
-// ║  Linha 2553 corrigida: ${ei+1} → ${i+1}                        ║
-// ║                                                                ║
-// ║  v207-v209 (descartadas — diagnóstico errado de cor de fundo)  ║
-// ║                                                                ║
-// ║  v205:                                                         ║
-// ║  • Manifest, favicon e icons como arquivos físicos             ║
-// ║  • Botão "Compartilhar DOCX" via WhatsApp/AirDrop nativo       ║
-// ║  • Slots com miniatura do croqui + indicador de fotos          ║
-// ║                                                                ║
-// ║  v204:                                                         ║
-// ║  • Topbar respeita notch/Dynamic Island do iPhone PWA          ║
-// ║  • Sem flash branco ao abrir pelo atalho (PWA standalone)      ║
-// ║  • Body fundo escuro fixo (#0a1420) já no HTML inicial         ║
-// ║                                                                ║
-// ║  v203:                                                         ║
-// ║  • Layout Solicitação responsivo (Android-friendly)            ║
-// ║  • Ano em select de 2 dígitos (24, 25, 26...)                  ║
-// ║  • Dark mode: labels com mais contraste (t2 → d4d4d8)          ║
-// ║  • Labels com peso 600 (mais legíveis)                         ║
-// ║  • Ícone forca/enforcamento: laçada redonda c/ nó              ║
-// ║                                                                ║
-// ║  v202:                                                         ║
-// ║  • PWA fix: tab bar respeita Dynamic Island/notch              ║
-// ║  • Microfone APENAS em textareas (campos longos)               ║
-// ║  • Botão de mic redesenhado (40×40 área, ícone visual menor)   ║
-// ║  • Labels "Observações" identificam de qual seção pertencem    ║
-// ║  • Imagens anatômicas como arquivos (/img/anatomy/*.jpg)       ║
-// ║  • Service Worker registrado (PWA offline)                     ║
-// ║                                                                ║
-// ║  v201:                                                         ║
-// ║  • RRV sem 2º perito · Campos extensíveis · Mic c/ scroll      ║
-// ║  • DOCX blindado · Cômodo extra unificado                      ║
-// ║                                                                ║
-// ║  Versões anteriores (v115 → v200): ver CHANGELOG.md            ║
+// ║  Versão atual: ver APP_VERSION abaixo.                         ║
+// ║  Histórico completo: CHANGELOG.md                              ║
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import html2pdf from "html2pdf.js";
-import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v277-Xandroid";
+const APP_VERSION="v278-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -885,10 +842,7 @@ const s=useCallback((k,v)=>setData(p=>({...p,[k]:v})),[]);const dataRef=useRef(d
   // ──────────────────────────────────────────
   // UTILITÁRIOS — Toast de notificação
   // ──────────────────────────────────────────
-const[backupStatus,setBackupStatus]=useState("");const[showConfirmNovo,setShowConfirmNovo]=useState(false);const[showConfirmRecup,setShowConfirmRecup]=useState(false);const[recupData,setRecupData]=useState(null);const[showTemplatePicker,setShowTemplatePicker]=useState(false);const[showLocalPicker,setShowLocalPicker]=useState(false);const[pendingTemplateId,setPendingTemplateId]=useState(null);const[showCameraHelp,setShowCameraHelp]=useState(false);const[cameraCancelCount,setCameraCancelCount]=useState(0);const[showConfirmDeleteAll,setShowConfirmDeleteAll]=useState(false);const[deleteAllInput,setDeleteAllInput]=useState("");const[burstCtx,setBurstCtx]=useState(null);const[showDiag,setShowDiag]=useState(false);const[zipProgress,setZipProgress]=useState(null);const[zipNowTick,setZipNowTick]=useState(0);const[advExpanded,setAdvExpanded]=useState(false);
-// v236: tick por segundo enquanto o ZIP está sendo gerado — atualiza o
-// cronômetro no modal sem depender de novos eventos de progresso.
-useEffect(()=>{if(!zipProgress||zipProgress.error||zipProgress.stage==="Concluído"||zipProgress.stage==="Cancelado")return;const id=setInterval(()=>setZipNowTick(Date.now()),1000);return()=>clearInterval(id);},[zipProgress]);
+const[backupStatus,setBackupStatus]=useState("");const[showConfirmNovo,setShowConfirmNovo]=useState(false);const[showConfirmRecup,setShowConfirmRecup]=useState(false);const[recupData,setRecupData]=useState(null);const[showTemplatePicker,setShowTemplatePicker]=useState(false);const[showLocalPicker,setShowLocalPicker]=useState(false);const[pendingTemplateId,setPendingTemplateId]=useState(null);const[showCameraHelp,setShowCameraHelp]=useState(false);const[cameraCancelCount,setCameraCancelCount]=useState(0);const[showConfirmDeleteAll,setShowConfirmDeleteAll]=useState(false);const[deleteAllInput,setDeleteAllInput]=useState("");const[burstCtx,setBurstCtx]=useState(null);const[showDiag,setShowDiag]=useState(false);const[advExpanded,setAdvExpanded]=useState(false);
 // Templates personalizados do perito (salvos por matrícula)
 const[customTemplates,setCustomTemplates]=useState([]);
 const[showSaveTemplate,setShowSaveTemplate]=useState(false);
@@ -922,7 +876,7 @@ const[confirmBack,setConfirmBack]=useState(null);
 // Haptic patterns inspirados em UIKit Feedback Generator (iOS)
 const haptic=(type=50)=>{try{if(typeof type==="number"){navigator.vibrate?.(type);return;}// Patterns nomeados (estilo iOS)
 const patterns={selection:10,light:15,medium:30,heavy:50,success:[15,40,15],warning:[30,80,30],error:[50,80,50,80,50],pulse:[20,60,20]};const p=patterns[type]||30;navigator.vibrate?.(p);}catch(e){/* vibrate não suportado, ok */}};
-const backupTimerRef=useRef(null);const savingRef=useRef(false);const pendingSaveRef=useRef(false);const exportingZipRef=useRef(false);const zipCancelRef=useRef(false);const zipProgressTimerRef=useRef(null);const zipStartedAtRef=useRef(0);
+const backupTimerRef=useRef(null);const savingRef=useRef(false);const pendingSaveRef=useRef(false);
 // ── STATE REF — stable reference for saveBackup (avoids 17+ dependencies) ──
 const stateSnap=useRef({});
 // Update stateSnap ref directly (no useEffect needed)
@@ -989,8 +943,7 @@ useEffect(()=>{if(!loggedIn||showStartMenu)return;isDirtyRef.current=true;setSav
 // salva últimas 10 ocorrências em window.__xandroidErrors (sobrevive enquanto
 // app está aberto). O usuário pode acessar via tela "🔍 Diagnóstico".
 useEffect(()=>{if(typeof window==="undefined")return;if(!window.__xandroidErrors)window.__xandroidErrors=[];const log=(type,err,extra)=>{try{const entry={t:new Date().toISOString(),type,msg:String(err&&err.message||err||"sem mensagem").slice(0,500),stack:String(err&&err.stack||"sem stack").slice(0,2000),extra:extra?String(extra).slice(0,300):""};window.__xandroidErrors.unshift(entry);if(window.__xandroidErrors.length>10)window.__xandroidErrors.length=10;}catch(_){}};const onErr=(ev)=>log("window.error",ev.error||ev.message,ev.filename+":"+ev.lineno);const onRej=(ev)=>log("unhandledrejection",ev.reason,"");window.addEventListener("error",onErr);window.addEventListener("unhandledrejection",onRej);return()=>{window.removeEventListener("error",onErr);window.removeEventListener("unhandledrejection",onRej);};},[]);
-useEffect(()=>{if(!loggedIn||pdfReady)return;setPdfReady("loading");(async()=>{try{await loadH2P();// Pré-carrega JSZip também (background, não bloqueia)
-loadJSZip().catch(e=>console.warn("CQ jszip preload:",e));setPdfReady("ok");}catch(e){console.warn("CQ pdf preload:",e);setPdfReady("fail");}})();},[loggedIn]);// eslint-disable-line react-hooks/exhaustive-deps
+useEffect(()=>{if(!loggedIn||pdfReady)return;setPdfReady("loading");(async()=>{try{await loadH2P();setPdfReady("ok");}catch(e){console.warn("CQ pdf preload:",e);setPdfReady("fail");}})();},[loggedIn]);// eslint-disable-line react-hooks/exhaustive-deps
 // Track recently used DPs (top 5) — adds to history when DP value stable for 2s
 
 // Restore backup on mount — scan ALL slots, show start menu
@@ -1612,14 +1565,14 @@ setStampObjs(so=>so.filter(s2=>s2.sheet!==desenhoIdx));setSelStamp(null);};
 
 // Export
 const pCSS=`@page{size:A4;margin:25mm 15mm 20mm 15mm}@page{@bottom-center{content:"Croqui de Levantamento de Local — pág. " counter(page) " de " counter(pages) " — SCPe/IC/DPT/PCDF";font-size:9px;color:#666;font-family:Arial,Helvetica,sans-serif}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body,html{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1A1A1A;line-height:1.55;padding:15px;margin:0}table{width:100%;border-collapse:collapse}td,th{line-height:1.5}img{max-width:100%}h2,h3,h4,h5,h6{font-family:Arial,Helvetica,sans-serif}`;
-// v235: bibliotecas (html2pdf, JSZip) agora vêm do bundle local via import,
-// não mais via fetch a CDN com cache em localStorage. Vantagens:
+// Bibliotecas (html2pdf, fflate) vêm do bundle local via import, não mais via
+// fetch a CDN com cache em localStorage. Vantagens:
 //  • Sem risco de cdnjs comprometido executar código no app forense
 //  • Sem cache de 30 dias em localStorage que poderia perpetuar comprometimento
 //  • Funciona offline desde a primeira carga (sem precisar baixar de rede)
 //  • CSP mais restritiva (script-src 'self') passa a ser viável
-// Mantemos as funções loadH2P/loadJSZip como wrappers async para preservar
-// a assinatura usada no resto do código (await loadH2P()).
+// loadH2P fica como wrapper async pra preservar a assinatura `await loadH2P()`
+// usada no resto do código.
 const loadH2P=async()=>html2pdf;
   // ──────────────────────────────────────────
   // MAPA — Abre Google Maps + sobe screenshot como base do canvas
@@ -1665,7 +1618,7 @@ const loadH2P=async()=>html2pdf;
   // ──────────────────────────────────────────
   // EXPORTAÇÃO — PDF, DOCX e funções auxiliares
   // savePDF: gera PDF via html2pdf.js
-  // saveCroquiDocx: gera .docx real (OOXML/JSZip) direto dos dados
+  // saveCroquiDocx: gera .docx real (OOXML via fflate) direto dos dados
   // copyHTML: copia HTML para clipboard
   // ──────────────────────────────────────────
 
@@ -1680,16 +1633,20 @@ setPdfBusy(true);setCopyOk("Gerando PDF…");if(pdfDataUrl)try{URL.revokeObjectU
 // v239: baixa direto, sem mostrar passo intermediário com botões "Visualizar/Baixar".
 await smartSavePdf(blob,title);
 }catch(e){setCopyOk("Erro: "+e.message);setTimeout(()=>setCopyOk(""),6000);}finally{setPdfBusy(false);}};
-const loadJSZip=async()=>JSZip;
+// Wrapper com a mesma API do JSZip (file/generateAsync), mas usando fflate por baixo.
+// Saída: Blob DOCX pronto pra download/share. Mantém a interface do código antigo
+// minimizando o diff dentro de saveCroquiDocx/saveRRVDocx.
+const mkDocxZip=()=>{const files={};return{
+  file:(path,content)=>{const u8=typeof content==="string"?strToU8(content):content;files[path]=[u8,{level:6}];},
+  generateAsync:()=>new Promise((resolve,reject)=>{fflateZip(files,{level:6},(err,u8)=>{if(err)reject(err);else resolve(new Blob([u8],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));});})
+};};
 const X=(s)=>{if(!s)return"";const v=Array.isArray(s)?s.join(", "):String(s);return v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
 const saveCroquiDocx=async(returnBlobOnly=false)=>{
   /* v201: forceSaveCanvas pode falhar (canvas vazio/quebrado) — não pode bloquear o DOCX */
   try{forceSaveCanvas();}catch(eFsc){console.warn("forceSaveCanvas falhou (continuando):",eFsc);}
   try{
-    if(!returnBlobOnly)showToast("⏳ Gerando laudo...");
-    const JSZip=await loadJSZip();
-    if(!JSZip)throw new Error("Não foi possível carregar JSZip — verifique sua internet");
-    const zip=new JSZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");
+    if(!returnBlobOnly)showToast("⏳ Gerando Croqui...");
+    const zip=mkDocxZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");
 /* v201: esc2 reforçado — strip de control chars que quebram XML (zero-width, BOMs etc.) */
 const esc2=(s)=>String(s??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
 const Pp=(text,opts={})=>{const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?`<w:color w:val="${opts.color}"/>`:"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:"";const ind=opts.indFirst?`<w:ind w:firstLine="${opts.indFirst}"/>`:"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing=`<w:spacing w:before="${spBef}" w:after="${spAft}" w:line="320" w:lineRule="auto"/>`;const brd=opts.border?`<w:pBdr>${opts.border}</w:pBdr>`:"";const keepNext=opts.keepNext?'<w:keepNext/>':"";const keepLines=opts.keepLines?'<w:keepLines/>':"";const pPr=`<w:pPr>${keepNext}${keepLines}${center}${brd}${spacing}${ind}${shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:""}<w:rPr>${bold}${italic}<w:sz w:val="${sz}"/>${color}</w:rPr></w:pPr>`;return`<w:p>${pPr}<w:r><w:rPr>${bold}${italic}${caps}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${color}</w:rPr><w:t xml:space="preserve">${esc2(text)}</w:t></w:r></w:p>`;};
@@ -1962,7 +1919,7 @@ if(d.obs_p)body+=Pp("Obs papiloscopia: "+d.obs_p,{sz:20,spBef:80});}
 // Encerramento
 body+=SPACER(240);
 const encPerito=perito2?`relatado pelo(a) Perito(a) Criminal ${perito1}${matP1?" (mat. "+matP1+")":""} e revisado pelo(a) Perito(a) Criminal ${perito2}${matP2?" (mat. "+matP2+")":""}`:`relatado pelo(a) Perito(a) Criminal ${perito1}${matP1?" (mat. "+matP1+")":""}`;
-body+=PARA(`Nada mais havendo a lavrar, encerra-se o presente laudo, ${encPerito}, que segue assinado digitalmente.`);
+body+=PARA(`Nada mais havendo a lavrar, encerra-se o presente Croqui de Levantamento, ${encPerito}, que segue assinado digitalmente.`);
 // ──── FOTOGRAFIAS ────
 let nextRid=10;const imgRels=[];
 let ctXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>';
@@ -2063,13 +2020,13 @@ const url=URL.createObjectURL(blob);
 const a=document.createElement("a");a.href=url;a.download=fileName;a.rel="noopener";
 document.body.appendChild(a);a.click();document.body.removeChild(a);
 setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){/* noop */}},10000);
-showToast("✅ Laudo gerado!");
+showToast("✅ Croqui gerado!");
 }catch(e){
   const msg=e?.message||String(e)||"erro desconhecido";
   console.error("DOCX error:",e);
   showToast("❌ Erro DOCX: "+msg);
   setTimeout(()=>showToast(""),6000);
-  if(returnBlobOnly)throw e; /* propaga p/ exportAllZip lidar */
+  if(returnBlobOnly)throw e;
 }
 };
 // v253: gera RRV (Registro de Recolhimento de Vestígios) em DOCX. Documento próprio,
@@ -2079,9 +2036,7 @@ showToast("✅ Laudo gerado!");
 const saveRRVDocx=async(returnBlobOnly=false)=>{
 try{
 if(!returnBlobOnly)showToast("Gerando RRV...");
-const JSZip=await loadJSZip();
-if(!JSZip)throw new Error("Nao foi possivel carregar JSZip");
-const zip=new JSZip();const d=data;
+const zip=mkDocxZip();const d=data;
 const oc=d.oc||"___";const ano=d.oc_ano||"____";
 const dpResolvedRRV=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
 const dpFooter=dpResolvedRRV.replace(/[ªº\s]/g,"")||"___";
@@ -2410,17 +2365,10 @@ const smartSavePdf=async(blobOrUrl,title)=>{
   setTimeout(()=>URL.revokeObjectURL(url),8000);
   showToast("✅ PDF baixado!");
 };
-// Helper: gera blob PDF a partir de HTML (reusado por exportAllZip)
-// v232: ID único pra evitar colisão se duas chamadas concorrerem.
-// Timeout opcional (default 60s) — html2pdf pode travar em silêncio em iOS.
-// v246: opts.fast=true reduz scale (2 → 1.4) — pra ZIP onde tempo importa mais que qualidade.
-// v248: removidas as opções `removeContainer`, `letterRendering`, `imageTimeout`, `compress`
-// que tinham introduzido na v246 e estavam causando falhas silenciosas no Croqui PDF
-// dentro do ZIP (algumas versões do html2canvas/jsPDF não aceitam essas chaves e
-// rejeitam a Promise sem mensagem clara). Voltei pra config conservadora que funcionava
-// na v245, mantendo só o `scale` dinâmico.
-// v250: detecta iPhone/iPad — em iOS, html2canvas trava com base64 grandes
-// (logos institucionais embutidos). Forçamos xLight e pré-carregamos imagens.
+// Helper: gera blob PDF a partir de HTML.
+// ID único pra evitar colisão se duas chamadas concorrerem.
+// Em iOS, html2canvas trava com base64 grandes (logos institucionais embutidos):
+// forçamos xLight (scale 1.0, qualidade 0.7) e pré-carregamos as imagens.
 const isIOS=()=>{try{return/iPad|iPhone|iPod/.test(navigator.userAgent||"")||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}catch(_){return false;}};
 const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const xLight=(opts&&opts.xLight)||isIOS();/* v250: iOS sempre xLight */const tMs=timeoutMs||(fast?45000:60000);const scale=xLight?1.0:(fast?1.4:2);const html2pdf=await loadH2P();
 const uniqueId="pdf-export-tmp-"+Date.now()+"-"+Math.floor(Math.random()*100000);
@@ -2437,11 +2385,9 @@ const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout "+(tMs/10
 const pdfObj=await Promise.race([work,timer]);
 const totalPages=pdfObj.internal.getNumberOfPages();const pageW=pdfObj.internal.pageSize.getWidth();const pageH=pdfObj.internal.pageSize.getHeight();for(let i=1;i<=totalPages;i++){pdfObj.setPage(i);pdfObj.setFontSize(7);pdfObj.setTextColor(150);pdfObj.text(`Oc.: ${data.oc||"___"}/${data.oc_ano||""} | DP: ${data.dp||""} | Perito: ${data.p1||"___"}`,pageW/2,8,{align:"center"});pdfObj.text(`Página ${i} de ${totalPages}`,pageW/2,pageH-5,{align:"center"});}return pdfObj.output("blob");}finally{try{document.body.removeChild(tempEl);}catch(e){}}};
 
-// Helpers fflate: converter blob → Uint8Array e base64 → Uint8Array
-const blobToU8=async(b)=>new Uint8Array(await b.arrayBuffer());
+// Helper: converte base64 → Uint8Array (usado no import do ZIP).
 const b64ToU8=(b64)=>{const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr;};
-const fflateZipAsync=(files,opts)=>new Promise((resolve,reject)=>{fflateZip(files,opts,(err,data)=>err?reject(err):resolve(data));});
-// v244: converte Uint8Array de uma foto JPEG em data URL (pra reconstruir o dataUrl
+// Converte Uint8Array de uma foto JPEG em data URL (pra reconstruir o dataUrl
 // no momento do import do ZIP). Usa chunks pra não estourar a stack em fotos grandes.
 const u8ToB64=(u8)=>{let binary="";const chunkSize=8192;for(let i=0;i<u8.length;i+=chunkSize){binary+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(i+chunkSize,u8.length)));}return btoa(binary);};
 // v244: importa um arquivo ZIP do Xandroid e reconstrói o estado completo
@@ -2492,114 +2438,6 @@ const doImportBackupFile=async(file,onDone)=>{
     haptic("warning");
   }
 };
-// Exportar TUDO em ZIP + Web Share API
-// v238: migrado de JSZip para fflate (~2x mais rápido, bundle menor).
-// fflate não tem callback de progresso na compactação — em troca a etapa
-// é tão rápida que não precisa.
-// v254: função exportAllZip não é mais chamada (botão "Pacote Completo" foi removido
-// da aba Exportar). Mantida no código por enquanto para não quebrar refs remanescentes
-// (exportingZipRef, zipProgress). Pode ser deletada numa próxima versão de limpeza.
-const exportAllZip=async(useShare=false)=>{
-if(zipProgressTimerRef.current){clearTimeout(zipProgressTimerRef.current);zipProgressTimerRef.current=null;}
-// v248: RESET DEFENSIVO — se exportingZipRef ficou preso por mais de 6 minutos
-// (tempo máximo realista de uma geração mesmo grande), considera que a chamada
-// anterior morreu silenciosamente e libera o lock. Resolve o bug "botões parados
-// após primeira geração" mesmo que algum erro silencioso tenha pulado o finally.
-const stuckMs=zipStartedAtRef.current?Date.now()-zipStartedAtRef.current:0;
-if(exportingZipRef.current&&stuckMs>360000){console.warn("[ZIP] reset defensivo — lock preso há",Math.round(stuckMs/1000),"s");exportingZipRef.current=false;setZipProgress(null);}
-if(exportingZipRef.current){showToast("⏳ Já está gerando — aguarde");haptic("warning");return;}
-zipStartedAtRef.current=Date.now();
-// v245: aviso pré-ZIP quando há muitas fotos (250+) — alerta o usuário sobre
-// tempo e risco de OOM em iPhone com pouca RAM
-const photoCount=fotos?.length||0;
-if(photoCount>=250){const estTotMB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0)/1024;const estMin=Math.max(1,Math.round(photoCount/180));const ok=await confirmAsync(`Pacote ZIP com ${photoCount} fotos`,`Volume estimado: ${estTotMB.toFixed(0)} MB.\nTempo estimado: ${estMin} a ${estMin*2} minuto${estMin>1?"s":""}.\n\nDuração varia conforme o celular. Em iPhone antigo pode falhar por memória.\n\nDicas:\n• Mantenha o app aberto até o banner verde\n• Se travar, prefira "Baixar JSON" + fotos manualmente\n\nContinuar?`,{okLabel:"Continuar",okIcon:"📦",danger:false,cancelLabel:"Cancelar"});if(!ok){haptic("selection");return;}}
-exportingZipRef.current=true;zipCancelRef.current=false;let stage="iniciando";const failures=[];const startTime=Date.now();const checkCancel=()=>{if(zipCancelRef.current)throw new Error("Cancelado pelo usuário");};const upd=(pct,st,detail)=>{stage=st;setZipProgress({pct,stage:st,detail:detail||"",startTime});checkCancel();};try{upd(2,"Preparando","Salvando canvas…");forceSaveCanvas();haptic("medium");const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
-// files: dicionário { "caminho/arquivo.ext": Uint8Array  ou  [Uint8Array, opts] }
-const files={};
-// v253: ZIP simplificado — só DOCX (Croqui + RRV) + JSON + fotos + desenhos do canvas.
-// Removida toda a tentativa de gerar PDF dentro do ZIP (causava travas em iOS 18 e era
-// fonte do "ZIP gerado parcial"). Quem precisa de PDF rápido usa os botões individuais.
-// 1) Croqui DOCX
-upd(15,"Gerando Croqui DOCX","Montando documento Word…");
-try{const docxPromise=saveCroquiDocx(true);const docxTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 90s no Croqui DOCX")),90000));const docxBlob=await Promise.race([docxPromise,docxTimer]);if(docxBlob)files[mkFileName("docx","Croqui")]=await blobToU8(docxBlob);}
-catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] Croqui DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push("Croqui DOCX ("+msg+")");}
-// 2) RRV DOCX
-upd(40,"Gerando RRV DOCX","Montando documento Word…");
-try{const rrvPromise=saveRRVDocx(true);const rrvTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 60s no RRV DOCX")),60000));const rrvBlob=await Promise.race([rrvPromise,rrvTimer]);if(rrvBlob)files[mkFileName("docx","RRV")]=await blobToU8(rrvBlob);}
-catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] RRV DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-rrv-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push("RRV DOCX ("+msg+")");}
-// 3) Fotos individuais — STORE (level 0, sem re-comprimir JPEG)
-// v244: agora geradas ANTES do JSON pra que o JSON possa apenas REFERENCIAR
-// os arquivos da pasta /fotos/ (em vez de incluir base64 das mesmas fotos).
-// Resultado: ZIP 30-50% menor + JSON.stringify muito mais rápido.
-const fotosLite=[];// cópia das fotos sem dataUrl, com _file apontando pro arquivo
-if(fotos&&fotos.length>0){upd(70,"Adicionando fotos",`${fotos.length} foto(s)…`);const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);for(let i=0;i<fotos.length;i++){const f=fotos[i];if(!f.dataUrl){fotosLite.push(f);continue;}try{const m=f.dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);if(!m){fotosLite.push(f);continue;}const seq=String(i+1).padStart(3,"0");const cat=tabToCat[fotoTab(f.ref)]||"outros";const fase=faseToShort[f.fase]||"sem_fase";const refSan=sanit(f.ref||"foto");const localShort=sanit(f.local||"");const descShort=sanit((f.desc||"").slice(0,30));const ctx=localShort||descShort;const nameParts=[seq,cat,fase,refSan,ctx].filter(Boolean);const safeName="fotos/"+nameParts.join("_")+".jpg";files[safeName]=[b64ToU8(m[1]),{level:0}];// foto JPEG sem recompressão
-// versão "lite" da foto pro JSON: tudo MENOS dataUrl, com _file apontando pro arquivo
-const{dataUrl,...meta}=f;fotosLite.push({...meta,_file:safeName});
-if(i%5===0)upd(70+Math.round((i/fotos.length)*15),"Adicionando fotos",`${i+1}/${fotos.length}`);}catch(e){console.warn("Foto skip:",e);fotosLite.push(f);}}}else{/* nenhuma foto */}
-// 4) Desenhos do canvas (croquis) também em /fotos/ — v253
-// Cada folha de desenho (imgRef.current[idx]) é exportada como PNG dentro de /fotos/
-// com nome 'croqui_NN_<label>.png'. Assim o perito tem TUDO numa pasta só.
-upd(82,"Adicionando croquis","Desenhos do canvas…");
-try{
-  const allDrawKeys=imgRef.current?Object.keys(imgRef.current).filter(k=>imgRef.current[k]):[];
-  const sanitDraw=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,30);
-  allDrawKeys.forEach((dk,di)=>{
-    const dataUrl=imgRef.current[dk];
-    if(!dataUrl)return;
-    try{
-      const m=String(dataUrl).match(/^data:image\/[a-z]+;base64,(.+)$/);
-      if(!m)return;
-      const labelObj=desenhos[+dk];
-      const label=sanitDraw(labelObj?labelObj.label:("Croqui_"+(+dk+1)));
-      const seq=String(di+1).padStart(2,"0");
-      const safeName="fotos/croqui_"+seq+"_"+label+".png";
-      files[safeName]=[b64ToU8(m[1]),{level:0}];
-    }catch(eDr){console.warn("Desenho skip:",eDr);}
-  });
-}catch(eOuter){console.warn("Bloco de desenhos falhou:",eOuter);}
-// 5) JSON Backup — agora SEM fotos em base64 (referencia /fotos/* via _file)
-// Quando reimportado o ZIP, o app reconstrói os dataUrl em memória a partir
-// dos arquivos da pasta. Backup standalone (botão "Baixar JSON") continua
-// embutindo as fotos completas pra ser auto-suficiente.
-upd(86,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,_format:"zip",dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos:fotosLite,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};files[mkFileName("json","Backup")]=strToU8(JSON.stringify(backupObj,null,2));
-// 6) README — v253: ZIP só com DOCX (Croqui + RRV) + JSON + fotos
-upd(88,"Finalizando","Gerando documentação…");
-const failuresNote=failures.length?("\n\n⚠ Parcial — falharam: "+failures.join(", ")+". Use os botões individuais para tentar de novo cada um."):"";
-const drawCount=imgRef.current?Object.keys(imgRef.current).filter(k=>imgRef.current[k]).length:0;
-const fotosLine=fotos.length>0?("- /fotos/*.jpg — "+fotos.length+" foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg\n"):"";
-const drawLine=drawCount>0?("- /fotos/croqui_*.png — "+drawCount+" desenho(s) do canvas (croquis em PNG)\n"):"";
-const readme="Xandroid — Pacote de exportação\n"+("=".repeat(40))+"\n\n"+
-"Ocorrência: "+oc+"/"+ano+"\n"+
-"DP: "+dp+"\n"+
-"Perito: "+(loginName||"___")+" (mat. "+loginMat+")\n"+
-"Gerado em: "+fmtDt(new Date())+"\n"+
-"Versão app: "+APP_VERSION+failuresNote+"\n\n"+
-"Conteúdo:\n"+
-"- "+mkFileName("docx","Croqui")+" — Croqui de Levantamento de Local (DOCX editável)\n"+
-"- "+mkFileName("docx","RRV")+" — Registro de Recolhimento de Vestígios (DOCX editável)\n"+
-"- "+mkFileName("json","Backup")+" — Backup completo (referencia /fotos/ — importe o ZIP inteiro)\n"+
-fotosLine+drawLine+"\n"+
-"COMO GERAR PDF:\n"+
-"  Abra o DOCX no Word / Pages / Google Docs / LibreOffice e use \"Salvar como PDF\".\n"+
-"  Os botões individuais \"Croqui PDF\" e \"RRV PDF\" da aba Exportar também geram PDF\n"+
-"  (em iPhone via AirPrint, em Windows/Android via download direto).\n\n"+
-"COMO IMPORTAR DE VOLTA:\n"+
-"  Abra o Xandroid → \"Importar backup\" → selecione este arquivo .zip\n"+
-"  As fotos serão reconectadas aos respectivos campos do croqui.\n";
-files["LEIA-ME.txt"]=strToU8(readme);
-// Gerar ZIP final via fflate — sem callback de progresso, mas é rápido
-upd(90,"Compactando","Comprimindo arquivos…");const zipU8=await fflateZipAsync(files,{level:6});const zipBlob=new Blob([zipU8],{type:"application/zip"});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
-// Web Share API
-if(useShare){upd(96,"Compartilhando","Abrindo opções…");try{const file=new File([zipBlob],zipName,{type:"application/zip"});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:`Xandroid ${oc}/${ano}`,text:`Documentação forense — Ocorrência ${oc}/${ano}`});upd(100,"Concluído",failures.length?`Parcial — falhou: ${failures.join(", ")}`:"Compartilhado!");showToast(failures.length?`⚠️ Compartilhado parcial — falhou: ${failures.join(", ")}`:"✅ Compartilhado!");return;}else{showToast("⚠️ Compartilhamento não disponível, baixando…");}}catch(e){if(e.name==="AbortError"){upd(100,"Cancelado","");showToast("Compartilhamento cancelado");return;}console.warn("Share falhou:",e);showToast("⚠️ Falhou — baixando arquivo");}}
-// Fallback: download
-upd(98,"Baixando","Iniciando download…");const url=URL.createObjectURL(zipBlob);const a=document.createElement("a");a.href=url;a.download=zipName;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),8000);upd(100,"Concluído",`${(zipBlob.size/1024/1024).toFixed(1)} MB`);showToast(failures.length?`⚠️ ZIP gerado parcial (faltou: ${failures.join(", ")})`:`✅ ZIP gerado (${(zipBlob.size/1024/1024).toFixed(1)} MB)`);haptic(failures.length?"warning":"success");}catch(e){const msg=e&&e.message?e.message:String(e);if(msg==="Cancelado pelo usuário"){setZipProgress({pct:0,stage:"Cancelado",detail:"Geração interrompida",startTime});showToast("⚠️ Geração cancelada");haptic("warning");}else{console.error("[ZIP] Erro fatal no estágio '"+stage+"':",e);console.error("[ZIP] Stack:",e&&e.stack);setZipProgress({pct:0,stage:"❌ Erro em "+stage,detail:msg.slice(0,80),error:true,startTime});showToast("❌ "+stage+": "+msg.slice(0,60));haptic("error");}}finally{exportingZipRef.current=false;zipCancelRef.current=false;
-// v249: se houve falhas parciais, modal NÃO fecha automaticamente — usuário
-// precisa ler o que falhou e fechar com o botão. Sem falhas, fecha em 3s.
-const hadFailures=failures.length>0;
-if(zipProgressTimerRef.current)clearTimeout(zipProgressTimerRef.current);
-if(!hadFailures){zipProgressTimerRef.current=setTimeout(()=>{setZipProgress(null);zipProgressTimerRef.current=null;},3000);}
-else{setZipProgress(p=>p?{...p,partial:true,failures:[...failures]}:p);}}};
-
 const copyHTML=(html,title)=>{const full=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${pCSS}</style></head><body>${html}</body></html>`;const fb=(t2)=>{const ta=document.createElement("textarea");ta.value=t2;ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");setCopyOk("HTML copiado!");}catch(e2){setCopyOk("Erro ao copiar.");}document.body.removeChild(ta);setTimeout(()=>setCopyOk(""),5000);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(full).then(()=>{setCopyOk("HTML copiado!");setTimeout(()=>setCopyOk(""),5000);}).catch(()=>fb(full));}else{fb(full);}};
   // ──────────────────────────────────────────
   // EXPORTAÇÃO — Resumo texto (sum)
@@ -2689,7 +2527,7 @@ const NAT_ABR={"Homicídio":"Hom","Feminicídio":"Fem","Tentativa de feminicídi
 const mkFileName=(ext,prefixo)=>{const d=data;const oc=d.oc||"sem_oc";const ano=(d.oc_ano||"").slice(-4);const dpRaw=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");const dp=dpRaw.replace(/[ªº\s]/g,"");const now=new Date();const dia=String(now.getDate()).padStart(2,"0");const mes=MESES_ABR[now.getMonth()];const natRaw=d.nat==="Outros"&&d.nat_outro?d.nat_outro:d.nat||"";const nat=NAT_ABR[natRaw]||natRaw.slice(0,6).replace(/\s/g,"");const pre=prefixo||"Croqui";const parts=[pre,"OC",oc+"-"+ano+"-"+dp+"-"+dia+mes+(nat?"-"+nat:"")].filter(Boolean);return parts.join("_").replace(/[^a-zA-Z0-9_\-çãõáéíóúâêôàüÇÃÕÁÉÍÓÚÂÊÔÀÜ.]/g,"")+"."+ext;};
   // ──────────────────────────────────────────
   // EXPORTAÇÃO — Geração HTML do croqui (bPDF)
-  // Monta o HTML completo do laudo para PDF/DOCX
+  // Monta o HTML completo do Croqui para PDF/DOCX
   // ──────────────────────────────────────────
 const esc=(s)=>typeof s==="string"?s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"):s;
 // Helper: retorna o suporte/local com complemento de placa quando existir (para PDF/RRV/DOCX)
@@ -2915,7 +2753,7 @@ if(d.obs_v)h+=`<div style="padding:6px 10px;font-size:11px;background:#fff8e1;bo
 // --- 7 ANÁLISE e 8 CONCLUSÃO — removidas (preenchidas manualmente pelos peritos no documento final) ---
 // Encerramento
 const encPerito=perito2?`relatado pelo(a) Perito(a) Criminal ${esc(perito1)}${matP1?" (mat. "+esc(matP1)+")":""} e revisado pelo(a) Perito(a) Criminal ${esc(perito2)}${matP2?" (mat. "+esc(matP2)+")":""}`:`relatado pelo(a) Perito(a) Criminal ${esc(perito1)}${matP1?" (mat. "+esc(matP1)+")":""}`;
-h+=`<p style="font-size:11px;text-align:justify;text-indent:18px;margin:16px 0 8px;line-height:1.5">Nada mais havendo a lavrar, encerra-se o presente laudo, ${encPerito}, que segue assinado digitalmente.</p>`;
+h+=`<p style="font-size:11px;text-align:justify;text-indent:18px;margin:16px 0 8px;line-height:1.5">Nada mais havendo a lavrar, encerra-se o presente Croqui de Levantamento, ${encPerito}, que segue assinado digitalmente.</p>`;
 // --- FOTOGRAFIAS ---
 if(fotos&&fotos.length){h+=`<div style="page-break-before:always"></div>`;h+=secCenter("Fotografias");fotos.forEach((f,i)=>{const legendaDesc=f.desc||f.name||"";const legendaLocal=f.local||"";const showLocal=legendaLocal&&!legendaDesc.includes(legendaLocal);const legendaTxt=`Fotografia ${i+1}${legendaDesc?" — "+esc(legendaDesc):""}${f.fase?" — "+esc(f.fase):""}${showLocal?" — "+esc(legendaLocal):""}`;h+=`<div style="margin:18px 0;text-align:center;page-break-inside:avoid"><img src="${f.dataUrl}" style="max-width:90%;max-height:450px;border:1px solid ${BORDER}"/><div style="font-size:11px;font-style:italic;color:#555;margin-top:6px">${legendaTxt}</div></div>`;});}
 // --- CROQUI ---
@@ -3771,7 +3609,7 @@ if(tab===TAB_CADAVER)return(<><Cd_ styles={ST} title="Cadáveres" aria-label="Ca
 <Cd_ styles={ST} title="Fenômenos Cadavéricos" aria-label="Fenômenos Cadavéricos" icon="🔬" variant="teal"><div style={{display:"flex",flexDirection:"column",gap:12}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Rd_ k={cx+"cu"} label="Cianose Ungueais?" opts={["Sim","Não"]} val={g(cx+"cu")} onChange={s} styles={ST}/><Rd_ k={cx+"cl"} label="Cianose Labial?" opts={["Sim","Não"]} val={g(cx+"cl")} onChange={s} styles={ST}/></div><Rd_ k={cx+"rm"} label="Rigidez Mandíbula" opts={["Não perceptível","Em instalação","Instalada","Em desinstalação","Desinstalada"]} val={g(cx+"rm")} onChange={s} styles={ST}/><Rd_ k={cx+"rs"} label="Rigidez Sup." opts={["Não perceptível","Em instalação","Instalada","Em desinstalação","Desinstalada"]} val={g(cx+"rs")} onChange={s} styles={ST}/><Rd_ k={cx+"ri"} label="Rigidez Inf." opts={["Não perceptível","Em instalação","Instalada","Em desinstalação","Desinstalada"]} val={g(cx+"ri")} onChange={s} styles={ST}/><Rd_ k={cx+"lv"} label="Livores" opts={["Não perceptível","Móvel","Quase-fixo","Fixo"]} val={g(cx+"lv")} onChange={s} styles={ST}/><F_ k={cx+"lp"} label="Posição dos Livores" val={g(cx+"lp")} onChange={s} styles={ST}/><Rd_ k={cx+"lc"} label="Compatível?" opts={["Sim","Não"]} val={g(cx+"lc")} onChange={s} styles={ST}/><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><Rd_ k={cx+"sn"} label="Secr. Nasal?" opts={["Sim","Não"]} val={g(cx+"sn")} onChange={s} styles={ST}/><Rd_ k={cx+"so"} label="Secr. Oral?" opts={["Sim","Não"]} val={g(cx+"so")} onChange={s} styles={ST}/><Rd_ k={cx+"sg"} label="Peniana/Vaginal?" opts={["Sim","Não"]} val={g(cx+"sg")} onChange={s} styles={ST}/><Rd_ k={cx+"sa"} label="Anal?" opts={["Sim","Não"]} val={g(cx+"sa")} onChange={s} styles={ST}/></div><Rd_ k={cx+"mva"} label="Mancha verde abdominal" opts={["Ausente","Presente"]} val={g(cx+"mva")} onChange={s} styles={ST}/><div style={{marginTop:12}}><F_ k={cx+"obs_peri"} label="Obs. fenômenos cadavéricos" type="textarea" val={g(cx+"obs_peri")} onChange={s} styles={ST}/></div></div></Cd_>
 {g(cx+"avancado_decomp")&&(()=>{const tg=(k2,o)=>{const cur=g(cx+k2)||[];const idx=cur.indexOf(o);const nx=idx>-1?cur.filter(x=>x!==o):[...cur,o];s(cx+k2,nx);};const grupos=[["dec_abio","Fenômenos abióticos / transformação",["Mancha verde abdominal","Rede venosa pútrida","Enfisema putrefativo (face)","Enfisema putrefativo (abdome)","Enfisema putrefativo (escroto/vulva)","Bolhas/flictenas pútridas","Desprendimento epidérmico","Luva da morte (mãos)","Saída de líquidos pútridos pela boca","Saída de líquidos pútridos pelo nariz","Saída de líquidos pútridos pelo ânus","Saída de líquidos pútridos pela vagina","Distensão abdominal com timpanismo","Liquefação tecidual / coliquação","Coloração enegrecida generalizada","Olhos liquefeitos / colapsados","Cabelo se desprendendo","Unhas se desprendendo","Língua protrusa","Olhos protrusos","Odor pútrido característico"]],["dec_fauna","Fauna cadavérica (entomologia)",["Larvas de díptero (varejeira)","Pupas","Coleópteros (escaravelhos)","Miíase","Múltiplas gerações de larvas","Sem fauna visível"]],["dec_cons","Conservação alternativa",["Saponificação / adipocera","Mumificação parcial","Mumificação total","Esqueletização parcial","Esqueletização total"]],["dec_amb","Achados ambientais / interferências",["Predação por roedores","Predação por cães/canídeos","Predação por aves","Manchas pútridas no substrato (poça subjacente)","Posição/decúbito alterados pela fauna","Maceração generalizada (ambiente úmido)","Ressecamento (ambiente seco)"]]];return(<Cd_ styles={ST} title="Decomposição Avançada — Achados" aria-label="Decomposição Avançada — Achados" icon="☠️" variant="danger"><div style={{padding:"8px 12px",background:dark?"#2a1410":"#fff8f5",border:`1px solid ${dark?"#552020":"#ffd5c4"}`,borderRadius:8,marginBottom:12,fontSize:11,color:t.t2,lineHeight:1.5}}>Marque os achados observados. <b>Lembre:</b> em putrefação avançada não estimar idade, etnia ou compleição — manter "Prejudicado". Sexo só se genitália preservada. Diagnóstico de causa de morte: registrar achados externos sugestivos e remeter ao IML.</div>{grupos.map(([gk,gl,gopts])=>{const cur=g(cx+gk)||[];return(<div key={gk} style={{marginBottom:14}}><label style={{...lb,fontSize:11,fontWeight:700,color:t.no,marginBottom:6}}>{gl} {cur.length>0&&<span style={{fontWeight:400,color:t.t3}}>({cur.length})</span>}</label><div style={{display:"flex",flexWrap:"wrap",gap:5}}>{gopts.map(o=>{const sel2=cur.includes(o);return <button type="button" key={o} style={{...ch(sel2),fontSize:11,padding:"5px 10px"}} onClick={()=>tg(gk,o)}>{o}</button>;})}
 </div></div>);})}
-<F_ k={cx+"dec_obs"} label="Observações específicas (datação aproximada, fauna detalhada, posição relativa, etc.)" type="textarea" val={g(cx+"dec_obs")} onChange={s} styles={ST}/><div style={{marginTop:12,padding:"10px 12px",background:t.infoBgS,border:`1px solid ${t.bd}`,borderRadius:8,fontSize:12,color:t.t2,lineHeight:1.5}}>💡 <b>Sugestão para o laudo:</b> "Cadáver em avançado estágio de decomposição, não recente, prejudicada a estimativa de faixa etária, etnia e compleição. Demais achados detalhados acima, recomendando-se exame interno no IML para determinação de causa jurídica."</div></Cd_>);})()}
+<F_ k={cx+"dec_obs"} label="Observações específicas (datação aproximada, fauna detalhada, posição relativa, etc.)" type="textarea" val={g(cx+"dec_obs")} onChange={s} styles={ST}/><div style={{marginTop:12,padding:"10px 12px",background:t.infoBgS,border:`1px solid ${t.bd}`,borderRadius:8,fontSize:12,color:t.t2,lineHeight:1.5}}>💡 <b>Sugestão para o Croqui:</b> "Cadáver em avançado estágio de decomposição, não recente, prejudicada a estimativa de faixa etária, etnia e compleição. Demais achados detalhados acima, recomendando-se exame interno no IML para determinação de causa jurídica."</div></Cd_>);})()}
 <Cd_ styles={ST} title="Vestes e Pertences" aria-label="Vestes e Pertences" icon="👔" variant="info"><div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4}}><span style={{fontSize:11,fontWeight:500,color:t.t2}}>Vestes</span><FotoBtn rk={"cad_vestes_"+cadaverIdx}/></div>{vestes.filter(v=>v.cadaver===undefined||v.cadaver===cadaverIdx).length===0&&vestes.length>0?<p style={{fontSize:12,color:t.t2}}>Nenhuma veste para este cadáver</p>:null}{(()=>{let vn=0;return vestes.map((v,i)=>{if(v.cadaver!==undefined&&v.cadaver!==cadaverIdx)return null;vn++;return(<div key={v.id} style={{background:t.bg3,borderRadius:10,padding:12,marginBottom:8,border:`0.5px solid ${t.bd}`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontSize:13,fontWeight:600,color:t.ac}}>Veste {vn}</span><div style={{display:"flex",alignItems:"center",gap:4}}><FotoBtn rk={"veste_"+v.id}/><button type="button" style={{background:"transparent",border:`1.5px solid ${t.ac}`,color:t.ac,cursor:"pointer",borderRadius:10,padding:"4px 12px",minWidth:40,minHeight:44,display:"inline-flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}} title="Duplicar veste" aria-label="Duplicar veste" onClick={()=>{setVestes([...vestes,{...v,id:uid(),cadaver:cadaverIdx}]);haptic("light");}}><Copy size={16} strokeWidth={2.2}/></button><button type="button" style={{background:"rgba(255,59,48,0.12)",border:`1.5px solid ${t.no}`,color:t.no,cursor:"pointer",fontSize:20,fontWeight:700,borderRadius:10,padding:"4px 12px",minWidth:40,minHeight:44,lineHeight:1,fontFamily:"inherit"}} title="Remover veste" aria-label="Remover veste" onClick={()=>{setVestes(vestes.filter((_,j)=>j!==i));haptic("medium");}}>×</button></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><label style={lb}>Tipo/Marca</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={inp} defaultValue={v.tipo} onBlur={e=>{setVestes(prev=>prev.map((v2,j)=>j===i?{...v2,tipo:e.target.value,cadaver:cadaverIdx}:v2));}}/></div><div><label style={lb}>Cor</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={inp} defaultValue={v.cor} onBlur={e=>{setVestes(prev=>prev.map((v2,j)=>j===i?{...v2,cor:e.target.value,cadaver:cadaverIdx}:v2));}}/></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:8}}>{[["sujidades","Suj?"],["sangue","Sg?"],["bolsos","Bols?"]].map(([f,l])=>(<div key={f}><label style={lb}>{l}</label><div style={{display:"flex"}}><button type="button" style={tY(v[f]==="Sim")} onClick={()=>{setVestes(prev=>prev.map((v2,j)=>j===i?{...v2,[f]:"Sim",cadaver:cadaverIdx}:v2));}}>S</button><button type="button" style={tN(v[f]==="Não")} onClick={()=>{setVestes(prev=>prev.map((v2,j)=>j===i?{...v2,[f]:"Não",cadaver:cadaverIdx}:v2));}}>N</button></div></div>))}</div><div style={{marginTop:8}}><label style={lb}>Notas</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={inp} defaultValue={v.notas} onBlur={e=>{setVestes(prev=>prev.map((v2,j)=>j===i?{...v2,notas:e.target.value,cadaver:cadaverIdx}:v2));}}/></div></div>);})})()}
 <button type="button" style={abtn} onClick={()=>setVestes([...vestes,{id:uid(),cadaver:cadaverIdx,tipo:"",cor:"",sujidades:"",sangue:"",bolsos:"",notas:""}])}>+ Veste</button>
 <div style={{marginTop:12}}><F_ k={cx+"pert"} label="Pertences" type="textarea" val={g(cx+"pert")} onChange={s} styles={ST}/></div>
@@ -3983,7 +3821,7 @@ return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}
 // v252: em iOS, o botão "Croqui PDF" abre direto o AirPrint (única forma confiável no iOS 18+).
 const onCroqui=isIOS()?()=>{forceSaveCanvas();printCroquiHTML(bPDF(),"Croqui de Levantamento");}:()=>{forceSaveCanvas();setPdfHTML(bPDF());setPdfTitle("Croqui de Levantamento de Local");setExportView("pdf");};
 return(<span style={{position:"relative",display:"inline-flex"}}><button type="button" style={{...bt,background:t.ac,color:"#fff"}} onClick={onCroqui} title={isIOS()?"iOS: abre nova aba com Croqui pronto pra imprimir/salvar PDF via AirPrint":"Visualizar e baixar Croqui em PDF"}><AppIcon name={isIOS()?"🖨":"📑"} size={14} mr={4}/>Croqui PDF{isIOS()?<span style={{fontSize:9,fontWeight:600,marginLeft:4,opacity:0.85,letterSpacing:0.3}}>· AirPrint</span>:null}</button>{pend>0&&<span title={`${pend} campo${pend>1?"s":""} pendente${pend>1?"s":""}`} style={{position:"absolute",top:-6,right:-6,background:"#ff9500",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:10,minWidth:20,textAlign:"center",lineHeight:1.2,boxShadow:"0 1px 4px rgba(0,0,0,0.3)",border:"2px solid "+t.cd}}>{pend}</span>}</span>);})()}
-<button type="button" style={{...bt,background:"#28a745",color:"#fff"}} onClick={saveCroquiDocx} title="Baixar Croqui DOCX" aria-label="Baixar Croqui DOCX"><AppIcon name="📝" size={14} mr={4}/>Croqui DOCX</button>
+<button type="button" style={{...bt,background:"#28a745",color:"#fff"}} onClick={()=>saveCroquiDocx(false)} title="Baixar Croqui DOCX" aria-label="Baixar Croqui DOCX"><AppIcon name="📝" size={14} mr={4}/>Croqui DOCX</button>
 <button type="button" style={{...bt,background:"#25D366",color:"#fff",fontWeight:700}} onClick={shareCroquiDocx} title="Compartilhar Croqui DOCX por WhatsApp, e-mail ou AirDrop" aria-label="Compartilhar Croqui DOCX"><AppIcon name="📤" size={14} mr={4}/>Compartilhar</button>
 </div></Cd_>
 
@@ -4037,7 +3875,7 @@ return(<div key={si} style={{background:isActive?(dark?"#1a2a1a":"#e8f5e9"):(dar
 {/* Diagnóstico + Reset libs */}
 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,fontSize:12}} onClick={()=>setShowDiag(true)} aria-label="Tela de diagnóstico"><AppIcon name="🔍" size={14} mr={4}/>Diagnóstico</button>
-<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.wn}`,fontSize:12}} onClick={async()=>{try{let removed=0;for(const k of Object.keys(localStorage)){if(k.startsWith("cq_lib_")){localStorage.removeItem(k);removed++;}}delete window.html2pdf;delete window.JSZip;setPdfReady(false);showToast(`✅ ${removed} bibliotecas resetadas — recarregando…`);haptic("medium");setTimeout(()=>window.location.reload(),1500);}catch(e){showToast("❌ "+e.message);}}} aria-label="Resetar cache de bibliotecas e recarregar app"><AppIcon name="🔄" size={14} mr={4}/>Resetar libs</button>
+<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.wn}`,fontSize:12}} onClick={async()=>{try{let removed=0;for(const k of Object.keys(localStorage)){if(k.startsWith("cq_lib_")){localStorage.removeItem(k);removed++;}}delete window.html2pdf;setPdfReady(false);showToast(`✅ ${removed} bibliotecas resetadas — recarregando…`);haptic("medium");setTimeout(()=>window.location.reload(),1500);}catch(e){showToast("❌ "+e.message);}}} aria-label="Resetar cache de bibliotecas e recarregar app"><AppIcon name="🔄" size={14} mr={4}/>Resetar libs</button>
 </div>
 
 {/* Limpeza de memória */}
@@ -4216,17 +4054,7 @@ return(<button type="button" key={slot} style={{background:dark?"rgba(52,199,89,
 </div>
 </div>);})()}
 {burstCtx&&<BurstModal rk={burstCtx.rk} onClose={()=>setBurstCtx(null)} onConfirm={(novas)=>{setFotos(p=>[...p,...novas]);haptic("heavy");showToast("📷 "+novas.length+" foto"+(novas.length>1?"s":"")+" adicionada"+(novas.length>1?"s":""));setBurstCtx(null);}} utils={{uid,mkAutoLegend,captureGPS,haptic,compressImg,pickFile,showToast}}/>}
-{zipProgress&&(()=>{const isErr=zipProgress.error;const pct=Math.max(0,Math.min(100,zipProgress.pct||0));const isCancelado=zipProgress.stage==="Cancelado";const isDone=zipProgress.stage==="Concluído"||isCancelado;const isPartial=zipProgress.partial===true;/* v249 */const startTime=zipProgress.startTime;const elapsed=startTime?Math.floor(((zipNowTick||Date.now())-startTime)/1000):0;const min=Math.floor(elapsed/60);const sec=elapsed%60;const elapsedTxt=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
-const headerColor=isErr?t.no:isCancelado?t.wn:isPartial?"#ff9500":t.ac;
-const headerEmoji=isErr?"❌":isCancelado?"⏹️":isPartial?"⚠️":isDone?"✅":"📦";
-const headerTitle=isErr?"Erro ao gerar ZIP":isCancelado?"Cancelado":isPartial?"ZIP gerado com falhas":isDone?"Pronto!":"Gerando pacote ZIP";
-return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16,backdropFilter:"blur(4px)"}}><div style={{background:t.cd,borderRadius:18,padding:28,maxWidth:480,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 12px 48px rgba(0,0,0,0.4)",border:`2px solid ${headerColor}`}}><div style={{textAlign:"center",marginBottom:18}}><div style={{fontSize:48,marginBottom:8}}>{headerEmoji}</div><div style={{fontSize:18,fontWeight:800,color:headerColor,letterSpacing:-0.3,marginBottom:4}}>{headerTitle}</div><div style={{fontSize:13,color:t.t2,marginBottom:2}}>{zipProgress.stage}</div>{zipProgress.detail&&<div style={{fontSize:11,color:t.t3,fontFamily:"monospace"}}>{zipProgress.detail}</div>}{startTime&&!isErr&&<div style={{fontSize:13,fontWeight:700,color:t.ac,fontFamily:"monospace",fontVariantNumeric:"tabular-nums",marginTop:8}}>⏱ {elapsedTxt}</div>}</div>
-{/* v249: bloco de falhas — fica até o usuário fechar */}
-{isPartial&&Array.isArray(zipProgress.failures)&&zipProgress.failures.length>0&&(<div style={{background:dark?"rgba(255,149,0,0.10)":"rgba(255,149,0,0.08)",border:`1.5px solid ${dark?"rgba(255,149,0,0.4)":"rgba(255,149,0,0.5)"}`,borderRadius:12,padding:"12px 14px",marginBottom:12}}><div style={{fontSize:13,fontWeight:700,color:"#ff9500",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {zipProgress.failures.length} item{zipProgress.failures.length>1?"s":""} não foi{zipProgress.failures.length>1?"ram":""} para o ZIP:</div><ul style={{margin:0,paddingLeft:18,fontSize:12,color:t.tx,lineHeight:1.6}}>{zipProgress.failures.map((f,i)=>(<li key={i} style={{marginBottom:3,wordBreak:"break-word"}}><b>{f}</b></li>))}</ul><div style={{fontSize:11,color:t.t2,marginTop:10,lineHeight:1.5}}>O ZIP foi baixado com o que conseguiu ser gerado. Use os botões individuais (Croqui PDF, DOCX, RRV PDF) na aba Exportar para tentar de novo cada item que falhou.</div></div>)}
-{!isErr&&!isCancelado&&!isPartial&&<><div style={{height:14,background:t.bg3,borderRadius:10,overflow:"hidden",marginBottom:8,border:`1px solid ${t.bd}`}}><div style={{height:"100%",width:pct+"%",background:`linear-gradient(90deg,${t.ac} 0%,${t.ac}dd 100%)`,transition:"width 0.4s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:`0 0 8px ${t.ac}88`}}/></div><div style={{textAlign:"center",fontSize:13,fontWeight:700,color:t.ac,fontVariantNumeric:"tabular-nums"}}>{pct}%</div></>}
-{!isDone&&!isErr&&!isPartial&&<><div style={{textAlign:"center",fontSize:11,color:t.t3,marginTop:14,lineHeight:1.5}}>Aguarde — pode levar de 10 segundos a 2 minutos<br/>dependendo do tamanho dos arquivos.<br/><b>Não feche o app durante a geração.</b></div><button type="button" style={{...bt,background:"transparent",color:t.no,border:`1.5px solid ${t.no}`,width:"100%",textAlign:"center",marginTop:14,fontWeight:600}} onClick={()=>{zipCancelRef.current=true;showToast("⏹️ Cancelando…");}}><AppIcon name="⏹️" size={14} mr={4}/>Cancelar</button></>}
-{(isErr||isCancelado||isPartial)&&<div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>{isPartial&&<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,minWidth:130,textAlign:"center"}} onClick={()=>{setZipProgress(null);setShowDiag(true);}}><AppIcon name="🔍" size={14} mr={4}/>Ver detalhes técnicos</button>}<button type="button" style={{...bt,background:isPartial?"#ff9500":t.ac,color:"#fff",flex:1,minWidth:130,textAlign:"center",fontWeight:700}} onClick={()=>setZipProgress(null)}>Entendi</button></div>}</div></div>);})()}
-{showDiag&&(()=>{const errs=(typeof window!=="undefined"&&window.__xandroidErrors)||[];const cacheKeys=(()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith("cq_lib_"));}catch(_){return[];}})();const libs=[];try{libs.push("html2pdf:"+(typeof window.html2pdf==="function"?"OK (função)":typeof window.html2pdf==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}try{libs.push("JSZip:"+(typeof window.JSZip==="function"?"OK (função)":typeof window.JSZip==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}const fullText=`Xandroid Diagnóstico — ${new Date().toLocaleString("pt-BR")}\nVersão: ${APP_VERSION}\nUserAgent: ${navigator.userAgent}\nLibs: ${libs.join(" | ")}\nCache libs: ${cacheKeys.join(", ")||"(vazio)"}\n\n=== Últimos ${errs.length} erros ===\n${errs.map((e,i)=>`[${i+1}] ${e.t}\nTipo: ${e.type}\nMsg: ${e.msg}\nExtra: ${e.extra}\nStack: ${e.stack}\n`).join("\n---\n")||"Nenhum erro registrado."}`;return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:14,padding:20,maxWidth:600,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}><div style={{fontSize:18,fontWeight:800,color:t.ac,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><AppIcon name="🔍" size={20} mr={0}/>Diagnóstico</div><p style={{fontSize:11,color:t.t2,margin:"0 0 12px",lineHeight:1.4}}>Estado interno do app, bibliotecas carregadas, e últimos erros. Útil para reportar problemas.</p><div style={{flex:1,overflowY:"auto",background:t.bg3,padding:12,borderRadius:8,fontFamily:"monospace",fontSize:11,color:t.tx,whiteSpace:"pre-wrap",lineHeight:1.5}}>{fullText}</div><div style={{display:"flex",gap:8,marginTop:12}}><button type="button" style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={()=>{const fb=()=>{const ta=document.createElement("textarea");ta.value=fullText;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");showToast("✅ Diagnóstico copiado!");}catch(e){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(()=>showToast("✅ Diagnóstico copiado!")).catch(fb);}else{fb();}}}><AppIcon name="📋" size={14} mr={4}/>Copiar tudo</button><button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,textAlign:"center"}} onClick={()=>setShowDiag(false)}>Fechar</button></div></div></div>);})()}
+{showDiag&&(()=>{const errs=(typeof window!=="undefined"&&window.__xandroidErrors)||[];const cacheKeys=(()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith("cq_lib_"));}catch(_){return[];}})();const libs=[];try{libs.push("html2pdf:"+(typeof window.html2pdf==="function"?"OK (função)":typeof window.html2pdf==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}libs.push("fflate: bundled");const fullText=`Xandroid Diagnóstico — ${new Date().toLocaleString("pt-BR")}\nVersão: ${APP_VERSION}\nUserAgent: ${navigator.userAgent}\nLibs: ${libs.join(" | ")}\nCache libs: ${cacheKeys.join(", ")||"(vazio)"}\n\n=== Últimos ${errs.length} erros ===\n${errs.map((e,i)=>`[${i+1}] ${e.t}\nTipo: ${e.type}\nMsg: ${e.msg}\nExtra: ${e.extra}\nStack: ${e.stack}\n`).join("\n---\n")||"Nenhum erro registrado."}`;return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:14,padding:20,maxWidth:600,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}><div style={{fontSize:18,fontWeight:800,color:t.ac,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><AppIcon name="🔍" size={20} mr={0}/>Diagnóstico</div><p style={{fontSize:11,color:t.t2,margin:"0 0 12px",lineHeight:1.4}}>Estado interno do app, bibliotecas carregadas, e últimos erros. Útil para reportar problemas.</p><div style={{flex:1,overflowY:"auto",background:t.bg3,padding:12,borderRadius:8,fontFamily:"monospace",fontSize:11,color:t.tx,whiteSpace:"pre-wrap",lineHeight:1.5}}>{fullText}</div><div style={{display:"flex",gap:8,marginTop:12}}><button type="button" style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={()=>{const fb=()=>{const ta=document.createElement("textarea");ta.value=fullText;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");showToast("✅ Diagnóstico copiado!");}catch(e){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(()=>showToast("✅ Diagnóstico copiado!")).catch(fb);}else{fb();}}}><AppIcon name="📋" size={14} mr={4}/>Copiar tudo</button><button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,textAlign:"center"}} onClick={()=>setShowDiag(false)}>Fechar</button></div></div></div>);})()}
 {toast&&(()=>{const isOK=toast.startsWith("✅")||toast.includes("Salvo")||toast.includes("Copiado");const isErr=toast.startsWith("❌")||toast.startsWith("⚠");const isCam=toast.startsWith("📷");const bg=isOK?"linear-gradient(180deg,#34c759,#28a745)":isErr?"linear-gradient(180deg,#ff453a,#d12822)":isCam?"linear-gradient(180deg,#ff9500,#cc7700)":"linear-gradient(180deg,#0a84ff,#0066cc)";return(<div className="di-toast" style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 8px)",left:"50%",transform:"translateX(-50%)",background:bg,color:"#fff",padding:"10px 18px",borderRadius:24,fontSize:14,fontWeight:600,letterSpacing:-0.2,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,0.35),0 0 0 0.5px rgba(255,255,255,0.15) inset",maxWidth:"90vw",textAlign:"center",pointerEvents:"none",display:"inline-flex",alignItems:"center",gap:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><IconText text={toast} size={16}/></div>);})()}
 {/* v242: banner sticky vermelho pulsando — fotos não salvaram, AVISO PESADO pra não fechar o app */}
 {photoSaveStuck&&<div role="alert" aria-live="assertive" className="photo-stuck-banner" style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 56px)",left:8,right:8,zIndex:9998,background:"linear-gradient(180deg,#ff3b30,#c0271e)",color:"#fff",padding:"12px 16px",borderRadius:14,fontSize:13,fontWeight:700,letterSpacing:-0.2,boxShadow:"0 4px 16px rgba(255,59,48,0.45),inset 0 1px 0 rgba(255,255,255,0.18)",display:"flex",alignItems:"center",gap:10,lineHeight:1.35}}><span style={{fontSize:22,flexShrink:0}}>🚨</span><span style={{flex:1,minWidth:0}}>FOTOS NÃO FORAM SALVAS — <b>NÃO feche o app.</b> Reta tentando ({backupStatus}).</span><button type="button" aria-label="Tentar salvar agora" onClick={()=>saveBackup()} style={{background:"rgba(255,255,255,0.22)",color:"#fff",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Tentar agora</button></div>}
