@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v260-Xandroid";
+const APP_VERSION="v261-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2612,15 +2612,15 @@ const POS_CABECA_F={"h_frontal":[210,51],"h_orbit_d":[168,100],"h_orbit_e":[248,
 const POS_CABECA_B={"h_parietal_d":[540,100],"h_parietal_e":[640,100],"h_vertex":[590,45],"h_occipital":[590,172],"h_auricular_d":[485,145],"h_auricular_e":[705,145]};
 const POS_CABECA_E={"h_temporal_e":[665,325],"h_auricular_e":[735,395]};
 const POS_CABECA_D={"h_temporal_d":[135,325],"h_auricular_d":[65,395]};
-// v258: POS de mãos/pés atualizadas para os novos viewBox 800x600 (mão) e 800x550 (pé)
-// Mão D (mao-d.png): palma esq + dorso dir
-const POS_MAO_D={md_palma:[200,350],md_dorso:[600,350],md_polegar:[65,280],md_indicador:[145,150],md_medio:[195,130],md_anelar:[245,150],md_minimo:[295,175],md_punho:[200,495]};
-// Mão E (mao-e.png): dorso esq + palma dir
-const POS_MAO_E={me_dorso:[200,350],me_palma:[600,350],me_polegar:[735,280],me_indicador:[645,150],me_medio:[595,130],me_anelar:[545,150],me_minimo:[495,175],me_punho:[200,495]};
-// Pé D (pe-d.png): planta esq + peito dir
-const POS_PE_D={pd_planta:[200,250],pd_dorso:[600,250],pd_pl_calcanhar:[215,440],pd_calcanhar:[615,440],pd_tornoz:[615,365],pd_pl_tornoz:[200,490],pd_pl_dedao:[205,70],pd_dedao:[535,80],pd_pl_2dedo:[150,70],pd_2dedo:[590,80],pd_pl_3dedo:[190,15],pd_3dedo:[630,20],pd_pl_4dedo:[230,70],pd_4dedo:[640,80],pd_pl_mindinho:[275,85],pd_mindinho:[685,90]};
-// Pé E (pe-e.jpg): peito esq + planta dir
-const POS_PE_E={pe_dorso:[200,250],pe_planta:[600,250],pe_calcanhar:[215,440],pe_pl_calcanhar:[615,440],pe_tornoz:[200,365],pe_pl_tornoz:[615,490],pe_dedao:[205,70],pe_pl_dedao:[535,80],pe_2dedo:[150,70],pe_pl_2dedo:[590,80],pe_3dedo:[190,15],pe_pl_3dedo:[630,20],pe_4dedo:[230,70],pe_pl_4dedo:[640,80],pe_mindinho:[275,85],pe_pl_mindinho:[685,90]};
+// v260: POS atualizadas com a ordem correta dos dedos no novo layout das imagens.
+// Mão D — polegar à esq (palma e dorso). Ordem polegar→mínimo da esq pra dir.
+const POS_MAO_D={md_palma:[200,345],md_dorso:[600,345],md_polegar:[70,275],md_indicador:[145,155],md_medio:[195,140],md_anelar:[245,155],md_minimo:[295,175],md_punho:[200,495]};
+// Mão E — polegar à dir (dorso e palma). Ordem mínimo→polegar da esq pra dir.
+const POS_MAO_E={me_dorso:[200,345],me_palma:[600,345],me_minimo:[95,175],me_anelar:[145,155],me_medio:[195,140],me_indicador:[245,155],me_polegar:[330,275],me_punho:[200,495]};
+// Pé D (pe-d.png): v1=sola D (esq), v2=peito D (dir). Dedão à esq em ambas vistas.
+const POS_PE_D={pd_planta:[190,235],pd_dorso:[590,225],pd_pl_calcanhar:[200,445],pd_calcanhar:[600,445],pd_tornoz:[200,355],pd_pl_dedao:[65,70],pd_dedao:[465,70],pd_pl_2dedo:[120,70],pd_2dedo:[520,70],pd_pl_3dedo:[160,70],pd_3dedo:[560,70],pd_pl_4dedo:[200,70],pd_4dedo:[600,70],pd_pl_mindinho:[245,75],pd_mindinho:[645,75]};
+// Pé E (pe-e.jpg): v1=peito E (esq), v2=sola E (dir). Dedão à esq em ambas vistas.
+const POS_PE_E={pe_dorso:[190,225],pe_planta:[590,235],pe_calcanhar:[200,445],pe_pl_calcanhar:[600,445],pe_tornoz:[200,355],pe_dedao:[65,70],pe_pl_dedao:[465,70],pe_2dedo:[120,70],pe_pl_2dedo:[520,70],pe_3dedo:[160,70],pe_pl_3dedo:[560,70],pe_4dedo:[200,70],pe_pl_4dedo:[600,70],pe_mindinho:[245,75],pe_pl_mindinho:[645,75]};
 // Detecta quais vistas têm feridas
 const has=(prefixes)=>woundsList.some(w=>prefixes.some(pr=>w.region&&w.region.startsWith(pr)));
 const hasFrente=has(["f_"]);
@@ -3136,84 +3136,99 @@ const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverId
   // SVGs DAS MÃOS — Palma e Dorso (D e E)
   // Mão E espelhada via scaleX(-1)
   // ══════════════════════════════════════════
-// v256: MSvg agora usa imagem real (mao-d.png ou mao-e.png).
-// Cada imagem mostra 2 vistas lado a lado (palma + dorso). Mãos NÃO mudam por sexo.
-// mao-d.png: palma D (esq) | dorso D (dir)
-// mao-e.png: dorso E (esq) | palma E (dir)
+// v260: MSvg com ordem correta dos dedos.
+// Mão D: polegar SEMPRE à esquerda da vista (em palma e em dorso) — ordem polegar→mínimo
+// Mão E: polegar SEMPRE à direita da vista (em dorso e em palma) — ordem mínimo→polegar
+// mao-d.png: v1=palma D (esq), v2=dorso D (dir)
+// mao-e.png: v1=dorso E (esq), v2=palma E (dir)
 const MSvg=({side})=>{const p=side==="D"?"md":"me";const img=side==="D"?IMG_MAO_D:IMG_MAO_E;
-// Coordenadas das vistas dentro da imagem (viewBox 0 0 800 600)
-// Para mao-d: vista1 (esq) = palma; vista2 (dir) = dorso
-// Para mao-e: vista1 (esq) = dorso; vista2 (dir) = palma
-const v1=side==="D"?"palma":"dorso";const v2=side==="D"?"dorso":"palma";
+const v1=side==="D"?"palma":"dorso";const v2=side==="D"?"dorso":"palma";const isD=side==="D";
 return(<svg viewBox="0 0 800 600" style={{width:"100%",maxWidth:760}}>
 <image href={img} x="0" y="0" width="800" height="580" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="595" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MÃO {side} — palma + dorso</text>
-{/* === Vista 1 (lado esquerdo da imagem, x≈0-400) === */}
+{/* === Vista 1 (x≈0-400) — ordem dos dedos depende de qual mão === */}
 <Rg_ id={p+"_"+v1} x={120} y={260} w={170} h={170} n={v1==="palma"?"Palma":"Dorso"} count={wc(p+"_"+v1)} onClick={aw}/>
 <Rg_ id={p+"_punho"} x={120} y={430} w={170} h={130} n="Punho" count={wc(p+"_punho")} onClick={aw}/>
-<Rg_ id={p+"_polegar"} x={20} y={200} w={100} h={150} n="Pol." count={wc(p+"_polegar")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={120} y={50} w={50} h={210} n="Ind" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={170} y={20} w={50} h={240} n="Med" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={220} y={50} w={50} h={210} n="Ane" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_minimo"} x={270} y={90} w={50} h={170} n="Min" count={wc(p+"_minimo")} onClick={aw}/>
-{/* === Vista 2 (lado direito da imagem, x≈400-800) === */}
+{isD?<>{/* Mão D v1 (palma): polegar esq → mínimo dir */}
+<Rg_ id={p+"_polegar"} x={20} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+<Rg_ id={p+"_indicador"} x={120} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
+<Rg_ id={p+"_medio"} x={170} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
+<Rg_ id={p+"_anelar"} x={220} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
+<Rg_ id={p+"_minimo"} x={270} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+</>:<>{/* Mão E v1 (dorso): mínimo esq → polegar dir */}
+<Rg_ id={p+"_minimo"} x={70} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+<Rg_ id={p+"_anelar"} x={120} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
+<Rg_ id={p+"_medio"} x={170} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
+<Rg_ id={p+"_indicador"} x={220} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
+<Rg_ id={p+"_polegar"} x={280} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+</>}
+{/* === Vista 2 (x≈400-800) === */}
 <Rg_ id={p+"_"+v2} x={510} y={260} w={170} h={170} n={v2==="palma"?"Palma":"Dorso"} count={wc(p+"_"+v2)} onClick={aw}/>
 <Rg_ id={p+"_punho"} x={510} y={430} w={170} h={130} n="Punho" count={wc(p+"_punho")} onClick={aw}/>
-<Rg_ id={p+"_polegar"} x={680} y={200} w={100} h={150} n="Pol." count={wc(p+"_polegar")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={620} y={50} w={50} h={210} n="Ind" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={570} y={20} w={50} h={240} n="Med" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={520} y={50} w={50} h={210} n="Ane" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_minimo"} x={470} y={90} w={50} h={170} n="Min" count={wc(p+"_minimo")} onClick={aw}/>
+{isD?<>{/* Mão D v2 (dorso): polegar esq → mínimo dir */}
+<Rg_ id={p+"_polegar"} x={420} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+<Rg_ id={p+"_indicador"} x={520} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
+<Rg_ id={p+"_medio"} x={570} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
+<Rg_ id={p+"_anelar"} x={620} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
+<Rg_ id={p+"_minimo"} x={670} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+</>:<>{/* Mão E v2 (palma): mínimo esq → polegar dir */}
+<Rg_ id={p+"_minimo"} x={470} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+<Rg_ id={p+"_anelar"} x={520} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
+<Rg_ id={p+"_medio"} x={570} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
+<Rg_ id={p+"_indicador"} x={620} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
+<Rg_ id={p+"_polegar"} x={680} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+</>}
 </svg>);};
 
   // ══════════════════════════════════════════
   // SVGs DOS PÉS — Planta e Dorso (D e E)
   // ══════════════════════════════════════════
-// v256: FootSvg agora usa imagem (pe-d.png ou pe-e.png). Pés NÃO mudam por sexo.
-// pe-d.png: sola D (esq) | peito D (dir)
-// pe-e.png: peito E (esq) | sola E (dir)
+// v260: FootSvg corrigido — em todas as 4 vistas o dedão fica à ESQUERDA da imagem.
+// Ordem uniforme da esquerda para direita: dedão, 2º, 3º, 4º, mínimo.
+// pe-d.png: v1=sola D, v2=peito D
+// pe-e.jpg: v1=peito E, v2=sola E
 const FootSvg=({side})=>{const p=side==="D"?"pd":"pe";const img=side==="D"?IMG_PE_D:IMG_PE_E;
-const v1plant=side==="D";  // pé D mostra sola na esq, peito na dir; pé E é o oposto
+const v1plant=side==="D";
 return(<svg viewBox="0 0 800 550" style={{width:"100%",maxWidth:760}}>
 <image href={img} x="0" y="0" width="800" height="530" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="546" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">PÉ {side} — sola + peito</text>
-{/* === Vista 1 (lado esquerdo) === */}
+{/* === Vista 1 (x≈0-400) === */}
 {v1plant?<>
-<Rg_ id={p+"_planta"} x={100} y={120} w={200} h={260} n="Planta" count={wc(p+"_planta")} onClick={aw}/>
-<Rg_ id={p+"_pl_calcanhar"} x={130} y={380} w={170} h={130} n="Calcanh." count={wc(p+"_pl_calcanhar")} onClick={aw}/>
-<Rg_ id={p+"_pl_dedao"} x={170} y={20} w={70} h={100} n="Dedão" count={wc(p+"_pl_dedao")} onClick={aw}/>
-<Rg_ id={p+"_pl_2dedo"} x={130} y={20} w={40} h={100} n="2º" count={wc(p+"_pl_2dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_3dedo"} x={170} y={0} w={40} h={20} n="3º" count={wc(p+"_pl_3dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_4dedo"} x={210} y={20} w={40} h={100} n="4º" count={wc(p+"_pl_4dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_mindinho"} x={250} y={40} w={50} h={80} n="5º" count={wc(p+"_pl_mindinho")} onClick={aw}/>
+<Rg_ id={p+"_planta"} x={80} y={120} w={220} h={230} n="Planta" count={wc(p+"_planta")} onClick={aw}/>
+<Rg_ id={p+"_pl_calcanhar"} x={100} y={380} w={200} h={130} n="Calcanh." count={wc(p+"_pl_calcanhar")} onClick={aw}/>
+<Rg_ id={p+"_pl_dedao"} x={30} y={20} w={70} h={100} n="Dedão" count={wc(p+"_pl_dedao")} onClick={aw}/>
+<Rg_ id={p+"_pl_2dedo"} x={100} y={20} w={40} h={100} n="2º" count={wc(p+"_pl_2dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_3dedo"} x={140} y={20} w={40} h={100} n="3º" count={wc(p+"_pl_3dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_4dedo"} x={180} y={20} w={40} h={100} n="4º" count={wc(p+"_pl_4dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_mindinho"} x={220} y={30} w={50} h={90} n="5º" count={wc(p+"_pl_mindinho")} onClick={aw}/>
 </>:<>
-<Rg_ id={p+"_dorso"} x={100} y={120} w={200} h={260} n="Peito" count={wc(p+"_dorso")} onClick={aw}/>
-<Rg_ id={p+"_calcanhar"} x={130} y={380} w={170} h={130} n="Calcanh." count={wc(p+"_calcanhar")} onClick={aw}/>
-<Rg_ id={p+"_tornoz"} x={130} y={350} w={170} h={40} n="Tornoz." count={wc(p+"_tornoz")} onClick={aw}/>
-<Rg_ id={p+"_dedao"} x={130} y={20} w={70} h={100} n="Dedão" count={wc(p+"_dedao")} onClick={aw}/>
-<Rg_ id={p+"_2dedo"} x={200} y={20} w={40} h={100} n="2º" count={wc(p+"_2dedo")} onClick={aw}/>
-<Rg_ id={p+"_3dedo"} x={240} y={0} w={40} h={20} n="3º" count={wc(p+"_3dedo")} onClick={aw}/>
-<Rg_ id={p+"_4dedo"} x={250} y={20} w={40} h={100} n="4º" count={wc(p+"_4dedo")} onClick={aw}/>
-<Rg_ id={p+"_mindinho"} x={290} y={40} w={50} h={80} n="5º" count={wc(p+"_mindinho")} onClick={aw}/>
+<Rg_ id={p+"_dorso"} x={80} y={120} w={220} h={210} n="Peito" count={wc(p+"_dorso")} onClick={aw}/>
+<Rg_ id={p+"_tornoz"} x={100} y={330} w={200} h={50} n="Tornoz." count={wc(p+"_tornoz")} onClick={aw}/>
+<Rg_ id={p+"_calcanhar"} x={100} y={380} w={200} h={130} n="Calcanh." count={wc(p+"_calcanhar")} onClick={aw}/>
+<Rg_ id={p+"_dedao"} x={30} y={20} w={70} h={100} n="Dedão" count={wc(p+"_dedao")} onClick={aw}/>
+<Rg_ id={p+"_2dedo"} x={100} y={20} w={40} h={100} n="2º" count={wc(p+"_2dedo")} onClick={aw}/>
+<Rg_ id={p+"_3dedo"} x={140} y={20} w={40} h={100} n="3º" count={wc(p+"_3dedo")} onClick={aw}/>
+<Rg_ id={p+"_4dedo"} x={180} y={20} w={40} h={100} n="4º" count={wc(p+"_4dedo")} onClick={aw}/>
+<Rg_ id={p+"_mindinho"} x={220} y={30} w={50} h={90} n="5º" count={wc(p+"_mindinho")} onClick={aw}/>
 </>}
-{/* === Vista 2 (lado direito) === */}
+{/* === Vista 2 (x≈400-800) === */}
 {v1plant?<>
-<Rg_ id={p+"_dorso"} x={500} y={120} w={200} h={260} n="Peito" count={wc(p+"_dorso")} onClick={aw}/>
-<Rg_ id={p+"_calcanhar"} x={530} y={380} w={170} h={130} n="Calcanh." count={wc(p+"_calcanhar")} onClick={aw}/>
-<Rg_ id={p+"_tornoz"} x={530} y={350} w={170} h={40} n="Tornoz." count={wc(p+"_tornoz")} onClick={aw}/>
-<Rg_ id={p+"_dedao"} x={500} y={30} w={70} h={100} n="Dedão" count={wc(p+"_dedao")} onClick={aw}/>
-<Rg_ id={p+"_2dedo"} x={570} y={30} w={40} h={100} n="2º" count={wc(p+"_2dedo")} onClick={aw}/>
-<Rg_ id={p+"_3dedo"} x={610} y={10} w={40} h={20} n="3º" count={wc(p+"_3dedo")} onClick={aw}/>
-<Rg_ id={p+"_4dedo"} x={620} y={30} w={40} h={100} n="4º" count={wc(p+"_4dedo")} onClick={aw}/>
-<Rg_ id={p+"_mindinho"} x={660} y={50} w={50} h={80} n="5º" count={wc(p+"_mindinho")} onClick={aw}/>
+<Rg_ id={p+"_dorso"} x={480} y={120} w={220} h={210} n="Peito" count={wc(p+"_dorso")} onClick={aw}/>
+<Rg_ id={p+"_tornoz"} x={500} y={330} w={200} h={50} n="Tornoz." count={wc(p+"_tornoz")} onClick={aw}/>
+<Rg_ id={p+"_calcanhar"} x={500} y={380} w={200} h={130} n="Calcanh." count={wc(p+"_calcanhar")} onClick={aw}/>
+<Rg_ id={p+"_dedao"} x={430} y={20} w={70} h={100} n="Dedão" count={wc(p+"_dedao")} onClick={aw}/>
+<Rg_ id={p+"_2dedo"} x={500} y={20} w={40} h={100} n="2º" count={wc(p+"_2dedo")} onClick={aw}/>
+<Rg_ id={p+"_3dedo"} x={540} y={20} w={40} h={100} n="3º" count={wc(p+"_3dedo")} onClick={aw}/>
+<Rg_ id={p+"_4dedo"} x={580} y={20} w={40} h={100} n="4º" count={wc(p+"_4dedo")} onClick={aw}/>
+<Rg_ id={p+"_mindinho"} x={620} y={30} w={50} h={90} n="5º" count={wc(p+"_mindinho")} onClick={aw}/>
 </>:<>
-<Rg_ id={p+"_planta"} x={500} y={120} w={200} h={260} n="Planta" count={wc(p+"_planta")} onClick={aw}/>
-<Rg_ id={p+"_pl_calcanhar"} x={530} y={380} w={170} h={130} n="Calcanh." count={wc(p+"_pl_calcanhar")} onClick={aw}/>
-<Rg_ id={p+"_pl_dedao"} x={550} y={20} w={70} h={100} n="Dedão" count={wc(p+"_pl_dedao")} onClick={aw}/>
-<Rg_ id={p+"_pl_2dedo"} x={510} y={20} w={40} h={100} n="2º" count={wc(p+"_pl_2dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_3dedo"} x={550} y={0} w={40} h={20} n="3º" count={wc(p+"_pl_3dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_4dedo"} x={590} y={20} w={40} h={100} n="4º" count={wc(p+"_pl_4dedo")} onClick={aw}/>
-<Rg_ id={p+"_pl_mindinho"} x={630} y={40} w={50} h={80} n="5º" count={wc(p+"_pl_mindinho")} onClick={aw}/>
+<Rg_ id={p+"_planta"} x={480} y={120} w={220} h={230} n="Planta" count={wc(p+"_planta")} onClick={aw}/>
+<Rg_ id={p+"_pl_calcanhar"} x={500} y={380} w={200} h={130} n="Calcanh." count={wc(p+"_pl_calcanhar")} onClick={aw}/>
+<Rg_ id={p+"_pl_dedao"} x={430} y={20} w={70} h={100} n="Dedão" count={wc(p+"_pl_dedao")} onClick={aw}/>
+<Rg_ id={p+"_pl_2dedo"} x={500} y={20} w={40} h={100} n="2º" count={wc(p+"_pl_2dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_3dedo"} x={540} y={20} w={40} h={100} n="3º" count={wc(p+"_pl_3dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_4dedo"} x={580} y={20} w={40} h={100} n="4º" count={wc(p+"_pl_4dedo")} onClick={aw}/>
+<Rg_ id={p+"_pl_mindinho"} x={620} y={30} w={50} h={90} n="5º" count={wc(p+"_pl_mindinho")} onClick={aw}/>
 </>}
 </svg>);};
   // ══════════════════════════════════════════
