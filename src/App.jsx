@@ -50,8 +50,9 @@
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import html2pdf from "html2pdf.js";
+import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8 } from "fflate";
-const APP_VERSION="v240-Xandroid";
+const APP_VERSION="v241-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da

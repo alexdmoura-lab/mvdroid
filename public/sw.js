@@ -1,10 +1,7 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v9 (acompanha App v240 — quick wins
-//   v240: CSP libera nominatim, fim do beforeunload cry-wolf,
-//   modo escuro automático, safe-area iPhone, manifest c/ shortcuts,
-//   código morto removido, type=button em todos os botões,
-//   confirmação ao cancelar Burst de fotos)
+// CACHE_VERSION: xandroid-v10 (v241 — HOTFIX: reintroduz JSZip que
+//   saveCroquiDocx precisa; remoção precoce na v240 quebraria o DOCX)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -28,7 +25,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v9';
+const CACHE_VERSION = 'xandroid-v10';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
