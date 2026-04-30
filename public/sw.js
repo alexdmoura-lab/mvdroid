@@ -1,9 +1,10 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v11 (acompanha App v242 — Pacote 2:
-//   bugs graves resolvidos. Banner sticky quando fotos não salvam,
-//   beforeunload força alerta nesse caso, GPS distingue 3 erros,
-//   2 window.confirm migrados pro modal custom, DOMPurify no pdf-preview)
+// CACHE_VERSION: xandroid-v12 (App v243 — RRV redesenhado:
+//   header institucional com logos PCDF+DF, cores institucionais
+//   (navy + dourado), cards de totais coloridos por destino
+//   (IC azul / II laranja), tabelas com cabeçalho colorido,
+//   assinaturas elegantes, rodapé institucional)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -27,7 +28,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v11';
+const CACHE_VERSION = 'xandroid-v12';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

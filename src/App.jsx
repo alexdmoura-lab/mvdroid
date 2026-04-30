@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v242-Xandroid";
+const APP_VERSION="v243-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2351,17 +2351,74 @@ return h;};
   // ──────────────────────────────────────────
   // EXPORTAÇÃO — RRV (Registro de Recolhimento)
   // ──────────────────────────────────────────
-const bRRV=()=>{const d=data;// Vestígios normais recebem placa concatenada no suporte; canvasVest preserva placa no desc (como antes)
-const vestWithP=vestigios.map(v=>({...v,suporte:supLoc(v)}));const allV2=[...vestWithP,...canvasVest.map(v=>({...v,desc:`[${v.placa}] ${v.desc}`,suporte:supLoc(v)}))];const vr=allV2.filter(v=>v.desc&&(v.destino||"").includes("IC")&&v.recolhido!=="Não");const vi2=allV2.filter(v=>v.desc&&(v.destino||"").includes("II")&&v.recolhido!=="Não");const pr=papilos.filter(p=>p.desc);
+const bRRV=()=>{const d=data;
+// v242: redesenho com cores institucionais (igual ao Croqui)
+const PRIMARY="#1A1A2E";const GOLD="#C9A961";const ZEBRA="#F5F5F7";const BORDER="#C8D6E5";const LIGHT="#E8E8EC";const ICBLUE="#1A4A7A";const IIORANGE="#B8741F";
+// Vestígios normais recebem placa concatenada no suporte; canvasVest preserva placa no desc
+const vestWithP=vestigios.map(v=>({...v,suporte:supLoc(v)}));
+const allV2=[...vestWithP,...canvasVest.map(v=>({...v,desc:`[${v.placa}] ${v.desc}`,suporte:supLoc(v)}))];
+const vr=allV2.filter(v=>v.desc&&(v.destino||"").includes("IC")&&v.recolhido!=="Não");
+const vi2=allV2.filter(v=>v.desc&&(v.destino||"").includes("II")&&v.recolhido!=="Não");
+const pr=papilos.filter(p=>p.desc);
 // VeiVest → RRV
 const mkVeiSupR=(vv)=>{const vi3=vv.veiculo??0;const vx2="v"+vi3+"_";const tm=d[vx2+"tipo"]||"";const vl=veiculos[vi3]?.label||"Veículo";return `${vl}${tm?" ("+tm+")":""} — ${vv.regionLabel}`;};
 const vvIC=veiVest.filter(vv=>(vv.destino||"").includes("IC")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv)}));
 const vvII=veiVest.filter(vv=>(vv.destino||"").includes("II")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv)}));
-let h=`<h2 style="text-align:center;font-size:16px;margin:0 0 2px">REGISTRO DE RECOLHIMENTO DE VESTÍGIOS (RRV)</h2><div style="text-align:center;font-size:11px;color:#666;margin-bottom:16px">Conforme OS nº 01 do DPT, de 17/02/2014</div>`;const dpResolvedRRV=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
-h+=`<div style="margin-bottom:12px;font-size:12px">Oc.: <b>${esc(d.oc)||"___"}/${esc(d.oc_ano)||"___"}</b> | DP: <b>${esc(dpResolvedRRV)||"___"}</b> | Data: <b>${d.dt_che||new Date().toLocaleDateString(LOCALE)}</b><br>Equipe: <b>Seção de Crimes Contra a Pessoa (SCPe)</b></div>`;const mkTh="border:1px solid #999;padding:6px 8px;background:#e8e8ed;font-size:11px;font-weight:700;text-align:center;height:28px";const mkTd="border:1px solid #999;padding:6px 8px;font-size:11px;height:28px;vertical-align:middle";const mk=(items,title,dest)=>{if(!items.length)return"";let t2=`<h3 style="font-size:12px;margin:12px 0 6px">${title}</h3><table style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:8%"/><col style="width:50%"/><col style="width:27%"/><col style="width:15%"/></colgroup><tr><th style="${mkTh}">Nº</th><th style="${mkTh}">Vestígio</th><th style="${mkTh}">Suporte</th><th style="${mkTh}">Destino</th></tr>`;items.forEach((item,i)=>{t2+=`<tr><td style="${mkTd};text-align:center">${i+1}</td><td style="${mkTd}">${esc(item.desc)}</td><td style="${mkTd}">${esc(item.suporte||item.local||"")}</td><td style="${mkTd};text-align:center;font-weight:600">${dest||item.destino||""}</td></tr>`;});return t2+`</table>`;};h+=mk([...vr,...vvIC],"Vestígios — Instituto de Criminalística","IC")+mk([...vi2,...vvII,...pr.map(p=>({desc:p.desc,suporte:supPlaca(p.local,p.placa),destino:"II"}))],"Vestígios — Instituto de Identificação","II");/* RRV: 2º perito não assina aqui — apenas perito principal e papiloscopista */
-/* v234: papiloscopista pode ser 'Outro' — pegar nome digitado em pp_outro */
+const dpResolvedRRV=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
+const natLbl=d.nat==="Outros"?(d.nat_outro||"—"):(d.nat||"—");
 const ppNomeRRV=d.pp==="Outro"?(d.pp_outro||"___"):(d.pp||"___");
-h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:50px;font-size:11px;text-align:center"><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(d.p1)||"___"}</b><br>Perito Criminal<br>Matrícula: ${esc(d.mat_p1)||"___"}</div><div><div style="border-bottom:1px solid #333;width:80%;margin:0 auto 6px;padding-top:60px"></div><b>${esc(ppNomeRRV)}</b><br>Papiloscopista Policial<br>Matrícula: ${esc(d.mat_pp)||"___"}</div></div>`;return h;};
+const totalIC=vr.length+vvIC.length;
+const totalII=vi2.length+vvII.length+pr.length;
+const totalGeral=totalIC+totalII;
+let h="";
+// === HEADER INSTITUCIONAL — idêntico ao Croqui ===
+h+=`<div style="display:grid;grid-template-columns:70px 1fr 70px;align-items:center;border-bottom:2.5px solid ${GOLD};padding-bottom:8px;margin-bottom:12px">
+<div style="text-align:center"><img src="data:image/jpeg;base64,${LOGO_PCDF_B64}" style="height:60px" alt="PCDF"/></div>
+<div style="text-align:center;font-size:12px;font-weight:700;color:${PRIMARY};line-height:1.55">POLÍCIA CIVIL DO DISTRITO FEDERAL<br>DEPARTAMENTO DE POLÍCIA TÉCNICA<br>INSTITUTO DE CRIMINALÍSTICA<br>SEÇÃO DE CRIMES CONTRA A PESSOA</div>
+<div style="text-align:center"><img src="data:image/jpeg;base64,${LOGO_DF_B64}" style="height:60px" alt="DF"/></div>
+</div>`;
+// === TÍTULO DO DOCUMENTO ===
+h+=`<div style="text-align:center;margin:18px 0 8px">
+<div style="font-size:22px;font-weight:700;color:${PRIMARY};letter-spacing:1px;line-height:1.3">REGISTRO DE RECOLHIMENTO DE VESTÍGIOS</div>
+<div style="font-size:13px;font-weight:600;color:${GOLD};letter-spacing:2px;margin-top:4px">— RRV —</div>
+<div style="font-size:10px;color:#666;margin-top:6px;font-style:italic">Conforme OS nº 01 do DPT, de 17/02/2014</div>
+</div>`;
+// === BLOCO IDENTIFICAÇÃO (dourado, mesmo do Croqui) ===
+h+=`<table style="width:100%;border-collapse:collapse;border:1px solid ${GOLD};margin-bottom:14px">
+<tr><td colspan="2" style="padding:7px 14px;font-weight:700;color:#fff;font-size:11.5px;background:${GOLD};letter-spacing:1px;text-transform:uppercase;border-bottom:1.5px solid #B89651">Identificação da Ocorrência</td></tr>
+<tr><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8;border-bottom:1px solid #E8D9A8">Ocorrência / DP</td><td style="padding:6px 14px;font-size:11.5px;background:#FFFCEF;border-bottom:1px solid #E8D9A8">${esc(d.oc)||"___"}/${esc(d.oc_ano)||"____"} — ${esc(dpResolvedRRV)||"___"}</td></tr>
+<tr><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8;border-bottom:1px solid #E8D9A8">Natureza</td><td style="padding:6px 14px;font-size:11.5px;background:#FFF8E8;border-bottom:1px solid #E8D9A8">${esc(natLbl)}</td></tr>
+${d.end?`<tr><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8;border-bottom:1px solid #E8D9A8">Endereço</td><td style="padding:6px 14px;font-size:11.5px;background:#FFFCEF;border-bottom:1px solid #E8D9A8">${esc(d.end)}</td></tr>`:""}
+<tr><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8;border-bottom:1px solid #E8D9A8">Data do atendimento</td><td style="padding:6px 14px;font-size:11.5px;background:#FFF8E8;border-bottom:1px solid #E8D9A8">${esc(d.dt_che)||new Date().toLocaleDateString(LOCALE)}</td></tr>
+<tr><td style="padding:6px 14px;font-weight:700;color:#6B5326;width:32%;font-size:11px;background:#E8D9A8">Equipe</td><td style="padding:6px 14px;font-size:11.5px;background:#FFFCEF">Seção de Crimes Contra a Pessoa (SCPe)</td></tr>
+</table>`;
+// === CARDS DE TOTAIS (visual rápido) ===
+h+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">
+<div style="background:linear-gradient(135deg,${ICBLUE} 0%,${ICBLUE}dd 100%);color:#fff;padding:12px;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.85">Inst. Criminalística</div><div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:2px">${totalIC}</div><div style="font-size:9px;opacity:0.8;margin-top:1px">vestígio${totalIC!==1?"s":""}</div></div>
+<div style="background:linear-gradient(135deg,${IIORANGE} 0%,${IIORANGE}dd 100%);color:#fff;padding:12px;border-radius:8px;text-align:center"><div style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.85">Inst. Identificação</div><div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:2px">${totalII}</div><div style="font-size:9px;opacity:0.8;margin-top:1px">vestígio${totalII!==1?"s":""}</div></div>
+<div style="background:linear-gradient(135deg,${PRIMARY} 0%,${PRIMARY}ee 100%);color:#fff;padding:12px;border-radius:8px;text-align:center;border:1.5px solid ${GOLD}"><div style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:${GOLD}">Total Recolhido</div><div style="font-size:24px;font-weight:800;line-height:1.1;margin-top:2px">${totalGeral}</div><div style="font-size:9px;opacity:0.8;margin-top:1px">vestígio${totalGeral!==1?"s":""}</div></div>
+</div>`;
+// === TABELAS COLORIDAS — IC (azul) e II (laranja) ===
+const mk=(items,title,dest,headColor,subtitle)=>{if(!items.length)return"";let t2=`<h3 style="font-size:13px;font-weight:700;color:${PRIMARY};margin:18px 0 4px;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1.5px solid ${headColor};padding-bottom:4px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;background:${headColor};border-radius:2px"></span>${title} <span style="font-size:11px;font-weight:500;color:#888;margin-left:auto">${items.length} item${items.length>1?"s":""}</span></h3>`;
+if(subtitle)t2+=`<p style="font-size:10px;color:#888;margin:0 0 6px;font-style:italic">${subtitle}</p>`;
+t2+=`<table style="width:100%;border-collapse:collapse;border:1px solid ${BORDER};margin:0 0 8px;table-layout:fixed"><colgroup><col style="width:7%"/><col style="width:48%"/><col style="width:32%"/><col style="width:13%"/></colgroup>
+<tr style="background:${headColor};color:#fff"><th style="padding:7px 8px;font-size:11px;border:1px solid ${headColor};text-align:center;font-weight:700">Nº</th><th style="padding:7px 8px;font-size:11px;border:1px solid ${headColor};text-align:left;font-weight:700">Vestígio</th><th style="padding:7px 8px;font-size:11px;border:1px solid ${headColor};text-align:left;font-weight:700">Suporte / Local</th><th style="padding:7px 8px;font-size:11px;border:1px solid ${headColor};text-align:center;font-weight:700">Destino</th></tr>`;
+items.forEach((item,i)=>{const fill=(i%2===0)?ZEBRA:"#FFFFFF";t2+=`<tr style="page-break-inside:avoid"><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill};text-align:center;font-weight:700;color:${headColor}">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(item.desc)}</td><td style="padding:5px 8px;font-size:10.5px;border:1px solid ${BORDER};background:${fill};color:#444">${esc(item.suporte||item.local||"")}</td><td style="padding:5px 8px;font-size:10.5px;border:1px solid ${BORDER};background:${fill};text-align:center;font-weight:600;color:${headColor}">${dest||item.destino||""}</td></tr>`;});
+return t2+`</table>`;};
+h+=mk([...vr,...vvIC],"Instituto de Criminalística (IC)","IC",ICBLUE,"Vestígios encaminhados para análise técnica laboratorial");
+h+=mk([...vi2,...vvII,...pr.map(p=>({desc:p.desc,suporte:supPlaca(p.local,p.placa),destino:"II"}))],"Instituto de Identificação (II)","II",IIORANGE,"Vestígios encaminhados para confronto papiloscópico e identificação");
+// === SE NÃO TEM NADA ===
+if(totalGeral===0){h+=`<div style="text-align:center;padding:30px;background:${ZEBRA};border:1.5px dashed ${BORDER};border-radius:8px;margin:18px 0;color:#888;font-size:12px;font-style:italic">Nenhum vestígio com destino IC/II registrado nesta ocorrência.</div>`;}
+// === ASSINATURAS — estilo elegante com bordas douradas ===
+h+=`<div style="margin-top:46px;page-break-inside:avoid">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;font-size:11px;text-align:center">
+<div><div style="border-bottom:1px solid ${PRIMARY};width:85%;margin:0 auto 8px;padding-top:50px"></div><b style="color:${PRIMARY};font-size:12px">${esc(d.p1)||"___"}</b><br><span style="color:#666">Perito Criminal</span><br><span style="font-size:10px;color:#888">Matrícula: ${esc(d.mat_p1)||"___"}</span></div>
+<div><div style="border-bottom:1px solid ${PRIMARY};width:85%;margin:0 auto 8px;padding-top:50px"></div><b style="color:${PRIMARY};font-size:12px">${esc(ppNomeRRV)}</b><br><span style="color:#666">Papiloscopista Policial</span><br><span style="font-size:10px;color:#888">Matrícula: ${esc(d.mat_pp)||"___"}</span></div>
+</div>
+</div>`;
+// === RODAPÉ INSTITUCIONAL ===
+h+=`<div style="margin-top:30px;padding-top:8px;border-top:1.5px solid ${GOLD};text-align:center;font-size:9px;color:#888;letter-spacing:0.5px"><b style="color:${PRIMARY}">PCDF / DPT / IC / SCPe</b> · Documento gerado pelo Xandroid em ${fmtDt(new Date())}</div>`;
+return h;};
 
 // Body SVGs
   // ──────────────────────────────════════════
