@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v268-Xandroid";
+const APP_VERSION="v269-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -328,13 +328,19 @@ const BurstModal=React.memo(function BurstModal({rk,onClose,onConfirm,utils}){
     </div>
   </div>);
 });
-const Cd_=({title,icon,children,styles:st,variant})=>{const isPink=st.accentMode==="pink";const vColors=isPink?{danger:"#ff3b6e",warning:"#ff7a30",info:"#b54d8e",success:"#3fb56b",primary:"#d6336c",teal:"#c73086",slate:"#8a5a72"}:{danger:"#ff3b30",warning:"#ff9500",info:"#5856d6",success:"#34c759",primary:"#007aff",teal:"#30b0c7",slate:"#636e72"};const accent=variant&&vColors[variant]?vColors[variant]:null;const iconKey=(icon||"").trim();const hasSvg=iconKey&&APP_ICONS&&APP_ICONS[iconKey];// Gradiente sutil: do topo (+claro) pro fundo (ligeiramente mais escuro).
-// Em dark mode: #1c1c1e → #242428 (elevação sutil). Em light: #ffffff → #fafbfc.
+const Cd_=({title,icon,children,styles:st,variant})=>{const isPink=st.accentMode==="pink";const vColors=isPink?{danger:"#ff3b6e",warning:"#ff7a30",info:"#b54d8e",success:"#3fb56b",primary:"#d6336c",teal:"#c73086",slate:"#8a5a72"}:{danger:"#ff3b30",warning:"#ff9500",info:"#5856d6",success:"#34c759",primary:"#007aff",teal:"#30b0c7",slate:"#636e72"};const accent=variant&&vColors[variant]?vColors[variant]:null;const iconKey=(icon||"").trim();const hasSvg=iconKey&&APP_ICONS&&APP_ICONS[iconKey];
+// v269: detecta quando o card está perto do topo da viewport para aplicar glow azul iOS
+const cardRef=React.useRef(null);const[topGlow,setTopGlow]=React.useState(false);
+React.useEffect(()=>{const el=cardRef.current;if(!el||typeof IntersectionObserver==="undefined")return;
+// rootMargin negativo no topo (-90px header) e bottom (-85% deixa só ~15% sup da viewport ativa)
+const obs=new IntersectionObserver(entries=>{setTopGlow(entries[0].isIntersecting);},{rootMargin:"-90px 0px -85% 0px",threshold:0});
+obs.observe(el);return()=>obs.disconnect();},[]);
 const bgGradient=st.dark?"linear-gradient(180deg,#1f1f22 0%,#141416 100%)":"linear-gradient(180deg,#ffffff 0%,#fafbfc 100%)";
-// Sombra normal + glow colorido quando há variant
 const baseShadow=st.dark?"0 2px 8px rgba(0,0,0,0.5),0 0 0 0.5px rgba(255,255,255,0.06),inset 0 1px 0 rgba(255,255,255,0.05)":"0 1px 3px rgba(0,0,0,0.06),0 0 0 0.5px rgba(0,0,0,0.04),0 4px 14px rgba(0,0,0,0.04)";
 const glowShadow=accent?`${baseShadow},0 0 16px ${accent}22,-2px 0 10px ${accent}18`:baseShadow;
-return(<div className="ios-card" style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:glowShadow,position:"relative",transition:"box-shadow 0.3s ease"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<AppIcon name={iconKey} size={30} mr={0}/>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
+// Glow azul iOS sobreposto quando card cruza a faixa superior da viewport
+const topGlowShadow=topGlow?`${glowShadow},0 0 0 2px rgba(10,132,255,0.45),0 0 30px rgba(10,132,255,0.55),0 6px 24px rgba(10,132,255,0.35)`:glowShadow;
+return(<div ref={cardRef} className={"ios-card"+(topGlow?" ios-card-near-top":"")} style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:topGlowShadow,position:"relative",transition:"box-shadow 0.4s ease,transform 0.3s ease",transform:topGlow?"scale(1.005)":"scale(1)"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<span style={{display:"inline-flex",transition:"transform 0.3s ease",transform:topGlow?"scale(1.12)":"scale(1)",filter:topGlow?"drop-shadow(0 0 8px rgba(10,132,255,0.6))":"none"}}><AppIcon name={iconKey} size={30} mr={0}/></span>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
 // EmptyState ilustrativo (estilo iOS / Apple Health)
 const EmptyState=({icon,title,hint,accent="#007aff",dark:isDark})=>{const grad=`url(#emptyGrad-${accent.replace("#","")})`;return(<div style={{padding:"28px 20px",textAlign:"center",background:isDark?"linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%)":"linear-gradient(180deg,rgba(0,0,0,0.015) 0%,transparent 100%)",borderRadius:14,marginBottom:10,border:`1.5px dashed ${accent}33`}}><svg width="64" height="64" viewBox="0 0 64 64" style={{marginBottom:10,filter:`drop-shadow(0 2px 6px ${accent}30)`}}><defs><linearGradient id={`emptyGrad-${accent.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity="0.18"/><stop offset="100%" stopColor={accent} stopOpacity="0.04"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill={grad} stroke={accent+"55"} strokeWidth="1.2"/><text x="32" y="42" textAnchor="middle" fontSize="28">{icon}</text></svg><div style={{fontSize:15,fontWeight:700,color:isDark?"#fff":"#000",letterSpacing:-0.3,marginBottom:4}}>{title}</div>{hint&&<div style={{fontSize:12,color:isDark?"#999":"#666",lineHeight:1.5}}>{hint}</div>}</div>);};
 // v267: estilo "pílula" — agora aceita props opcionais lx,ly para posicionar a label
