@@ -1,3 +1,17 @@
+## v255 — Burst nativo (picker em loop), nomenclatura de fotos refeita, header limpo
+
+- **Burst de fotos reescrito**: agora usa o **picker nativo do iOS em loop** em vez de `getUserMedia`+canvas. Cada foto abre a câmera nativa do iPhone com **0.5×, 1×, 2×, 3×, flash, HDR, modo noite, foco/exposição automática** — tudo do iPhone.
+  - Trade-off: 1 toque "Usar foto" extra por foto, mas qualidade idêntica à individual.
+  - Acabou o bug do landscape (não temos mais modal nosso — usamos a câmera nativa).
+- **Nomenclatura de fotos nova** ao Salvar Fotos:
+  - Antes: `Oc1234-2026_DP30_001_local_durante_local_xxx.jpg`
+  - Agora: `Cadaver1-1234-26-30_01.jpg` · `Vestigio3-1234-26-30_02.jpg` · `FeridaCadaver1-1234-26-30_01.jpg` · `Local-1234-26-30_01.jpg`
+  - Formato: `<Referência>-<Oc>-<Ano2dig>-<DP>_<seq>.jpg`. Sequência por referência (cada origem com seu próprio contador).
+- **Header limpo**:
+  - Removido o medidor de armazenamento `📷 X%` (estava desnecessário no header — info dele aparece na aba Exportar).
+  - Removido o toggle de tema rosa/azul (💗/💙) do header.
+- **Tema rosa/azul movido para o fim da aba Exportar** (entre os Slots e Avançado), em forma de card discreto com label "Tema do app" e botão de troca explícito.
+
 ## v254 — ZIP descontinuado, qualidade máxima, fix burst e bug do "+ Cadáver"
 
 - **ZIP "Pacote Completo" REMOVIDO** da aba Exportar. Cada saída agora é um botão individual: travas grandes nunca mais.

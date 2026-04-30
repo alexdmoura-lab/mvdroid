@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v254-Xandroid";
+const APP_VERSION="v255-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -235,40 +235,85 @@ const Nw_=React.memo(({k,label,val,onChange,styles:st})=>{const r=React.useRef(n
 // e fotos capturadas locais entre re-renders do App. Se fosse declarado
 // dentro de App, seria recriado a cada render e perderia o estado.
 // ════════════════════════════════════════════════════════════════
+// v255: BurstModal reescrito — usa o picker nativo do iOS em loop em vez de
+// getUserMedia + canvas. Isso dá acesso a TODAS as opções da câmera nativa
+// (lentes 0.5x/1x/2x/3x, flash, HDR, modo noite, foco/exposição automática).
+// Trade-off: 1 toque "Usar foto" extra por foto — mas qualidade idêntica à
+// captura individual (compressImg → 2400px / 0.92 JPEG).
 const BurstModal=React.memo(function BurstModal({rk,onClose,onConfirm,utils}){
-  const{uid,mkAutoLegend,captureGPS,haptic}=utils;
-  const videoRef=React.useRef(null);
-  const streamRef=React.useRef(null);
+  const{uid,mkAutoLegend,captureGPS,haptic,compressImg,pickFile,showToast}=utils;
   const[captured,setCaptured]=React.useState([]);
-  const[error,setError]=React.useState("");
   const[busy,setBusy]=React.useState(false);
-  const[facing,setFacing]=React.useState("environment");
   const[finishing,setFinishing]=React.useState(false);
-  // v254: pede 4K ideal — iOS Safari entrega o melhor que a câmera suporta.
-  // Sempre qualidade máxima (sem toggle HQ).
-  React.useEffect(()=>{let cancelled=false;(async()=>{try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){throw new Error("Câmera não suportada neste navegador");}const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:3840},height:{ideal:2160}},audio:false});if(cancelled){stream.getTracks().forEach(t=>t.stop());return;}streamRef.current=stream;if(videoRef.current){videoRef.current.srcObject=stream;try{await videoRef.current.play();}catch(_){}}}catch(e){if(!cancelled)setError(String(e&&e.message||e||"Câmera indisponível"));}})();return()=>{cancelled=true;if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}};},[facing]);
-  // v254: delay de 280ms antes de capturar dá tempo do autofoco do iOS pegar.
-  // Sem isso a foto sai borrada (frame antes do focus). Mantém qualidade máxima
-  // (2400px / 0.92) igual à captura individual via compressImg.
-  const capture=()=>{if(busy||finishing)return;const v=videoRef.current;if(!v||!v.videoWidth)return;setBusy(true);try{haptic(20);}catch(_){}setTimeout(()=>{try{const v2=videoRef.current;if(!v2||!v2.videoWidth){setBusy(false);return;}const w=v2.videoWidth,h=v2.videoHeight;const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(v2,0,0,w,h);const maxW=2400;let outCv=cv;if(Math.max(w,h)>maxW){const r=maxW/Math.max(w,h);outCv=document.createElement("canvas");outCv.width=Math.round(w*r);outCv.height=Math.round(h*r);outCv.getContext("2d").drawImage(cv,0,0,outCv.width,outCv.height);}const quality=0.92;const dataUrl=outCv.toDataURL("image/jpeg",quality);const sizeKB=Math.round(dataUrl.length*0.75/1024);const w2u=outCv.width,h2u=outCv.height;cv.width=0;cv.height=0;if(outCv!==cv){outCv.width=0;outCv.height=0;}setCaptured(prev=>[...prev,{_id:uid(),dataUrl,w:w2u,h:h2u,sizeKB}]);}catch(e){setError("Falha ao capturar: "+String(e.message||e).slice(0,40));}finally{setBusy(false);}},280);};
+  const tirarFoto=()=>{
+    if(busy||finishing)return;
+    pickFile({accept:"image/*",capture:"environment",onPick:async(fls)=>{
+      if(!fls||!fls.length)return;
+      setBusy(true);
+      try{
+        const foto=await compressImg(fls[0]);
+        setCaptured(prev=>[...prev,{_id:uid(),...foto}]);
+        try{haptic(20);}catch(_){}
+      }catch(e){
+        showToast("❌ "+(e&&e.message||"Falha ao processar foto"));
+      }finally{
+        setBusy(false);
+      }
+    }});
+  };
   const removeOne=(id)=>setCaptured(prev=>prev.filter(c=>c._id!==id));
-  const finish=async()=>{if(!captured.length){onClose();return;}setFinishing(true);try{const legend=mkAutoLegend(rk);const gps=await captureGPS();const novas=captured.map(c=>({id:uid(),ref:rk,desc:legend.desc,fase:"",local:legend.local,dataUrl:c.dataUrl,w:c.w,h:c.h,sizeKB:c.sizeKB,ts:new Date().toISOString(),hq:true,...(gps?{gps}:{})}));onConfirm(novas);}catch(e){setError("Erro ao concluir: "+String(e.message||e).slice(0,40));}finally{setFinishing(false);}};
-  // v240: cancelar com confirmação quando há fotos não salvas (evita perda acidental)
-  const handleCancel=()=>{if(finishing)return;if(captured.length>0){const msg=`Descartar ${captured.length} foto${captured.length>1?"s":""} capturada${captured.length>1?"s":""}?`;if(!window.confirm(msg))return;}onClose();};
-  return(<div role="dialog" aria-modal="true" aria-label="Várias fotos seguidas" style={{position:"fixed",inset:0,background:"#000",zIndex:9999,display:"flex",flexDirection:"column"}}>
-    <div style={{padding:"max(env(safe-area-inset-top),12px) 14px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(0,0,0,0.55)",gap:8}}>
-      <button type="button" onClick={handleCancel} disabled={finishing} aria-label={captured.length>0?`Cancelar e descartar ${captured.length} fotos`:"Cancelar"} style={{background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:14,fontWeight:600,cursor:finishing?"default":"pointer",fontFamily:"inherit",minHeight:44,opacity:finishing?0.5:1}}>Cancelar</button>
-      <span style={{color:"#fff",fontSize:14,fontWeight:700,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}><Layers size={16} strokeWidth={2.2}/>Várias fotos{captured.length>0?` · ${captured.length}`:""}</span>
-      <button type="button" disabled={!captured.length||finishing} onClick={finish} style={{background:captured.length&&!finishing?"#34c759":"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:captured.length&&!finishing?"pointer":"default",opacity:captured.length&&!finishing?1:0.5,fontFamily:"inherit",minHeight:44,whiteSpace:"nowrap"}}>{finishing?"…":(captured.length?`Concluir (${captured.length})`:"Concluir")}</button>
+  const finish=async()=>{
+    if(!captured.length){onClose();return;}
+    setFinishing(true);
+    try{
+      const legend=mkAutoLegend(rk);
+      const gps=await captureGPS();
+      const novas=captured.map(c=>({id:uid(),ref:rk,desc:legend.desc,fase:"",local:legend.local,dataUrl:c.dataUrl,w:c.w,h:c.h,sizeKB:c.sizeKB,ts:new Date().toISOString(),hq:true,...(gps?{gps}:{})}));
+      onConfirm(novas);
+    }catch(e){
+      showToast("❌ Erro: "+(e&&e.message||"falha desconhecida"));
+    }finally{
+      setFinishing(false);
+    }
+  };
+  const handleCancel=()=>{
+    if(finishing||busy)return;
+    if(captured.length>0){
+      const msg="Descartar "+captured.length+" foto"+(captured.length>1?"s":"")+" capturada"+(captured.length>1?"s":"")+"?";
+      if(!window.confirm(msg))return;
+    }
+    onClose();
+  };
+  return(<div role="dialog" aria-modal="true" aria-label="Várias fotos seguidas" style={{position:"fixed",inset:0,background:"#0d1117",zIndex:9999,display:"flex",flexDirection:"column",color:"#fff"}}>
+    <div style={{padding:"max(env(safe-area-inset-top),12px) 14px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,borderBottom:"1px solid rgba(255,255,255,0.08)",background:"rgba(0,0,0,0.35)"}}>
+      <button type="button" onClick={handleCancel} disabled={finishing||busy} aria-label="Cancelar várias fotos" style={{background:"rgba(255,255,255,0.12)",color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:14,fontWeight:600,cursor:(finishing||busy)?"default":"pointer",fontFamily:"inherit",minHeight:44,opacity:(finishing||busy)?0.5:1}}>Cancelar</button>
+      <span style={{fontSize:14,fontWeight:700,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}><Layers size={16} strokeWidth={2.2}/>Várias fotos{captured.length>0?" · "+captured.length:""}</span>
+      <button type="button" disabled={!captured.length||finishing||busy} onClick={finish} style={{background:captured.length&&!finishing&&!busy?"#34c759":"rgba(255,255,255,0.12)",color:"#fff",border:"none",borderRadius:10,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:captured.length&&!finishing&&!busy?"pointer":"default",opacity:captured.length&&!finishing&&!busy?1:0.5,fontFamily:"inherit",minHeight:44,whiteSpace:"nowrap"}}>{finishing?"…":(captured.length?"Concluir ("+captured.length+")":"Concluir")}</button>
     </div>
-    <div style={{flex:1,position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",background:"#000"}}>
-      {error?(<div style={{color:"#fff",padding:24,textAlign:"center",maxWidth:340}}><div style={{fontSize:48,marginBottom:12}}>📷</div><p style={{fontSize:14,marginBottom:8,fontWeight:600}}>{error}</p><p style={{fontSize:12,opacity:0.7,lineHeight:1.5}}>Verifique se você permitiu o acesso à câmera. Em iOS, vá em Ajustes → Safari → Câmera, ou reabra o app pela tela inicial.</p></div>):(<video ref={videoRef} playsInline muted autoPlay style={{width:"100%",height:"100%",objectFit:"cover"}}/>)}
+    <div style={{flex:1,overflowY:"auto",padding:"16px",WebkitOverflowScrolling:"touch"}}>
+      {captured.length===0?(
+        <div style={{textAlign:"center",padding:"40px 24px",opacity:0.85}}>
+          <div style={{fontSize:64,marginBottom:16}}>📷</div>
+          <p style={{fontSize:15,fontWeight:700,marginBottom:10}}>Nenhuma foto ainda</p>
+          <p style={{fontSize:13,opacity:0.85,lineHeight:1.6,maxWidth:320,margin:"0 auto"}}>Toque em <b>"Tirar foto"</b> abaixo. Vai abrir a câmera do iPhone com <b>todas as opções</b> (0.5×, 1×, 2×, flash, HDR, etc.).<br/><br/>Você pode tirar quantas quiser e clicar em <b>Concluir</b> quando terminar.</p>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:12}}>
+          {captured.map((c,i)=>(
+            <div key={c._id} style={{position:"relative"}}>
+              <img src={c.dataUrl} alt={"Foto "+(i+1)} style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.25)",display:"block"}}/>
+              <span style={{position:"absolute",bottom:6,left:6,background:"rgba(0,0,0,0.75)",color:"#fff",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:5}}>#{i+1}</span>
+              <button type="button" aria-label={"Remover foto "+(i+1)} onClick={()=>removeOne(c._id)} style={{position:"absolute",top:-8,right:-8,width:30,height:30,borderRadius:"50%",background:"#ff3b30",color:"#fff",border:"2px solid #fff",fontSize:18,cursor:"pointer",lineHeight:"22px",padding:0,fontWeight:700,boxShadow:"0 2px 6px rgba(0,0,0,0.4)",fontFamily:"inherit"}}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-    {captured.length>0&&(<div style={{padding:"8px 12px",background:"rgba(0,0,0,0.6)",overflowX:"auto",whiteSpace:"nowrap",WebkitOverflowScrolling:"touch"}}>{captured.map((c,idx)=>(<span key={c._id} style={{display:"inline-block",position:"relative",marginRight:6,verticalAlign:"top"}}><img src={c.dataUrl} alt={`Foto ${idx+1}`} style={{width:54,height:54,objectFit:"cover",borderRadius:6,border:"1.5px solid rgba(255,255,255,0.6)"}}/><button type="button" aria-label={`Remover foto ${idx+1}`} onClick={()=>removeOne(c._id)} style={{position:"absolute",top:-6,right:-6,width:24,height:24,borderRadius:"50%",background:"#ff3b30",color:"#fff",border:"2px solid #fff",fontSize:14,cursor:"pointer",lineHeight:"18px",padding:0,fontWeight:700,fontFamily:"inherit"}}>×</button></span>))}</div>)}
-    <div style={{padding:"16px 24px max(env(safe-area-inset-bottom),16px)",background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
-      <button type="button" onClick={()=>setFacing(f=>f==="environment"?"user":"environment")} disabled={!!error||busy||finishing} aria-label="Alternar câmera frontal/traseira" style={{background:"rgba(255,255,255,0.15)",color:"#fff",border:"none",borderRadius:"50%",width:48,height:48,fontSize:22,cursor:"pointer",fontFamily:"inherit",opacity:error?0.4:1}}>🔄</button>
-      <button type="button" onClick={capture} disabled={busy||finishing||!!error} aria-label="Capturar foto" style={{background:"#fff",border:"4px solid rgba(255,255,255,0.4)",borderRadius:"50%",width:78,height:78,cursor:(busy||finishing||error)?"default":"pointer",boxShadow:"inset 0 0 0 4px #000",opacity:(busy||finishing||error)?0.4:1,fontFamily:"inherit",padding:0}}/>
-      <div style={{width:48}}/>
+    <div style={{padding:"14px 20px max(env(safe-area-inset-bottom),14px)",borderTop:"1px solid rgba(255,255,255,0.08)",background:"rgba(0,0,0,0.5)"}}>
+      <button type="button" onClick={tirarFoto} disabled={busy||finishing} aria-label="Abrir câmera para tirar foto" style={{width:"100%",padding:"16px 20px",borderRadius:14,background:busy?"rgba(255,255,255,0.18)":"linear-gradient(135deg,#0a84ff 0%,#007aff 100%)",color:"#fff",border:"none",fontSize:17,fontWeight:700,cursor:(busy||finishing)?"default":"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:10,minHeight:60,boxShadow:busy?"none":"0 4px 16px rgba(0,122,255,0.45)",opacity:(busy||finishing)?0.6:1}}>
+        <Camera size={22} strokeWidth={2.4}/>
+        {busy?"Processando…":(captured.length===0?"Tirar foto":"Tirar mais uma")}
+      </button>
     </div>
   </div>);
 });
@@ -2131,18 +2176,46 @@ const shareCroquiDocx=async()=>{
 // iOS abre o share sheet — usuário escolhe "Salvar em Arquivos" e cria pasta com
 // as fotos descomprimidas (na qualidade da captura). Sem ZIP, sem trava.
 // Fallback: se a Web Share não suportar arquivos, baixa as fotos uma a uma.
+// v255: mapeia o "ref key" da foto (rk) para um nome legível e ASCII-safe
+// pro nome do arquivo. Ex: cad_1 -> Cadaver1, wound_X -> FeridaCadaver1, etc.
+const mkRefSlug=(rk)=>{
+  const ascii=(s)=>String(s||"").normalize("NFD").replace(/[^\w-]/g,"").slice(0,30)||"Foto";
+  if(!rk)return"Foto";
+  if(rk==="solicitacao")return"Solicitacao";
+  if(rk==="local")return"Local";
+  if(rk==="vestigios")return"Vestigios";
+  if(rk==="endereco")return"Endereco";
+  if(rk==="via")return"Via";
+  if(rk==="isolamento")return"Isolamento";
+  if(rk==="geral")return"Foto";
+  if(rk==="cadaver"){return"Cadaver"+(cadaverIdx+1);}
+  if(rk==="veiculo"){return"Veiculo"+(veiIdx+1);}
+  if(rk.startsWith("cad_desc_")){const ci=+rk.split("_")[2]||0;return"DescricaoCadaver"+(ci+1);}
+  if(rk.startsWith("cad_diag_")){const ci=+rk.split("_")[2]||0;return"DiagnosticoCadaver"+(ci+1);}
+  if(rk.startsWith("cad_vestes_")){const ci=+rk.split("_")[2]||0;return"VestesCadaver"+(ci+1);}
+  if(rk.startsWith("veste_")){const id=+rk.slice(6);const v=vestes.find(x=>x.id===id);const ci=v&&v.cadaver!=null?v.cadaver:0;return"VesteCadaver"+(ci+1);}
+  if(rk.startsWith("cad_")){const id=+rk.slice(4);const ci=cadaveres.findIndex(x=>x.id===id);return"Cadaver"+((ci>-1?ci:0)+1);}
+  if(rk.startsWith("vest_")){const id=+rk.slice(5);const idx=vestigios.findIndex(x=>x.id===id);return"Vestigio"+((idx>-1?idx:0)+1);}
+  if(rk.startsWith("placa_")){return"Placa"+ascii(rk.slice(6));}
+  if(rk.startsWith("wound_")){const id=+rk.slice(6);const w=wounds.find(x=>x.id===id);const ci=w?(w.cadaver!=null?w.cadaver:0):0;return"FeridaCadaver"+(ci+1);}
+  if(rk.startsWith("vei_")){const id=+rk.slice(4);const vi=veiculos.findIndex(x=>x.id===id);return"Veiculo"+((vi>-1?vi:0)+1);}
+  if(rk.startsWith("veivest_")){return"VestigioVeicular";}
+  if(rk.startsWith("papilo_")){return"Papiloscopia";}
+  if(rk.startsWith("edif_")){const id=+rk.slice(5);const idx=edificacoes.findIndex(e=>e.id===id);return"Edificacao"+((idx>-1?idx:0)+1);}
+  if(rk.startsWith("comodo_")){return ascii(rk);}
+  return ascii(rk);
+};
 const saveFotos=async()=>{
   if(!fotos||fotos.length===0){showToast("❌ Não há fotos para salvar");return;}
   try{
     haptic("medium");
     showToast("⏳ Preparando "+fotos.length+" foto"+(fotos.length>1?"s":"")+"…");
-    const d=data;const oc=d.oc||"sem_oc";const ano=(d.oc_ano||"").slice(-4);
+    const d=data;const oc=d.oc||"sem_oc";const ano2=(d.oc_ano||"").slice(-2);
     const dpRaw=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
     const dp=dpRaw.replace(/[ªº\s]/g,"")||"___";
-    const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);
-    const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};
-    const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};
-    // Converte cada foto (dataUrl base64) em File com nome significativo
+    // v255: nomenclatura nova — Referência-Oc-Ano(2dig)-DP_seq.jpg
+    // (seq por referência, pra fotos repetidas da mesma origem ficarem _01, _02…)
+    const refCounters={};
     const files=[];
     for(let i=0;i<fotos.length;i++){
       const f=fotos[i];
@@ -2153,13 +2226,10 @@ const saveFotos=async()=>{
         const bin=atob(m[1]);
         const bytes=new Uint8Array(bin.length);
         for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);
-        const seq=String(i+1).padStart(3,"0");
-        const cat=tabToCat[fotoTab(f.ref)]||"outros";
-        const fase=faseToShort[f.fase]||"sem_fase";
-        const refSan=sanit(f.ref||"foto");
-        const ctx=sanit(f.local||(f.desc||"").slice(0,30));
-        const nameParts=["Oc"+oc+"-"+ano+"_DP"+dp,seq,cat,fase,refSan,ctx].filter(Boolean);
-        const fileName=nameParts.join("_")+".jpg";
+        const slug=mkRefSlug(f.ref);
+        refCounters[slug]=(refCounters[slug]||0)+1;
+        const seq=String(refCounters[slug]).padStart(2,"0");
+        const fileName=slug+"-"+oc+"-"+ano2+"-"+dp+"_"+seq+".jpg";
         const file=new File([bytes],fileName,{type:"image/jpeg"});
         files.push(file);
       }catch(e){console.warn("Foto "+i+" skip:",e);}
@@ -2168,7 +2238,7 @@ const saveFotos=async()=>{
     // Tenta Web Share API primeiro (iOS + Android)
     if(navigator.canShare&&navigator.share&&navigator.canShare({files})){
       try{
-        await navigator.share({files,title:"Fotos — Oc. "+oc+"/"+ano,text:"Fotografias da ocorrência "+oc+"/"+ano});
+        await navigator.share({files,title:"Fotos — Oc. "+oc+"/"+ano2,text:"Fotografias da ocorrência "+oc+"/"+ano2});
         showToast("✅ "+files.length+" foto"+(files.length>1?"s compartilhadas":" compartilhada"));
         haptic("heavy");
         return;
@@ -3645,6 +3715,11 @@ return(<span style={{position:"relative",display:"inline-flex"}}><button type="b
 const thumb=(()=>{if(!sd||!sd.desenho)return null;if(typeof sd.desenho==="string")return sd.desenho;if(typeof sd.desenho==="object"){const k=Object.keys(sd.desenho)[0];return sd.desenho[k]||null;}return null;})();
 return(<div key={si} style={{background:isActive?(dark?"#1a2a1a":"#e8f5e9"):(dark?"#1c1c1e":"#f8f8fa"),border:`2px solid ${isActive?t.ok:t.bd}`,borderRadius:10,padding:12,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>{/* Miniatura */}<div style={{flexShrink:0,width:64,height:46,borderRadius:6,background:dark?"#0a0a0a":"#fff",border:`1px solid ${t.bd}`,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>{thumb?<img src={thumb} alt="Miniatura do croqui" style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}} loading="lazy"/>:<span style={{fontSize:18,opacity:0.3}}>📋</span>}{sd&&sd.fotos&&sd.fotos.length>0&&<span style={{position:"absolute",bottom:1,right:2,fontSize:8,fontWeight:700,background:"rgba(0,122,255,0.9)",color:"#fff",padding:"1px 4px",borderRadius:6,lineHeight:1}}>📷{sd.fotos.length}</span>}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:isActive?t.ok:t.tx}}>Slot {si+1} {isActive?"(ativo)":""}</div>{sd?(<><p style={{fontSize:11,color:t.t2,margin:"4px 0 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Oc.: <b>{sd.data?.oc||"—"}/{(sd.data?.oc_ano||"").slice(-2)}</b> {sd.data?.dp||""} — {sd.data?.nat||""}</p><p style={{fontSize:10,color:t.t3,margin:"2px 0 0"}}>Salvo: {fmtDt(sd.timestamp)}</p></>):(<p style={{fontSize:11,color:t.t3,margin:"4px 0 0",fontStyle:"italic"}}>Vazio</p>)}</div><div style={{display:"flex",gap:4,flexShrink:0}}>{sd&&<button type="button" style={{...tb(false),fontSize:11,padding:"6px 10px"}} onClick={async()=>{try{const bd=await loadFullSlot("cq_"+loginMat+"_"+si);if(bd){setRecupData({...bd,_slotIdx:si});setShowConfirmRecup(true);}else{showToast("❌ Slot vazio");}}catch(e){showToast("❌ Erro");}}}><AppIcon name="📂" size={14} mr={4}/>Abrir</button>}{!sd&&!isActive&&<button type="button" style={{...tb(false),fontSize:11,padding:"6px 10px"}} onClick={()=>{setSlotIdx(si);showToast("✅ Slot "+(si+1)+" ativado!");}}><AppIcon name="✚" size={14} mr={4}/>Usar</button>}{sd&&<button type="button" style={{background:"rgba(255,59,48,0.12)",border:`1.5px solid ${t.no}`,color:t.no,cursor:"pointer",fontSize:18,fontWeight:700,borderRadius:8,padding:"4px 10px",minWidth:44,minHeight:44,lineHeight:1,fontFamily:"inherit"}} title="Apagar slot" aria-label="Apagar slot" onClick={async()=>{await deleteFullSlot("cq_"+loginMat+"_"+si);setSavedSlots(prev=>prev.filter(s=>s.slot!==si));if(isActive)resetAll(true);haptic("medium");showToast("🗑️ Slot "+(si+1)+" apagado");}}>×</button>}</div></div>);})}
 </div><button type="button" style={{...abtn,marginTop:8}} onClick={reloadSlots}><AppIcon name="🔄" size={14} mr={4}/>Atualizar slots</button></Cd_>
+{/* === TEMA (rosa/azul) — v255: movido do header pra cá === */}
+<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"10px 14px",marginTop:8,marginBottom:8,background:t.bg3,borderRadius:10,border:`1px solid ${t.bd}`}}>
+<span style={{fontSize:12,color:t.t2,display:"inline-flex",alignItems:"center",gap:6}}><span style={{fontSize:14}}>{accent==="pink"?"💗":"💙"}</span>Tema do app</span>
+<button type="button" style={{background:accent==="pink"?"rgba(232,91,138,0.18)":"rgba(10,132,255,0.18)",border:`1px solid ${accent==="pink"?"#e85b8a":"#0a84ff"}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",color:accent==="pink"?"#e85b8a":"#0a84ff",fontSize:12,fontFamily:"inherit",fontWeight:600}} onClick={()=>{setAccent(accent==="pink"?"blue":"pink");haptic("selection");showToast(accent==="pink"?"💙 Tema azul":"💗 Tema rosa");}} aria-label="Alternar cor do tema">{accent==="pink"?"Mudar para azul":"Mudar para rosa"}</button>
+</div>
 {/* === AVANÇADO (recolhível) === */}
 <Cd_ styles={ST} title="Avançado" aria-label="Avançado" icon="⚙️" variant="slate">
 <button type="button" style={{width:"100%",background:"transparent",border:"none",color:t.t2,cursor:"pointer",fontSize:13,fontFamily:"inherit",padding:"6px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}} onClick={()=>setAdvExpanded(x=>!x)} aria-expanded={advExpanded}>
@@ -3765,14 +3840,8 @@ button:focus-visible,[role=button]:focus-visible,a:focus-visible{outline:2px sol
 const dur=fmtDur(elapsed);const long=elapsed>3*60*60*1000;/* >3h destaca */
 return(<div title={terDt?`Cena finalizada — duração total ${dur}`:`Tempo na cena (desde a chegada)`} aria-label={`Tempo na cena: ${dur}`} className="ios-statusPill" style={{background:terDt?(dark?"rgba(48,209,88,0.15)":"rgba(52,199,89,0.10)"):(long?(dark?"rgba(255,149,0,0.18)":"rgba(255,149,0,0.10)"):(dark?"rgba(10,132,255,0.18)":"rgba(0,122,255,0.10)")),color:terDt?t.ok:(long?"#ff9500":t.ac),flexShrink:0,fontVariantNumeric:"tabular-nums",fontWeight:700}}><span style={{fontSize:9}}>{terDt?"✓":"⏱"}</span>{dur}</div>);})()}
 <button type="button" aria-label="Iniciar novo croqui" title="Novo croqui" style={{background:t.bg3,border:`1px solid ${t.bd}`,borderRadius:8,padding:"6px 8px",cursor:"pointer",color:t.t2,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",minWidth:32,minHeight:32}} onClick={()=>setShowConfirmNovo(true)}><Plus size={16} strokeWidth={2.4}/></button>
-{(()=>{// v247: medidor de storage só (toggle de alta qualidade removido)
-const totalKB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0);const limitKB=quotaKB;
-const pct=Math.min(100,Math.round(totalKB/limitKB*100));
-const warn=pct>=70;const danger=pct>=90;
-const color=danger?t.no:(warn?"#ff9500":t.ok);
-if(fotos.length===0)return null;
-return(<div title={`Armazenamento: ${(totalKB/1024).toFixed(1)} MB de ${quotaKB>=1048576?(quotaKB/1048576).toFixed(1)+" GB":(quotaKB/1024).toFixed(0)+" MB"} (${pct}%) · ${fotos.length} foto${fotos.length>1?"s":""}`} aria-label={`Armazenamento ${pct} por cento`} style={{background:t.bg3,border:`1px solid ${t.bd}`,borderRadius:8,padding:"6px 9px",color:t.tx,display:"flex",alignItems:"center",gap:4,fontFamily:"inherit",fontSize:11,fontWeight:600}}><Camera size={14}/><span style={{fontSize:10,color,fontWeight:700,background:warn?(dark?"#3a2a0a":"#fff4e0"):(dark?"#1a2a1a":"#e8f5e9"),padding:"1px 5px",borderRadius:4,lineHeight:1.2}}>{pct}%</span></div>);})()}
-<button type="button" style={{background:accent==="pink"?"rgba(232,91,138,0.18)":"rgba(10,132,255,0.18)",border:`1px solid ${accent==="pink"?"#e85b8a":"#0a84ff"}`,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:accent==="pink"?"#e85b8a":"#0a84ff",display:"flex",alignItems:"center",gap:4,fontSize:12,fontFamily:"inherit",fontWeight:700,transition:"all 0.25s cubic-bezier(0.34,1.56,0.64,1)"}} onClick={()=>{setAccent(accent==="pink"?"blue":"pink");haptic("selection");showToast(accent==="pink"?"💙 Tema azul":"💗 Tema rosa");}} title={accent==="pink"?"Mudar para azul":"Mudar para rosa"} aria-label="Alternar cor do tema">{accent==="pink"?"💗":"💙"}</button>
+{/* v255: medidor de storage e toggle de tema rosa removidos do header.
+    Tema rosa/azul agora vive num card discreto no fim da aba Exportar. */}
 <button type="button" style={{background:t.bg3,border:`1px solid ${t.bd}`,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:t.tx,display:"flex",alignItems:"center",gap:4,fontSize:12,fontFamily:"inherit"}} onClick={()=>setDark(!dark)}>{dark?<Sun size={14}/>:<Moon size={14}/>}</button>
 </div></div>{showStartMenu&&<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",zIndex:2000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"max(20px,env(safe-area-inset-top)) 16px 16px"}}><div className="modal-box" style={{background:t.cd,borderRadius:16,padding:24,maxWidth:440,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",marginTop:20}}>
 <div style={{textAlign:"center",marginBottom:16}}>{(()=>{const isPink=accent==="pink";const sb1=isPink?"#7a1a4a":"#1a4a7a";const sb2=isPink?"#40051f":"#0a2540";const aCol=isPink?"#ff6b9d":"#5ac8fa";return(<svg viewBox="0 0 200 200" style={{width:64,height:64,display:"block",margin:"0 auto",filter:`drop-shadow(0 0 8px ${isPink?"rgba(255,107,157,0.25)":"rgba(90,200,250,0.25)"})`}}><defs><radialGradient id="smLogoBg" cx="50%" cy="40%"><stop offset="0%" stopColor={sb1}/><stop offset="100%" stopColor={sb2}/></radialGradient><linearGradient id="smLogoSk" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#f8f8fa"/><stop offset="100%" stopColor="#d1d1d6"/></linearGradient><linearGradient id="smBloodG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#8b0000"/><stop offset="100%" stopColor="#5a0000"/></linearGradient></defs><circle cx="100" cy="100" r="98" fill="url(#smLogoBg)"/><path d="M100 40 C70 40 48 62 48 95 C48 115 56 130 70 138 L70 155 Q70 162 78 162 L82 162 L82 158 C82 154 85 152 88 152 C91 152 94 154 94 158 L94 162 L106 162 L106 158 C106 154 109 152 112 152 C115 152 118 154 118 158 L118 162 L122 162 Q130 162 130 155 L130 138 C144 130 152 115 152 95 C152 62 130 40 100 40 Z" fill="url(#smLogoSk)" stroke="#a1a1a6" strokeWidth="1.5"/><ellipse cx="78" cy="98" rx="14" ry="16" fill={sb2}/><ellipse cx="122" cy="98" rx="14" ry="16" fill={sb2}/><circle cx="74" cy="93" r="2.5" fill={aCol}/><circle cx="118" cy="93" r="2.5" fill={aCol}/><path d="M100 115 L94 130 L100 134 L106 130 Z" fill={sb2}/><path d="M82 148 L82 156 M88 148 L88 156 M94 148 L94 156 M100 148 L100 156 M106 148 L106 156 M112 148 L112 156 M118 148 L118 156" stroke="#a1a1a6" strokeWidth="0.6" opacity="0.4"/><path d="M81 113 Q78 121 81 126 Q84 121 81 113 Z" fill="url(#smBloodG)"/></svg>);})()}<div style={{fontSize:20,fontWeight:800,color:t.tx,marginTop:4,letterSpacing:0.5}}>Xandroid</div><p style={{fontSize:12,color:t.t2,margin:"6px 0 0"}}>Olá, {loginName}! O que deseja fazer?</p></div>
@@ -3792,7 +3861,7 @@ return(<div key={slot} style={{background:dark?"#1c2a1c":"#f0faf0",border:`2px s
 </>}
 {savedSlots.length===0&&<p style={{fontSize:12,color:t.t3,textAlign:"center",fontStyle:"italic"}}>Nenhum croqui salvo encontrado.</p>}
 </div></div>}
-{burstCtx&&<BurstModal rk={burstCtx.rk} onClose={()=>setBurstCtx(null)} onConfirm={(novas)=>{setFotos(p=>[...p,...novas]);haptic("heavy");showToast("📷 "+novas.length+" foto"+(novas.length>1?"s":"")+" adicionada"+(novas.length>1?"s":""));setBurstCtx(null);}} utils={{uid,mkAutoLegend,captureGPS,haptic}}/>}
+{burstCtx&&<BurstModal rk={burstCtx.rk} onClose={()=>setBurstCtx(null)} onConfirm={(novas)=>{setFotos(p=>[...p,...novas]);haptic("heavy");showToast("📷 "+novas.length+" foto"+(novas.length>1?"s":"")+" adicionada"+(novas.length>1?"s":""));setBurstCtx(null);}} utils={{uid,mkAutoLegend,captureGPS,haptic,compressImg,pickFile,showToast}}/>}
 {zipProgress&&(()=>{const isErr=zipProgress.error;const pct=Math.max(0,Math.min(100,zipProgress.pct||0));const isCancelado=zipProgress.stage==="Cancelado";const isDone=zipProgress.stage==="Concluído"||isCancelado;const isPartial=zipProgress.partial===true;/* v249 */const startTime=zipProgress.startTime;const elapsed=startTime?Math.floor(((zipNowTick||Date.now())-startTime)/1000):0;const min=Math.floor(elapsed/60);const sec=elapsed%60;const elapsedTxt=`${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
 const headerColor=isErr?t.no:isCancelado?t.wn:isPartial?"#ff9500":t.ac;
 const headerEmoji=isErr?"❌":isCancelado?"⏹️":isPartial?"⚠️":isDone?"✅":"📦";
