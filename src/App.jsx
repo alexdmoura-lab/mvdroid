@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v259-Xandroid";
+const APP_VERSION="v260-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -337,12 +337,31 @@ const glowShadow=accent?`${baseShadow},0 0 16px ${accent}22,-2px 0 10px ${accent
 return(<div className="ios-card" style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:glowShadow,position:"relative",transition:"box-shadow 0.3s ease"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<AppIcon name={iconKey} size={30} mr={0}/>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
 // EmptyState ilustrativo (estilo iOS / Apple Health)
 const EmptyState=({icon,title,hint,accent="#007aff",dark:isDark})=>{const grad=`url(#emptyGrad-${accent.replace("#","")})`;return(<div style={{padding:"28px 20px",textAlign:"center",background:isDark?"linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%)":"linear-gradient(180deg,rgba(0,0,0,0.015) 0%,transparent 100%)",borderRadius:14,marginBottom:10,border:`1.5px dashed ${accent}33`}}><svg width="64" height="64" viewBox="0 0 64 64" style={{marginBottom:10,filter:`drop-shadow(0 2px 6px ${accent}30)`}}><defs><linearGradient id={`emptyGrad-${accent.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity="0.18"/><stop offset="100%" stopColor={accent} stopOpacity="0.04"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill={grad} stroke={accent+"55"} strokeWidth="1.2"/><text x="32" y="42" textAnchor="middle" fontSize="28">{icon}</text></svg><div style={{fontSize:15,fontWeight:700,color:isDark?"#fff":"#000",letterSpacing:-0.3,marginBottom:4}}>{title}</div>{hint&&<div style={{fontSize:12,color:isDark?"#999":"#666",lineHeight:1.5}}>{hint}</div>}</div>);};
-// v257: fonte maior e mais negrita para legibilidade (min 11 max 18)
-// Stroke da região mais espesso quando vazio (1.6 em vez de 0.9) para destacar
-// Texto com sombra/contorno branco para contraste sobre a imagem
-const Rg_=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(11,Math.min(18,w/((n||"").length||1)*2));return(<g onClick={()=>onClick(id)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.30)":"rgba(0,80,220,0.10)"} stroke={c?"#ff3b30":"#3355aa"} strokeWidth={c?2.4:1.6} strokeDasharray={c?"":"5,3"} rx="4"/>{n&&<text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#cc0000":"#112"} stroke="#fff" strokeWidth="2.5" paintOrder="stroke" style={{letterSpacing:"-0.2px"}}>{n}</text>}{c>0&&<><circle cx={x+w-9} cy={y+9} r="10" fill="#ff3b30" stroke="#fff" strokeWidth="1.5"/><text x={x+w-9} y={y+13} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{c}</text></>}</g>);};
-// Vehicle SVG region — mesma melhoria
-const VRg=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=Math.max(11,Math.min(18,w/n.length*2));return(<g onClick={()=>onClick(id,n)} style={{cursor:"pointer"}}><rect x={x} y={y} width={w} height={h} fill={c?"rgba(255,59,48,0.30)":"rgba(0,80,220,0.10)"} stroke={c?"#ff3b30":"#3355aa"} strokeWidth={c?2.4:1.6} strokeDasharray={c?"":"5,3"} rx="4"/><text x={x+w/2} y={y+h/2+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#cc0000":"#112"} stroke="#fff" strokeWidth="2.5" paintOrder="stroke" style={{letterSpacing:"-0.2px"}}>{n}</text>{c>0&&<><circle cx={x+w-9} cy={y+9} r="10" fill="#ff3b30" stroke="#fff" strokeWidth="1.5"/><text x={x+w-9} y={y+13} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{c}</text></>}</g>);};
+// v260: estilo "pílula" — retângulo do tamanho da palavra centralizado no alvo (x+w/2, y+h/2).
+// Não cobre a imagem; apenas indica a região com texto legível e clicável.
+// Fonte fixa 16px, negrito 800. Altura ~28 (mais alta que letra para facilitar toque).
+// Tag inclui margem de toque invisível para click ainda funcionar mesmo se chip pequeno.
+const Rg_=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=16;const txt=n||"";
+const tagW=Math.max(36,txt.length*fs*0.58+18);const tagH=fs+12;
+const cxC=x+w/2;const cyC=y+h/2;const tagX=cxC-tagW/2;const tagY=cyC-tagH/2;
+return(<g onClick={()=>onClick(id)} style={{cursor:"pointer"}}>
+{/* hitbox transparente preserva área de toque generosa */}
+<rect x={x} y={y} width={w} height={h} fill="transparent" rx="4"/>
+{/* pílula visível */}
+<rect x={tagX} y={tagY} width={tagW} height={tagH} fill={c?"rgba(255,59,48,0.85)":"rgba(255,255,255,0.92)"} stroke={c?"#cc0000":"#3355aa"} strokeWidth={c?1.5:1.5} rx={tagH/2}/>
+{txt&&<text x={cxC} y={cyC+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#fff":"#112"} style={{letterSpacing:"-0.2px",pointerEvents:"none"}}>{txt}</text>}
+{c>0&&<><circle cx={tagX+tagW-2} cy={tagY+2} r="9" fill="#cc0000" stroke="#fff" strokeWidth="1.5"/><text x={tagX+tagW-2} y={tagY+6} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff" style={{pointerEvents:"none"}}>{c}</text></>}
+</g>);};
+// Vehicle SVG region — mesma lógica
+const VRg=({id,x,y,w,h,n,count,onClick})=>{const c=count;const fs=16;const txt=n||"";
+const tagW=Math.max(36,txt.length*fs*0.58+18);const tagH=fs+12;
+const cxC=x+w/2;const cyC=y+h/2;const tagX=cxC-tagW/2;const tagY=cyC-tagH/2;
+return(<g onClick={()=>onClick(id,n)} style={{cursor:"pointer"}}>
+<rect x={x} y={y} width={w} height={h} fill="transparent" rx="4"/>
+<rect x={tagX} y={tagY} width={tagW} height={tagH} fill={c?"rgba(255,59,48,0.85)":"rgba(255,255,255,0.92)"} stroke={c?"#cc0000":"#3355aa"} strokeWidth={c?1.5:1.5} rx={tagH/2}/>
+{txt&&<text x={cxC} y={cyC+fs/3} textAnchor="middle" fontSize={fs} fontWeight="800" fill={c?"#fff":"#112"} style={{letterSpacing:"-0.2px",pointerEvents:"none"}}>{txt}</text>}
+{c>0&&<><circle cx={tagX+tagW-2} cy={tagY+2} r="9" fill="#cc0000" stroke="#fff" strokeWidth="1.5"/><text x={tagX+tagW-2} y={tagY+6} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff" style={{pointerEvents:"none"}}>{c}</text></>}
+</g>);};
 
 
 // ════════════════════════════════════════════════════════════════
@@ -3066,7 +3085,7 @@ const BLat=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaver
 // v257: HS recalibrado — 5 vistas em 1 imagem (800x560)
 // quadrantes da imagem: TL=frente (x≈100-310,y≈10-220), TR=nuca (x≈460-720,y≈10-220),
 // BL=face D (x≈40-260,y≈285-490), BC=cima (x≈285-490,y≈275-510), BR=face E (x≈540-770,y≈285-490)
-const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:1150}}>
+const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:1400}}>
 <image href={I.cabeca} x="0" y="0" width="800" height="540" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="572" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">CABEÇA — 5 vistas {fem?"♀":"♂"}</text>
 {/* === Vista 1: FACE (FRENTE) === */}
