@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v12 (App v243 — RRV redesenhado:
-//   header institucional com logos PCDF+DF, cores institucionais
-//   (navy + dourado), cards de totais coloridos por destino
-//   (IC azul / II laranja), tabelas com cabeçalho colorido,
-//   assinaturas elegantes, rodapé institucional)
+// CACHE_VERSION: xandroid-v13 (App v244 — fim da duplicação de fotos
+//   no ZIP: JSON dentro do ZIP agora referencia /fotos/ via _file
+//   em vez de incluir base64. ZIP fica 30-50% menor. Importador
+//   aceita .zip e reconstrói os dataUrls em memória — fluxo
+//   "exportei → fechei → reabri ZIP → continuei editando" funciona)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -28,7 +28,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v12';
+const CACHE_VERSION = 'xandroid-v13';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

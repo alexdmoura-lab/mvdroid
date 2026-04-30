@@ -51,9 +51,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
-import { zip as fflateZip, strToU8 } from "fflate";
+import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v243-Xandroid";
+const APP_VERSION="v244-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2011,6 +2011,57 @@ const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssTe
 const blobToU8=async(b)=>new Uint8Array(await b.arrayBuffer());
 const b64ToU8=(b64)=>{const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return arr;};
 const fflateZipAsync=(files,opts)=>new Promise((resolve,reject)=>{fflateZip(files,opts,(err,data)=>err?reject(err):resolve(data));});
+// v244: converte Uint8Array de uma foto JPEG em data URL (pra reconstruir o dataUrl
+// no momento do import do ZIP). Usa chunks pra não estourar a stack em fotos grandes.
+const u8ToB64=(u8)=>{let binary="";const chunkSize=8192;for(let i=0;i<u8.length;i+=chunkSize){binary+=String.fromCharCode.apply(null,u8.subarray(i,Math.min(i+chunkSize,u8.length)));}return btoa(binary);};
+// v244: importa um arquivo ZIP do Xandroid e reconstrói o estado completo
+// (com fotos referenciadas via _file). Throws se o ZIP for inválido ou não
+// tiver backup.json reconhecível.
+const importZipBackup=async(zipFile)=>{
+  const buffer=new Uint8Array(await zipFile.arrayBuffer());
+  let unzipped;
+  try{unzipped=unzipSync(buffer);}catch(e){throw new Error("Arquivo .zip inválido ou corrompido");}
+  // Achar o JSON do backup (qualquer .json com "Backup" no nome ou que tenha _v)
+  const jsonKey=Object.keys(unzipped).find(k=>/Backup.*\.json$/i.test(k))||Object.keys(unzipped).find(k=>k.endsWith(".json"));
+  if(!jsonKey)throw new Error("ZIP não tem backup.json — não é um pacote do Xandroid");
+  let bd;
+  try{bd=JSON.parse(strFromU8(unzipped[jsonKey]));}catch(e){throw new Error("backup.json corrompido");}
+  // Reconstruir dataUrls das fotos a partir da pasta /fotos/ do próprio ZIP
+  if(Array.isArray(bd.fotos)&&bd.fotos.length>0){
+    bd.fotos=bd.fotos.map(f=>{
+      // Se já tem dataUrl (formato antigo), só passa adiante
+      if(f.dataUrl)return f;
+      // Se tem _file, lê do ZIP e reconstrói
+      if(f._file&&unzipped[f._file]){
+        try{const u8=unzipped[f._file];const b64=u8ToB64(u8);const{_file,...rest}=f;return{...rest,dataUrl:`data:image/jpeg;base64,${b64}`};}
+        catch(e){console.warn("Falha ao reconstruir foto",f._file,e);return f;}
+      }
+      return f;// foto sem dataUrl nem _file (raro) — devolve como veio
+    });
+  }
+  return bd;
+};
+// v244: helper unificado de importação — detecta .json ou .zip pelo nome do
+// arquivo e dispara o caminho certo. Usado em 2 lugares (botão "Importar"
+// da aba Exportar e botão "Importar backup" do start menu).
+const doImportBackupFile=async(file,onDone)=>{
+  if(!file)return;
+  const isZip=/\.zip$/i.test(file.name);
+  try{
+    let bd;
+    if(isZip){showToast("⏳ Lendo ZIP… aguarde");bd=await importZipBackup(file);}
+    else{const text=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.onerror=()=>rej(new Error("Falha leitura"));fr.readAsText(file);});bd=JSON.parse(text);}
+    applyBackupData({...bd,data:bd.dados||bd.data});
+    const photoCount=Array.isArray(bd.fotos)?bd.fotos.length:0;
+    showToast(`✅ Backup importado${isZip?` (ZIP${photoCount?` · ${photoCount} foto${photoCount>1?"s":""}`:""})`:""}`);
+    haptic("heavy");
+    if(onDone)onDone(bd);
+  }catch(err){
+    console.error("CQ import:",err);
+    showToast("❌ "+(err.message||"Erro ao importar").slice(0,60));
+    haptic("warning");
+  }
+};
 // Exportar TUDO em ZIP + Web Share API
 // v238: migrado de JSZip para fflate (~2x mais rápido, bundle menor).
 // fflate não tem callback de progresso na compactação — em troca a etapa
@@ -2024,12 +2075,22 @@ upd(15,"Gerando Croqui PDF","Convertendo para PDF…");try{const croquiBlob=awai
 upd(35,"Gerando RRV PDF","Convertendo para PDF…");try{const rrvBlob=await genPdfBlobFromHtml(bRRV(),"RRV",60000);files[mkFileName("pdf","RRV")]=await blobToU8(rrvBlob);}catch(e){console.error("[ZIP] RRV PDF falhou:",e);failures.push("RRV PDF");}
 // 3) DOCX (tolerante a falha)
 upd(55,"Gerando DOCX","Montando documento Word…");try{const docxBlob=await saveCroquiDocx(true);if(docxBlob)files[mkFileName("docx")]=await blobToU8(docxBlob);}catch(e){console.warn("DOCX falhou, continuando sem:",e);failures.push("DOCX");}
-// 4) JSON Backup
-upd(70,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};files[mkFileName("json","Backup")]=strToU8(JSON.stringify(backupObj,null,2));
-// 5) Fotos individuais — STORE (level 0) — JPEG já é comprimido
-if(fotos&&fotos.length>0){upd(75,"Adicionando fotos",`${fotos.length} foto(s)…`);const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);for(let i=0;i<fotos.length;i++){const f=fotos[i];if(!f.dataUrl)continue;try{const m=f.dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);if(!m)continue;const seq=String(i+1).padStart(3,"0");const cat=tabToCat[fotoTab(f.ref)]||"outros";const fase=faseToShort[f.fase]||"sem_fase";const refSan=sanit(f.ref||"foto");const localShort=sanit(f.local||"");const descShort=sanit((f.desc||"").slice(0,30));const ctx=localShort||descShort;const nameParts=[seq,cat,fase,refSan,ctx].filter(Boolean);const safeName="fotos/"+nameParts.join("_")+".jpg";files[safeName]=[b64ToU8(m[1]),{level:0}];if(i%5===0)upd(75+Math.round((i/fotos.length)*10),"Adicionando fotos",`${i+1}/${fotos.length}`);}catch(e){console.warn("Foto skip:",e);}}}
+// 4) Fotos individuais — STORE (level 0, sem re-comprimir JPEG)
+// v244: agora geradas ANTES do JSON pra que o JSON possa apenas REFERENCIAR
+// os arquivos da pasta /fotos/ (em vez de incluir base64 das mesmas fotos).
+// Resultado: ZIP 30-50% menor + JSON.stringify muito mais rápido.
+const fotosLite=[];// cópia das fotos sem dataUrl, com _file apontando pro arquivo
+if(fotos&&fotos.length>0){upd(70,"Adicionando fotos",`${fotos.length} foto(s)…`);const tabToCat={[TAB_SOLICITACAO]:"solicitacao",[TAB_LOCAL]:"local",[TAB_VESTIGIOS]:"vestigios",[TAB_CADAVER]:"cadaver",[TAB_VEICULO]:"veiculo"};const faseToShort={"Antes da perícia":"antes","Durante a perícia":"durante","Após a perícia":"apos"};const sanit=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,40);for(let i=0;i<fotos.length;i++){const f=fotos[i];if(!f.dataUrl){fotosLite.push(f);continue;}try{const m=f.dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);if(!m){fotosLite.push(f);continue;}const seq=String(i+1).padStart(3,"0");const cat=tabToCat[fotoTab(f.ref)]||"outros";const fase=faseToShort[f.fase]||"sem_fase";const refSan=sanit(f.ref||"foto");const localShort=sanit(f.local||"");const descShort=sanit((f.desc||"").slice(0,30));const ctx=localShort||descShort;const nameParts=[seq,cat,fase,refSan,ctx].filter(Boolean);const safeName="fotos/"+nameParts.join("_")+".jpg";files[safeName]=[b64ToU8(m[1]),{level:0}];// foto JPEG sem recompressão
+// versão "lite" da foto pro JSON: tudo MENOS dataUrl, com _file apontando pro arquivo
+const{dataUrl,...meta}=f;fotosLite.push({...meta,_file:safeName});
+if(i%5===0)upd(70+Math.round((i/fotos.length)*15),"Adicionando fotos",`${i+1}/${fotos.length}`);}catch(e){console.warn("Foto skip:",e);fotosLite.push(f);}}}else{/* nenhuma foto */}
+// 5) JSON Backup — agora SEM fotos em base64 (referencia /fotos/* via _file)
+// Quando reimportado o ZIP, o app reconstrói os dataUrl em memória a partir
+// dos arquivos da pasta. Backup standalone (botão "Baixar JSON") continua
+// embutindo as fotos completas pra ser auto-suficiente.
+upd(86,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,_format:"zip",dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos:fotosLite,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};files[mkFileName("json","Backup")]=strToU8(JSON.stringify(backupObj,null,2));
 // 6) README
-upd(86,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("pdf","RRV")} — Relatório RRV\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup completo (importável)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n`;files["LEIA-ME.txt"]=strToU8(readme);
+upd(88,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("pdf","RRV")} — Relatório RRV\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup (referencia /fotos/ — importe o ZIP inteiro)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n\nCOMO IMPORTAR DE VOLTA:\n  Abra o Xandroid → "Importar backup" → selecione este arquivo .zip\n  As fotos serão reconectadas aos respectivos campos do croqui.\n`;files["LEIA-ME.txt"]=strToU8(readme);
 // Gerar ZIP final via fflate — sem callback de progresso, mas é rápido
 upd(90,"Compactando","Comprimindo arquivos…");const zipU8=await fflateZipAsync(files,{level:6});const zipBlob=new Blob([zipU8],{type:"application/zip"});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
 // Web Share API
@@ -3189,7 +3250,7 @@ return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}
 <p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Salva ou restaura todos os dados deste laudo num arquivo JSON. Útil para mover de celular ou guardar offline.</p>
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 <button type="button" style={{...bt,background:t.ac,color:"#fff"}} onClick={()=>{try{const bk=JSON.stringify({_v:APP_VERSION,dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()});const blob=new Blob([bk],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=mkFileName("json","Backup");document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),5000);showToast("✅ Backup baixado!");}catch(e){showToast("❌ Erro: "+e.message);}}}><AppIcon name="💾" size={14} mr={4}/>Baixar JSON</button>
-<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>pickFile({accept:".json",onPick:(fls)=>{const f=fls[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const bd=JSON.parse(ev.target.result);applyBackupData({...bd,data:bd.dados||bd.data});showToast("✅ Backup restaurado!");}catch(err){showToast("❌ Arquivo inválido");}};r.readAsText(f);}})}><AppIcon name="📂" size={14} mr={4}/>Importar JSON</button>
+<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>pickFile({accept:".json,.zip",onPick:(fls)=>doImportBackupFile(fls[0])})}><AppIcon name="📂" size={14} mr={4}/>Importar JSON / ZIP</button>
 </div></Cd_>
 {exportView==="txt"&&<Cd_ styles={ST} title="Texto" aria-label="Texto" icon="📝" variant="slate"><button type="button" style={{...bt,background:t.ac,color:"#fff",marginBottom:12,fontSize:13}} onClick={()=>{const txt=sum();const copyFallback=(t2)=>{const ta=document.createElement("textarea");ta.value=t2;ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");showToast("✅ Copiado!");}catch(e2){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>showToast("✅ Copiado!")).catch(()=>copyFallback(txt));}else{copyFallback(txt);}}}><AppIcon name="📋" size={14} mr={4}/>Copiar</button><pre style={{whiteSpace:"pre-wrap",fontFamily:"monospace",fontSize:11,color:t.tx,background:t.bg3,padding:16,borderRadius:8,maxHeight:400,overflowY:"auto"}}>{exportData}</pre></Cd_>}
 <Cd_ styles={ST} title="Resumo" aria-label="Resumo" icon="📊" variant="teal"><div style={{background:t.bg3,borderRadius:10,padding:16,fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap",fontFamily:"inherit",color:t.tx,maxHeight:500,overflowY:"auto"}}>{sum()}</div></Cd_>
@@ -3329,7 +3390,7 @@ return(<button type="button" style={{background:fotoHQ?"#ff9500":t.bg3,border:`1
 <div style={{textAlign:"center",marginBottom:16}}>{(()=>{const isPink=accent==="pink";const sb1=isPink?"#7a1a4a":"#1a4a7a";const sb2=isPink?"#40051f":"#0a2540";const aCol=isPink?"#ff6b9d":"#5ac8fa";return(<svg viewBox="0 0 200 200" style={{width:64,height:64,display:"block",margin:"0 auto",filter:`drop-shadow(0 0 8px ${isPink?"rgba(255,107,157,0.25)":"rgba(90,200,250,0.25)"})`}}><defs><radialGradient id="smLogoBg" cx="50%" cy="40%"><stop offset="0%" stopColor={sb1}/><stop offset="100%" stopColor={sb2}/></radialGradient><linearGradient id="smLogoSk" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#f8f8fa"/><stop offset="100%" stopColor="#d1d1d6"/></linearGradient><linearGradient id="smBloodG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#8b0000"/><stop offset="100%" stopColor="#5a0000"/></linearGradient></defs><circle cx="100" cy="100" r="98" fill="url(#smLogoBg)"/><path d="M100 40 C70 40 48 62 48 95 C48 115 56 130 70 138 L70 155 Q70 162 78 162 L82 162 L82 158 C82 154 85 152 88 152 C91 152 94 154 94 158 L94 162 L106 162 L106 158 C106 154 109 152 112 152 C115 152 118 154 118 158 L118 162 L122 162 Q130 162 130 155 L130 138 C144 130 152 115 152 95 C152 62 130 40 100 40 Z" fill="url(#smLogoSk)" stroke="#a1a1a6" strokeWidth="1.5"/><ellipse cx="78" cy="98" rx="14" ry="16" fill={sb2}/><ellipse cx="122" cy="98" rx="14" ry="16" fill={sb2}/><circle cx="74" cy="93" r="2.5" fill={aCol}/><circle cx="118" cy="93" r="2.5" fill={aCol}/><path d="M100 115 L94 130 L100 134 L106 130 Z" fill={sb2}/><path d="M82 148 L82 156 M88 148 L88 156 M94 148 L94 156 M100 148 L100 156 M106 148 L106 156 M112 148 L112 156 M118 148 L118 156" stroke="#a1a1a6" strokeWidth="0.6" opacity="0.4"/><path d="M81 113 Q78 121 81 126 Q84 121 81 113 Z" fill="url(#smBloodG)"/></svg>);})()}<div style={{fontSize:20,fontWeight:800,color:t.tx,marginTop:4,letterSpacing:0.5}}>Xandroid</div><p style={{fontSize:12,color:t.t2,margin:"6px 0 0"}}>Olá, {loginName}! O que deseja fazer?</p></div>
 <button type="button" style={{...bt,background:"#28a745",color:"#fff",width:"100%",textAlign:"center",padding:"14px",fontSize:15,marginBottom:8}} onClick={()=>{const emptySlot=savedSlots.length<5?[0,1,2,3,4].find(i=>!savedSlots.some(s=>s.slot===i)):0;setSlotIdx(emptySlot||0);setShowStartMenu(false);setBackupStatus("🆕 Novo croqui");setData(prev=>({...prev,oc_ano:prev.oc_ano||""+new Date().getFullYear()}));showToast("✅ Novo croqui no Slot "+(((emptySlot||0))+1));setTimeout(()=>setShowTemplatePicker(true),300);}}><AppIcon name="📝" size={14} mr={4}/>Novo Croqui</button>
 {(data.p1||data.dp||vestigios.some(v=>v.desc))&&<button type="button" style={{...bt,background:dark?"rgba(10,132,255,0.15)":"rgba(0,122,255,0.08)",color:t.ac,border:`1.5px solid ${t.ac}55`,width:"100%",textAlign:"center",padding:"12px",fontSize:13,marginBottom:8}} onClick={()=>{setShowStartMenu(false);setTimeout(()=>setShowSaveTemplate(true),200);}}><AppIcon name="💾" size={14} mr={4}/>Salvar este croqui como template</button>}
-<button type="button" style={{...bt,background:t.ac,color:"#fff",width:"100%",textAlign:"center",padding:"12px",fontSize:14,marginBottom:16}} onClick={()=>pickFile({accept:".json",onPick:(fls)=>{const f2=fls[0];if(!f2)return;const r2=new FileReader();r2.onload=evr=>{try{const bd=JSON.parse(evr.target.result);applyBackupData({...bd,data:bd.dados||bd.data});setSlotIdx(0);setShowStartMenu(false);showToast("✅ Backup importado!");}catch(err){showToast("❌ Arquivo inválido");}};r2.readAsText(f2);}})}><AppIcon name="📂" size={14} mr={4}/>Importar backup JSON</button>
+<button type="button" style={{...bt,background:t.ac,color:"#fff",width:"100%",textAlign:"center",padding:"12px",fontSize:14,marginBottom:16}} onClick={()=>pickFile({accept:".json,.zip",onPick:(fls)=>doImportBackupFile(fls[0],()=>{setSlotIdx(0);setShowStartMenu(false);})})}><AppIcon name="📂" size={14} mr={4}/>Importar backup (JSON ou ZIP)</button>
 {savedSlots.length>0&&<><div style={{fontSize:13,fontWeight:600,color:t.tx,marginBottom:8}}>📂 Croquis salvos ({savedSlots.length})</div>
 {savedSlots.map(({slot,bd})=>{const dd=bd.data||bd.dados||{};const ageMs=bd.timestamp?Date.now()-new Date(bd.timestamp).getTime():0;const remainH=Math.max(0,Math.round((BACKUP_EXPIRY_MS-ageMs)/3600000));// v205: miniatura do desenho
 const thumb=(()=>{if(!bd.desenho)return null;if(typeof bd.desenho==="string")return bd.desenho;if(typeof bd.desenho==="object"){const k=Object.keys(bd.desenho)[0];return bd.desenho[k]||null;}return null;})();
