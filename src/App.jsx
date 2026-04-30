@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v249-Xandroid";
+const APP_VERSION="v250-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2047,10 +2047,18 @@ const smartSavePdf=async(blobOrUrl,title)=>{
 // dentro do ZIP (algumas versões do html2canvas/jsPDF não aceitam essas chaves e
 // rejeitam a Promise sem mensagem clara). Voltei pra config conservadora que funcionava
 // na v245, mantendo só o `scale` dinâmico.
-const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const xLight=opts&&opts.xLight;const tMs=timeoutMs||(fast?45000:60000);const scale=xLight?1.0:(fast?1.4:2);const html2pdf=await loadH2P();
+// v250: detecta iPhone/iPad — em iOS, html2canvas trava com base64 grandes
+// (logos institucionais embutidos). Forçamos xLight e pré-carregamos imagens.
+const isIOS=()=>{try{return/iPad|iPhone|iPod/.test(navigator.userAgent||"")||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}catch(_){return false;}};
+const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const xLight=(opts&&opts.xLight)||isIOS();/* v250: iOS sempre xLight */const tMs=timeoutMs||(fast?45000:60000);const scale=xLight?1.0:(fast?1.4:2);const html2pdf=await loadH2P();
 const uniqueId="pdf-export-tmp-"+Date.now()+"-"+Math.floor(Math.random()*100000);
 const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssText="position:fixed;top:-99999px;left:-99999px;width:800px;padding:24px 20px;color:#222;font-size:12px;line-height:1.5;background:#fff;font-family:-apple-system,Arial,sans-serif;";tempEl.innerHTML=html;document.body.appendChild(tempEl);try{
-// respiro pro DOM renderizar antes do html2canvas começar (evita race em iOS)
+// v250: pré-carrega TODAS as imagens do tempEl ANTES de chamar html2canvas.
+// Sem isso, html2canvas em iOS Safari trava esperando imagens base64
+// gigantes (logos PCDF/DF). Timeout de 8s por imagem.
+const imgs=tempEl.querySelectorAll("img");
+if(imgs.length>0){await Promise.race([Promise.all(Array.from(imgs).map(im=>{if(im.complete&&im.naturalWidth>0)return Promise.resolve();return new Promise(res=>{const done=()=>res();im.addEventListener("load",done,{once:true});im.addEventListener("error",done,{once:true});setTimeout(done,8000);});})),new Promise(r=>setTimeout(r,12000))]);}
+// respiro pro DOM renderizar antes do html2canvas começar
 await new Promise(r=>setTimeout(r,50));
 const work=html2pdf().set({margin:[14,8,14,8],filename:mkFileName("pdf",title==="RRV"?"RRV":"Croqui"),image:{type:"jpeg",quality:xLight?0.7:(fast?0.85:0.95)},html2canvas:{scale,useCORS:true,logging:false},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["avoid-all","css","legacy"]}}).from(tempEl).toPdf().get("pdf");
 const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout "+(tMs/1000)+"s gerando "+title+" (html2pdf travou)")),tMs));
@@ -2134,18 +2142,18 @@ if(photoCount>=250){const estTotMB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0)/1024;c
 exportingZipRef.current=true;zipCancelRef.current=false;let stage="iniciando";const failures=[];const startTime=Date.now();const checkCancel=()=>{if(zipCancelRef.current)throw new Error("Cancelado pelo usuário");};const upd=(pct,st,detail)=>{stage=st;setZipProgress({pct,stage:st,detail:detail||"",startTime});checkCancel();};try{upd(2,"Preparando","Salvando canvas…");forceSaveCanvas();haptic("medium");const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
 // files: dicionário { "caminho/arquivo.ext": Uint8Array  ou  [Uint8Array, opts] }
 const files={};
-// 1) PDF Croqui (tolerante a falha) — timeout 90s + fallback "extra-light"
-// v249: se a 1ª tentativa (scale 1.4) der timeout, tenta de novo com scale 1.0
-// (mais rápido e menos pesado) antes de desistir. Cobre cenários iOS Safari
-// onde até 1.4 estava travando.
-upd(15,"Gerando Croqui PDF","Renderizando (modo rápido)…");
+// 1) PDF Croqui (tolerante a falha) — 2 tentativas com timeouts longos
+// v250: em iOS, genPdfBlobFromHtml força xLight automaticamente + pré-carrega
+// imagens base64 (logos PCDF/DF que travavam o html2canvas). Timeouts maiores
+// porque é melhor esperar 2min do que falhar em 90s.
+upd(15,"Gerando Croqui PDF",isIOS()?"Modo iOS (otimizado)…":"Renderizando (modo rápido)…");
 let croquiOK=false;
-try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",90000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);croquiOK=true;}
+try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",120000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);croquiOK=true;}
 catch(e1){const msg1=String(e1&&e1.message||e1||"desconhecido").slice(0,80);console.warn("[ZIP] Croqui PDF 1ª tentativa falhou:",e1);
-// 2ª tentativa: ULTRA leve (scale 1.0, quality 0.7, timeout 60s)
+// 2ª tentativa: força xLight (ainda mais leve) com timeout maior
 upd(15,"Gerando Croqui PDF","Tentando modo ultra-leve…");
-try{const croquiBlob2=await genPdfBlobFromHtml(bPDF(),"Croqui",60000,{fast:true,xLight:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob2);croquiOK=true;showToast("⚠ Croqui gerado em modo ultra-leve");}
-catch(e2){const msg2=String(e2&&e2.message||e2||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou nas 2 tentativas:",e2);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg:`1ª: ${msg1} · 2ª: ${msg2}`,stack:String(e2&&e2.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`Croqui PDF (${msg2})`);}}
+try{const croquiBlob2=await genPdfBlobFromHtml(bPDF(),"Croqui",90000,{fast:true,xLight:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob2);croquiOK=true;showToast("⚠ Croqui gerado em modo ultra-leve");}
+catch(e2){const msg2=String(e2&&e2.message||e2||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou nas 2 tentativas:",e2);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg:`1ª: ${msg1} · 2ª: ${msg2}`,stack:String(e2&&e2.stack||"").slice(0,1500),extra:isIOS()?"iOS detectado":""});}catch(_){}failures.push(`Croqui PDF (${isIOS()?"iOS — gere pelo computador se possível":msg2})`);}}
 // 2) RRV NÃO é mais incluído no ZIP (v247)
 //    Motivo: RRV requer assinatura do papiloscopista, geralmente feita em
 //    momento separado. Incluir antes do RRV ser válido confunde a cadeia
@@ -3317,6 +3325,8 @@ return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}
 <Cd_ styles={ST} title="Pacote Completo" aria-label="Pacote Completo" icon="📦" variant="success">
 <p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Gera um ZIP com: <b>Croqui PDF + DOCX + Backup JSON{fotos.length>0?` + ${fotos.length} foto(s)`:""}</b>.</p>
 <div style={{fontSize:11,color:dark?"#ffcc00":"#856404",background:dark?"rgba(255,204,0,0.08)":"rgba(255,204,0,0.15)",border:`1px solid ${dark?"rgba(255,204,0,0.25)":"rgba(255,204,0,0.4)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>ℹ️</span><span><b>RRV não vai no pacote.</b> Como precisa da assinatura do papiloscopista, gere ele separado pelo botão <b>"RRV PDF"</b> abaixo no momento que ele estiver disponível.</span></div>
+{/* v250: aviso específico iPhone — html2pdf trava com base64 grandes em iOS Safari */}
+{isIOS()&&<div style={{fontSize:11,color:dark?"#7dc3ff":"#0050b5",background:dark?"rgba(0,122,255,0.08)":"rgba(0,122,255,0.08)",border:`1px solid ${dark?"rgba(0,122,255,0.25)":"rgba(0,122,255,0.3)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>📱</span><span><b>iPhone/iPad detectado.</b> A geração de PDF é mais lenta em iOS (1-3 min). Se falhar, baixe o JSON pelo card <b>"Backup"</b> abaixo, abra no computador e gere o PDF lá. O <b>DOCX</b> funciona normalmente.</span></div>}
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 <button type="button" style={{...bt,background:`linear-gradient(135deg,${t.ac} 0%,${t.ac}cc 100%)`,color:"#fff",fontWeight:700,boxShadow:`0 2px 8px ${t.ac}55`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(true)} aria-label="Compartilhar pacote ZIP"><AppIcon name="📤" size={16} mr={4}/>Compartilhar ZIP</button>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1.5px solid ${t.bd}`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(false)} aria-label="Baixar pacote ZIP"><AppIcon name="💾" size={16} mr={4}/>Baixar ZIP</button>

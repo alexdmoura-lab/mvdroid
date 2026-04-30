@@ -1,11 +1,12 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v18 (App v249 — modal de erro persistente + retry
-//   automático no Croqui PDF. Modal de progresso ZIP agora NÃO fecha
-//   sozinho quando há falhas parciais (antes sumia em 3s, usuário perdia).
-//   Mostra lista das falhas, botão "Ver detalhes técnicos" → Diagnóstico,
-//   botão "Entendi" pra fechar. Croqui PDF: 2 tentativas — 1ª scale 1.4
-//   timeout 90s; 2ª (se 1ª falhar) scale 1.0 quality 0.7 timeout 60s.)
+// CACHE_VERSION: xandroid-v19 (App v250 — fix Croqui PDF travando em iPhone.
+//   Causa: html2canvas em iOS Safari pendurava esperando logos PCDF/DF
+//   embutidos como base64 grandes. Fix: pré-carrega TODAS as imagens do
+//   tempEl com Image.onload + timeout 8s antes de chamar html2canvas.
+//   Bonus: detector isIOS() força modo xLight automático (scale 1.0,
+//   quality 0.7) na 1ª tentativa em iOS. Timeouts subiram pra 120s/90s.
+//   Aviso visual azul na aba Exportar quando detecta iPhone/iPad.)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -29,7 +30,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v18';
+const CACHE_VERSION = 'xandroid-v19';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
