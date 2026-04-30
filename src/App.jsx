@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v250-Xandroid";
+const APP_VERSION="v251-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2011,6 +2011,24 @@ const smartSaveDocx=async()=>{
 };
 // v239: aceita blob direto (preferido) OU blobUrl/dataUrl (legado).
 // Em PWA standalone iOS usa Web Share API (oferece "Salvar em Arquivos"); fora disso, baixa direto.
+// v251: Alternativa pra iOS — abre o croqui em nova aba pronta pra imprimir.
+// O usuário usa "Compartilhar → Imprimir" do Safari (ou Cmd+P no PC), que abre
+// o sheet de print do iOS com opção "Save to Files" → escolhe formato PDF.
+// Funciona MUITO mais confiável que html2pdf+html2canvas em iOS 18.x e
+// produz PDF nativo do sistema (qualidade alta, sem limite de tamanho).
+const printCroquiHTML=(htmlBody,title)=>{
+  try{
+    const w=window.open("","_blank");
+    if(!w){showToast("⚠ Popup bloqueado — permita pop-ups do Xandroid e tente de novo");return;}
+    const css=`@page{size:A4;margin:14mm 8mm}body{font-family:-apple-system,'SF Pro Display',Arial,sans-serif;padding:0;margin:0;color:#222;font-size:12px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media screen{body{max-width:800px;margin:0 auto;padding:24px}.print-hint{position:fixed;top:0;left:0;right:0;background:#0a84ff;color:#fff;padding:12px 16px;font-size:13px;font-weight:600;text-align:center;z-index:999;display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:-apple-system,sans-serif}.print-hint button{background:#fff;color:#0a84ff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}body{padding-top:80px}}@media print{.print-hint{display:none}body{padding:0}}`;
+    const hint=`<div class="print-hint"><span>📱 Toque em <b>Compartilhar (⎘) → Imprimir</b> e use AirPrint → "Salvar em Arquivos" como PDF</span><button onclick="window.print()">🖨 Imprimir</button></div>`;
+    w.document.open();
+    w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title||"Croqui"} — Xandroid</title><style>${css}</style></head><body>${hint}${htmlBody}</body></html>`);
+    w.document.close();
+    showToast("✅ Aberto em nova aba — toque em Imprimir");
+    haptic("medium");
+  }catch(e){console.error("printCroquiHTML:",e);showToast("❌ Falha ao abrir aba — "+String(e.message||"").slice(0,40));}
+};
 const smartSavePdf=async(blobOrUrl,title)=>{
   if(!blobOrUrl){showToast("❌ PDF não disponível");return;}
   const fileName=mkFileName("pdf",title==="RRV"?"RRV":"Croqui");
@@ -2142,18 +2160,28 @@ if(photoCount>=250){const estTotMB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0)/1024;c
 exportingZipRef.current=true;zipCancelRef.current=false;let stage="iniciando";const failures=[];const startTime=Date.now();const checkCancel=()=>{if(zipCancelRef.current)throw new Error("Cancelado pelo usuário");};const upd=(pct,st,detail)=>{stage=st;setZipProgress({pct,stage:st,detail:detail||"",startTime});checkCancel();};try{upd(2,"Preparando","Salvando canvas…");forceSaveCanvas();haptic("medium");const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
 // files: dicionário { "caminho/arquivo.ext": Uint8Array  ou  [Uint8Array, opts] }
 const files={};
-// 1) PDF Croqui (tolerante a falha) — 2 tentativas com timeouts longos
-// v250: em iOS, genPdfBlobFromHtml força xLight automaticamente + pré-carrega
-// imagens base64 (logos PCDF/DF que travavam o html2canvas). Timeouts maiores
-// porque é melhor esperar 2min do que falhar em 90s.
-upd(15,"Gerando Croqui PDF",isIOS()?"Modo iOS (otimizado)…":"Renderizando (modo rápido)…");
+// 1) PDF Croqui — em iOS é PULADO automaticamente
+// v251: html2pdf trava persistentemente em iOS 18.x mesmo com:
+//   - pré-carga de imagens base64
+//   - scale 1.0 (ultra-leve)
+//   - timeouts de 120s + 90s
+// O usuário relatou 3min30s perdidos sem PDF. Em iOS, pulamos direto pra
+// poupar tempo do usuário e adicionamos o HTML do croqui dentro do ZIP
+// (em /croqui.html). Usuário pode abrir no PC e gerar PDF lá, ou usar
+// o botão "Salvar PDF (AirPrint)" individual da aba Exportar.
+if(isIOS()){
+  upd(15,"Croqui PDF (pulado)","iOS detectado — incluindo HTML em vez de PDF");
+  try{const croquiHtml=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Croqui — Oc. ${oc}/${ano}</title><style>body{font-family:-apple-system,Arial,sans-serif;padding:24px;color:#222;font-size:12px;line-height:1.5;background:#fff;max-width:800px;margin:0 auto}@media print{body{padding:8mm;font-size:10px}}</style></head><body>${bPDF()}</body></html>`;files[`Croqui_Oc-${oc}-${ano}.html`]=strToU8(croquiHtml);}catch(eHtml){console.warn("[ZIP] HTML croqui falhou:",eHtml);failures.push("Croqui HTML");}
+  failures.push("Croqui PDF (gerar no computador — abrir Croqui_*.html e imprimir como PDF)");
+}else{
+upd(15,"Gerando Croqui PDF","Renderizando (modo rápido)…");
 let croquiOK=false;
-try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",120000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);croquiOK=true;}
+try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",90000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);croquiOK=true;}
 catch(e1){const msg1=String(e1&&e1.message||e1||"desconhecido").slice(0,80);console.warn("[ZIP] Croqui PDF 1ª tentativa falhou:",e1);
-// 2ª tentativa: força xLight (ainda mais leve) com timeout maior
+// 2ª tentativa: ainda mais leve (xLight)
 upd(15,"Gerando Croqui PDF","Tentando modo ultra-leve…");
-try{const croquiBlob2=await genPdfBlobFromHtml(bPDF(),"Croqui",90000,{fast:true,xLight:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob2);croquiOK=true;showToast("⚠ Croqui gerado em modo ultra-leve");}
-catch(e2){const msg2=String(e2&&e2.message||e2||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou nas 2 tentativas:",e2);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg:`1ª: ${msg1} · 2ª: ${msg2}`,stack:String(e2&&e2.stack||"").slice(0,1500),extra:isIOS()?"iOS detectado":""});}catch(_){}failures.push(`Croqui PDF (${isIOS()?"iOS — gere pelo computador se possível":msg2})`);}}
+try{const croquiBlob2=await genPdfBlobFromHtml(bPDF(),"Croqui",60000,{fast:true,xLight:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob2);croquiOK=true;showToast("⚠ Croqui gerado em modo ultra-leve");}
+catch(e2){const msg2=String(e2&&e2.message||e2||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou nas 2 tentativas:",e2);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg:`1ª: ${msg1} · 2ª: ${msg2}`,stack:String(e2&&e2.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`Croqui PDF (${msg2})`);}}}
 // 2) RRV NÃO é mais incluído no ZIP (v247)
 //    Motivo: RRV requer assinatura do papiloscopista, geralmente feita em
 //    momento separado. Incluir antes do RRV ser válido confunde a cadeia
@@ -2176,7 +2204,7 @@ if(i%5===0)upd(70+Math.round((i/fotos.length)*15),"Adicionando fotos",`${i+1}/${
 // embutindo as fotos completas pra ser auto-suficiente.
 upd(86,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,_format:"zip",dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos:fotosLite,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};files[mkFileName("json","Backup")]=strToU8(JSON.stringify(backupObj,null,2));
 // 6) README
-upd(88,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup (referencia /fotos/ — importe o ZIP inteiro)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n\n⚠️ RRV (Registro de Recolhimento de Vestígios) NÃO está incluído neste pacote.\n   Motivo: o RRV requer assinatura do papiloscopista responsável.\n   Para gerar o RRV, use o botão "RRV PDF" individual na aba Exportar\n   no momento em que o papiloscopista puder assinar o documento.\n\nCOMO IMPORTAR DE VOLTA:\n  Abra o Xandroid → "Importar backup" → selecione este arquivo .zip\n  As fotos serão reconectadas aos respectivos campos do croqui.\n`;files["LEIA-ME.txt"]=strToU8(readme);
+upd(88,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const isIOSnote=isIOS();const croquiLine=isIOSnote?`- Croqui_Oc-${oc}-${ano}.html — Croqui em HTML (abrir no PC e gerar PDF lá, ou usar AirPrint)`:`- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento`;const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n${croquiLine}\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup (referencia /fotos/ — importe o ZIP inteiro)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n\n⚠️ RRV (Registro de Recolhimento de Vestígios) NÃO está incluído neste pacote.\n   Motivo: o RRV requer assinatura do papiloscopista responsável.\n   Para gerar o RRV, use o botão "RRV PDF" individual na aba Exportar.\n${isIOSnote?`\n📱 NOTA SOBRE IPHONE/IPAD:\n   A geração de PDF nativa do Croqui falha em iOS 18.x por bug do html2pdf+\n   Safari. Por isso, o pacote inclui Croqui_*.html em vez de Croqui_*.pdf.\n   Pra ter o PDF do Croqui:\n   - Opção A: abra o Croqui_*.html no computador (Chrome/Firefox/Safari) e\n     use Ctrl+P / Cmd+P → Salvar como PDF.\n   - Opção B: no iPhone, use o botão "🖨 Imprimir/PDF (iOS)" da aba Exportar\n     → AirPrint → Salvar em Arquivos.\n`:""}\nCOMO IMPORTAR DE VOLTA:\n  Abra o Xandroid → "Importar backup" → selecione este arquivo .zip\n  As fotos serão reconectadas aos respectivos campos do croqui.\n`;files["LEIA-ME.txt"]=strToU8(readme);
 // Gerar ZIP final via fflate — sem callback de progresso, mas é rápido
 upd(90,"Compactando","Comprimindo arquivos…");const zipU8=await fflateZipAsync(files,{level:6});const zipBlob=new Blob([zipU8],{type:"application/zip"});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
 // Web Share API
@@ -3325,8 +3353,10 @@ return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}
 <Cd_ styles={ST} title="Pacote Completo" aria-label="Pacote Completo" icon="📦" variant="success">
 <p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Gera um ZIP com: <b>Croqui PDF + DOCX + Backup JSON{fotos.length>0?` + ${fotos.length} foto(s)`:""}</b>.</p>
 <div style={{fontSize:11,color:dark?"#ffcc00":"#856404",background:dark?"rgba(255,204,0,0.08)":"rgba(255,204,0,0.15)",border:`1px solid ${dark?"rgba(255,204,0,0.25)":"rgba(255,204,0,0.4)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>ℹ️</span><span><b>RRV não vai no pacote.</b> Como precisa da assinatura do papiloscopista, gere ele separado pelo botão <b>"RRV PDF"</b> abaixo no momento que ele estiver disponível.</span></div>
-{/* v250: aviso específico iPhone — html2pdf trava com base64 grandes em iOS Safari */}
-{isIOS()&&<div style={{fontSize:11,color:dark?"#7dc3ff":"#0050b5",background:dark?"rgba(0,122,255,0.08)":"rgba(0,122,255,0.08)",border:`1px solid ${dark?"rgba(0,122,255,0.25)":"rgba(0,122,255,0.3)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>📱</span><span><b>iPhone/iPad detectado.</b> A geração de PDF é mais lenta em iOS (1-3 min). Se falhar, baixe o JSON pelo card <b>"Backup"</b> abaixo, abra no computador e gere o PDF lá. O <b>DOCX</b> funciona normalmente.</span></div>}
+{/* v251: aviso iOS — PDF nativo via html2pdf trava em iOS 18.x.
+    Solução: ZIP inclui Croqui.html, e botão "🖨 Imprimir/PDF (iOS)"
+    abaixo abre via AirPrint. */}
+{isIOS()&&<div style={{fontSize:11,color:dark?"#7dc3ff":"#0050b5",background:dark?"rgba(0,122,255,0.08)":"rgba(0,122,255,0.08)",border:`1px solid ${dark?"rgba(0,122,255,0.25)":"rgba(0,122,255,0.3)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>📱</span><span><b>iPhone/iPad detectado.</b> O ZIP inclui o <b>Croqui em HTML</b> em vez de PDF (geração de PDF nativa trava em iOS 18). <b>Para gerar o PDF:</b> use o botão <b>"🖨 Imprimir/PDF (iOS)"</b> abaixo — abre nova aba; toque em <b>Compartilhar → Imprimir</b> e use AirPrint <b>"Salvar em Arquivos"</b> como PDF. DOCX e RRV funcionam normalmente.</span></div>}
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 <button type="button" style={{...bt,background:`linear-gradient(135deg,${t.ac} 0%,${t.ac}cc 100%)`,color:"#fff",fontWeight:700,boxShadow:`0 2px 8px ${t.ac}55`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(true)} aria-label="Compartilhar pacote ZIP"><AppIcon name="📤" size={16} mr={4}/>Compartilhar ZIP</button>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1.5px solid ${t.bd}`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(false)} aria-label="Baixar pacote ZIP"><AppIcon name="💾" size={16} mr={4}/>Baixar ZIP</button>
@@ -3338,6 +3368,8 @@ return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{(()=>{const pend=checkCampos().length;return(<span style={{position:"relative",display:"inline-flex"}}><button type="button" style={{...bt,background:t.ac,color:"#fff"}} onClick={()=>{forceSaveCanvas();setPdfHTML(bPDF());setPdfTitle("Croqui de Levantamento de Local");setExportView("pdf");}}><AppIcon name="📑" size={14} mr={4}/>Croqui PDF</button>{pend>0&&<span title={`${pend} campo${pend>1?"s":""} pendente${pend>1?"s":""}`} style={{position:"absolute",top:-6,right:-6,background:"#ff9500",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:10,minWidth:20,textAlign:"center",lineHeight:1.2,boxShadow:"0 1px 4px rgba(0,0,0,0.3)",border:"2px solid "+t.cd}}>{pend}</span>}</span>);})()}<button type="button" style={{...bt,background:"#ff9500",color:"#fff"}} onClick={()=>{forceSaveCanvas();setPdfHTML(bRRV());setPdfTitle("RRV");setExportView("rrv");}}><AppIcon name="📋" size={14} mr={4}/>RRV PDF</button>
 <button type="button" style={{...bt,background:"#28a745",color:"#fff"}} onClick={saveCroquiDocx} title="Baixar DOCX para o Documents/Downloads do dispositivo" aria-label="Baixar DOCX"><AppIcon name="📝" size={14} mr={4}/>DOCX</button><button type="button" style={{...bt,background:"#25D366",color:"#fff",fontWeight:700}} onClick={shareCroquiDocx} title="Enviar DOCX por WhatsApp, e-mail ou AirDrop" aria-label="Enviar DOCX por WhatsApp ou e-mail"><AppIcon name="📤" size={14} mr={4}/>Enviar DOCX</button>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>{setExportData(sum());setExportView("txt");}}><AppIcon name="📋" size={14} mr={4}/>Texto</button>
+{/* v251: botão alternativo de PDF via AirPrint — único caminho confiável em iOS 18.x */}
+{isIOS()&&<button type="button" style={{...bt,background:"#5856d6",color:"#fff",fontWeight:700}} onClick={()=>{forceSaveCanvas();printCroquiHTML(bPDF(),"Croqui");}} title="Abrir em nova aba pra Imprimir/Salvar PDF via AirPrint" aria-label="Imprimir ou salvar PDF via AirPrint"><AppIcon name="🖨" size={14} mr={4}/>Imprimir/PDF (iOS)</button>}
 </div></Cd_>
 
 {/* === BACKUP JSON === */}
