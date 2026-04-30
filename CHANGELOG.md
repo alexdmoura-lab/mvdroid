@@ -1,3 +1,18 @@
+## v253 — ZIP simplificado: só DOCX + JSON + fotos + desenhos
+
+- **Pacote ZIP refeito**: agora contém apenas
+  - `Croqui_OC_*.docx` — Croqui de Levantamento de Local (DOCX editável)
+  - `RRV_OC_*.docx` — Registro de Recolhimento de Vestígios (NOVO — função `saveRRVDocx` criada do zero)
+  - `Backup_OC_*.json` — backup completo
+  - `/fotos/*.jpg` — fotografias do laudo
+  - `/fotos/croqui_NN_*.png` — desenhos do canvas (NOVO — antes ficavam só dentro do DOCX)
+- **Removido do ZIP**: tentativa de gerar PDF (causava trava no iPhone) e o HTML alternativo do Croqui
+- **Modal de "ZIP gerado parcial" não aparece mais** quando o usuário está em iOS — porque não há mais "falha intencional" sendo reportada como falha real
+- **Para PDF**: abrir o DOCX no Word/Pages/Google Docs e usar "Salvar como PDF". Os botões individuais "Croqui PDF" e "RRV PDF" continuam funcionando (AirPrint em iOS, html2pdf no resto)
+- **Card "Pacote Completo"**: texto descritivo refeito; aviso "RRV não vai no pacote" e aviso especial iOS removidos (não são mais necessários)
+- **Card "Backup"**: trocado "deste laudo" por "deste croqui"
+- **Tempo de geração do ZIP cai 30-90s** em qualquer plataforma (sem mais tentativa de PDF)
+
 ## v202 — Microfone só em textareas + Service Worker
 
 - **Microfone**: apareceu apenas em campos `type="textarea"` (observações longas)

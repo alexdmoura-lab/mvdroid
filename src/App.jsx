@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v252-Xandroid";
+const APP_VERSION="v253-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -1961,6 +1961,130 @@ showToast("✅ Laudo gerado!");
   if(returnBlobOnly)throw e; /* propaga p/ exportAllZip lidar */
 }
 };
+// v253: gera RRV (Registro de Recolhimento de Vestígios) em DOCX. Documento próprio,
+// separado do Croqui, para envio ao papiloscopista. Replica o conteúdo de bRRV() em OOXML.
+// Helpers (esc2, Pp) duplicados para função autocontida. esc2 usa loop charCode em vez
+// de regex unicode (evita problemas de codificação no fonte).
+const saveRRVDocx=async(returnBlobOnly=false)=>{
+try{
+if(!returnBlobOnly)showToast("Gerando RRV...");
+const JSZip=await loadJSZip();
+if(!JSZip)throw new Error("Nao foi possivel carregar JSZip");
+const zip=new JSZip();const d=data;
+const oc=d.oc||"___";const ano=d.oc_ano||"____";
+const dpResolvedRRV=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
+const dpFooter=dpResolvedRRV.replace(/[ªº\s]/g,"")||"___";
+const natLbl=d.nat==="Outros"?(d.nat_outro||"-"):(d.nat||"-");
+const ppNomeRRV=d.pp==="Outro"?(d.pp_outro||"___"):(d.pp||"___");
+const esc2=(s)=>{const str=String(s==null?"":s);let r="";for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);if(c<=8)continue;if(c===11||c===12)continue;if(c>=14&&c<=31)continue;if(c===65534||c===65535)continue;r+=str[i];}return r.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");};
+const Pp=(text,opts)=>{opts=opts||{};const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?'<w:color w:val="'+opts.color+'"/>':"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+opts.shd+'"/>':"";const ind=opts.indFirst?'<w:ind w:firstLine="'+opts.indFirst+'"/>':"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing='<w:spacing w:before="'+spBef+'" w:after="'+spAft+'" w:line="320" w:lineRule="auto"/>';const keepNext=opts.keepNext?'<w:keepNext/>':"";const keepLines=opts.keepLines?'<w:keepLines/>':"";const pPr='<w:pPr>'+keepNext+keepLines+center+spacing+ind+shd+'<w:rPr>'+bold+italic+'<w:sz w:val="'+sz+'"/>'+color+'</w:rPr></w:pPr>';return'<w:p>'+pPr+'<w:r><w:rPr>'+bold+italic+caps+'<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>'+color+'</w:rPr><w:t xml:space="preserve">'+esc2(text)+'</w:t></w:r></w:p>';};
+const SPACER=(sz)=>'<w:p><w:pPr><w:spacing w:after="'+(sz||120)+'"/></w:pPr></w:p>';
+const vestWithP=vestigios.map(v=>({...v,suporte:supLoc(v)}));
+const allV2=[...vestWithP,...canvasVest.map(v=>({...v,desc:'['+v.placa+'] '+v.desc,suporte:supLoc(v)}))];
+const vr=allV2.filter(v=>v.desc&&(v.destino||"").includes("IC")&&v.recolhido!=="Não");
+const vi2=allV2.filter(v=>v.desc&&(v.destino||"").includes("II")&&v.recolhido!=="Não");
+const pr=papilos.filter(p=>p.desc);
+const mkVeiSupR=(vv)=>{const vi3=vv.veiculo==null?0:vv.veiculo;const vx2="v"+vi3+"_";const tm=d[vx2+"tipo"]||"";const vl=veiculos[vi3]?veiculos[vi3].label:"Veiculo";return vl+(tm?" ("+tm+")":"")+" - "+vv.regionLabel;};
+const vvIC=veiVest.filter(vv=>(vv.destino||"").includes("IC")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv),destino:"IC"}));
+const vvII=veiVest.filter(vv=>(vv.destino||"").includes("II")&&vv.recolhido!=="Não").map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupR(vv),destino:"II"}));
+const totalIC=vr.length+vvIC.length;
+const totalII=vi2.length+vvII.length+pr.length;
+let body="";
+body+=Pp("POLÍCIA CIVIL DO DISTRITO FEDERAL",{bold:true,sz:22,center:true,spAft:40});
+body+=Pp("DEPARTAMENTO DE POLÍCIA TÉCNICA",{bold:true,sz:22,center:true,spAft:40});
+body+=Pp("INSTITUTO DE CRIMINALÍSTICA",{bold:true,sz:22,center:true,spAft:40});
+body+=Pp("SEÇÃO DE CRIMES CONTRA A PESSOA",{bold:true,sz:22,center:true,spAft:280});
+body+=Pp("REGISTRO DE RECOLHIMENTO DE VESTÍGIOS",{bold:true,sz:32,center:true,spAft:60,color:"1A1A2E"});
+body+=Pp("— RRV —",{bold:true,sz:22,center:true,spAft:60,color:"C9A961"});
+body+=Pp("Conforme OS nº 01 do DPT, de 17/02/2014",{italic:true,sz:18,center:true,spAft:240,color:"888888"});
+const ROW_GOLD=(l,v,idx)=>{const fill=(idx%2===0)?"FFF8E8":"FFFCEF";return'<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="3200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8D9A8"/></w:tcPr>'+Pp(l,{bold:true,sz:20,spAft:0,color:"6B5326"})+'</w:tc><w:tc><w:tcPr><w:tcW w:w="6800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="'+fill+'"/></w:tcPr>'+Pp(String(v||""),{sz:20,spAft:0})+'</w:tc></w:tr>';};
+const ROW_GOLD_GROUP=(title)=>'<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="10000" w:type="dxa"/><w:gridSpan w:val="2"/><w:shd w:val="clear" w:color="auto" w:fill="C9A961"/></w:tcPr>'+Pp(title,{bold:true,sz:20,caps:true,spAft:0,color:"FFFFFF",keepNext:true,keepLines:true})+'</w:tc></w:tr>';
+let idTbl='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:left w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:right w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/></w:tblBorders></w:tblPr>';
+idTbl+=ROW_GOLD_GROUP("Identificação da Ocorrência");
+let _rIdx=0;
+idTbl+=ROW_GOLD("Ocorrência / DP",oc+"/"+ano+" — "+(dpResolvedRRV||"___"),_rIdx++);
+idTbl+=ROW_GOLD("Natureza",natLbl,_rIdx++);
+if(d.end)idTbl+=ROW_GOLD("Endereço",d.end,_rIdx++);
+idTbl+=ROW_GOLD("Data do atendimento",d.dt_che||new Date().toLocaleDateString("pt-BR"),_rIdx++);
+idTbl+=ROW_GOLD("Equipe","Seção de Crimes Contra a Pessoa (SCPe)",_rIdx++);
+idTbl+='</w:tbl>';
+body+=idTbl;
+body+=SPACER(180);
+const ICBLUE="1A4A7A";const IIORANGE="B8741F";
+const mkVestTbl=(items,title,subtitle,headColor)=>{
+  if(!items.length)return "";
+  let r=Pp(title,{bold:true,sz:24,spBef:160,spAft:40,color:headColor,keepNext:true});
+  if(subtitle)r+=Pp(subtitle,{italic:true,sz:18,spAft:80,color:"888888",keepNext:true});
+  r+='<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="'+headColor+'"/><w:left w:val="single" w:sz="6" w:space="0" w:color="'+headColor+'"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="'+headColor+'"/><w:right w:val="single" w:sz="6" w:space="0" w:color="'+headColor+'"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="4800"/><w:gridCol w:w="3200"/><w:gridCol w:w="1300"/></w:tblGrid>';
+  const headCell=(text,w)=>'<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="'+headColor+'"/></w:tcPr>'+Pp(text,{bold:true,sz:18,center:true,spAft:0,color:"FFFFFF"})+'</w:tc>';
+  r+='<w:tr><w:trPr><w:cantSplit/></w:trPr>'+headCell("Nº",700)+headCell("Vestígio",4800)+headCell("Suporte / Local",3200)+headCell("Destino",1300)+'</w:tr>';
+  items.forEach((it,i)=>{
+    const fill=(i%2===0)?"F5F5F7":"FFFFFF";
+    const cell=(text,w,opts)=>{const o=Object.assign({sz:18,spAft:0},opts||{});return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="'+fill+'"/></w:tcPr>'+Pp(text,o)+'</w:tc>';};
+    r+='<w:tr><w:trPr><w:cantSplit/></w:trPr>'+cell(String(i+1),700,{center:true,bold:true,color:headColor})+cell(it.desc||"",4800)+cell(it.suporte||it.local||"",3200)+cell(it.destino||"",1300,{center:true,bold:true,color:headColor})+'</w:tr>';
+  });
+  r+='</w:tbl>';
+  return r;
+};
+body+=mkVestTbl([...vr,...vvIC],"Instituto de Criminalística (IC) — "+totalIC+" item"+(totalIC!==1?"s":""),"Vestígios encaminhados para análise técnica laboratorial",ICBLUE);
+body+=mkVestTbl([...vi2,...vvII,...pr.map(p=>({desc:p.desc,suporte:supPlaca(p.local,p.placa),destino:"II"}))],"Instituto de Identificação (II) — "+totalII+" item"+(totalII!==1?"s":""),"Vestígios encaminhados para confronto papiloscópico e identificação",IIORANGE);
+if(totalIC+totalII===0){
+  body+=Pp("Nenhum vestígio com destino IC/II registrado nesta ocorrência.",{italic:true,sz:20,center:true,spBef:160,spAft:160,color:"888888"});
+}
+body+=SPACER(720);
+const sigTbl='<w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="5000"/><w:gridCol w:w="5000"/></w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>'+
+'<w:tc><w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="1A1A2E"/></w:tcBorders></w:tcPr>'+Pp(d.p1||"___",{bold:true,sz:22,center:true,spBef:80,spAft:0,color:"1A1A2E"})+Pp("Perito Criminal",{sz:18,center:true,spAft:0,color:"666666"})+Pp("Matrícula: "+(d.mat_p1||"___"),{sz:16,center:true,spAft:0,color:"888888"})+'</w:tc>'+
+'<w:tc><w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="1A1A2E"/></w:tcBorders></w:tcPr>'+Pp(ppNomeRRV,{bold:true,sz:22,center:true,spBef:80,spAft:0,color:"1A1A2E"})+Pp("Papiloscopista Policial",{sz:18,center:true,spAft:0,color:"666666"})+Pp("Matrícula: "+(d.mat_pp||"___"),{sz:16,center:true,spAft:0,color:"888888"})+'</w:tc>'+
+'</w:tr></w:tbl>';
+body+=sigTbl;
+const pcdfBytes=(()=>{const bin=atob(LOGO_PCDF_B64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return bytes;})();
+const dfBytes=(()=>{const bin=atob(LOGO_DF_B64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return bytes;})();
+zip.file("word/media/logo_pcdf.jpeg",pcdfBytes);
+zip.file("word/media/logo_df.jpeg",dfBytes);
+const imgPcdfEMU_cx=550000,imgPcdfEMU_cy=700000;
+const imgDfEMU_cx=600000,imgDfEMU_cy=700000;
+const header1Xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:bottom w:val="single" w:sz="8" w:space="0" w:color="C9A961"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="7000"/><w:gridCol w:w="1500"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+imgPcdfEMU_cx+'" cy="'+imgPcdfEMU_cy+'"/><wp:docPr id="1001" name="Logo PCDF"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1001" name="logo_pcdf.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogoPcdf"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+imgPcdfEMU_cx+'" cy="'+imgPcdfEMU_cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="7000" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>POLÍCIA CIVIL DO DISTRITO FEDERAL</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>DEPARTAMENTO DE POLÍCIA TÉCNICA</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>INSTITUTO DE CRIMINALÍSTICA</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>SEÇÃO DE CRIMES CONTRA A PESSOA</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+imgDfEMU_cx+'" cy="'+imgDfEMU_cy+'"/><wp:docPr id="1002" name="Logo DF"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1002" name="logo_df.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogoDf"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+imgDfEMU_cx+'" cy="'+imgDfEMU_cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:hdr>';
+zip.file("word/header1.xml",header1Xml);
+zip.file("word/_rels/header1.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogoPcdf" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo_pcdf.jpeg"/><Relationship Id="rIdLogoDf" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo_df.jpeg"/></Relationships>');
+const footer1Xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="4" w:space="1" w:color="C9A961"/></w:pBdr><w:tabs><w:tab w:val="center" w:pos="4680"/><w:tab w:val="right" w:pos="9360"/></w:tabs><w:spacing w:before="60" w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t xml:space="preserve">RRV — Oc. '+oc+'/'+ano+' — '+dpFooter+'ª DP</w:t></w:r><w:r><w:tab/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t xml:space="preserve">pág. </w:t></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:instrText xml:space="preserve"> PAGE \\* MERGEFORMAT </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t xml:space="preserve"> de </w:t></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:instrText xml:space="preserve"> NUMPAGES \\* MERGEFORMAT </w:instrText></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t>1</w:t></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:fldChar w:fldCharType="end"/></w:r><w:r><w:tab/></w:r><w:r><w:rPr><w:sz w:val="16"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:color w:val="666666"/></w:rPr><w:t xml:space="preserve">SCPe/IC/DPT/PCDF</w:t></w:r></w:p></w:ftr>';
+zip.file("word/footer1.xml",footer1Xml);
+const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'+body+'<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:footerReference w:type="default" r:id="rIdFooter1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1700" w:right="1134" w:bottom="1200" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>';
+const ctXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>';
+const relsXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>';
+zip.file("[Content_Types].xml",ctXml);
+zip.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+zip.file("word/document.xml",docXml);
+zip.file("word/_rels/document.xml.rels",relsXml);
+const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+if(returnBlobOnly)return blob;
+const fileName=mkFileName("docx","RRV");
+const isStandalonePWA=(typeof navigator!=="undefined"&&navigator.standalone===true)||(typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
+const isIOSlocal=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+if(isStandalonePWA&&isIOSlocal&&navigator.canShare){
+  try{
+    const file=new File([blob],fileName,{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    if(navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:"RRV — Oc. "+(data.oc||"___")+"/"+((data.oc_ano||"").slice(-2)),text:"RRV DOCX — Ocorrência "+(data.oc||"___")+"/"+(data.oc_ano||"")});
+      showToast("✅ RRV compartilhado!");return;
+    }
+  }catch(e){
+    if(e.name==="AbortError"){showToast("Cancelado");return;}
+    console.warn("Share fallback falhou, tentando download:",e);
+  }
+}
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");a.href=url;a.download=fileName;a.rel="noopener";
+document.body.appendChild(a);a.click();document.body.removeChild(a);
+setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){}},10000);
+showToast("✅ RRV gerado!");
+}catch(e){
+const msg=(e&&e.message)||String(e)||"erro desconhecido";
+console.error("RRV DOCX error:",e);
+showToast("❌ Erro RRV: "+msg);
+setTimeout(()=>showToast(""),6000);
+if(returnBlobOnly)throw e;
+}
+};
 // v205: Compartilhar DOCX direto via Web Share API (WhatsApp, e-mail, AirDrop, etc)
 // Gera o DOCX em memória e abre o sheet de compartilhamento nativo do iOS/Android.
 const shareCroquiDocx=async()=>{
@@ -2160,36 +2284,18 @@ if(photoCount>=250){const estTotMB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0)/1024;c
 exportingZipRef.current=true;zipCancelRef.current=false;let stage="iniciando";const failures=[];const startTime=Date.now();const checkCancel=()=>{if(zipCancelRef.current)throw new Error("Cancelado pelo usuário");};const upd=(pct,st,detail)=>{stage=st;setZipProgress({pct,stage:st,detail:detail||"",startTime});checkCancel();};try{upd(2,"Preparando","Salvando canvas…");forceSaveCanvas();haptic("medium");const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");const baseName=`Xandroid_${oc}-${ano}_DP${dp}`.replace(/[^a-zA-Z0-9_-]/g,"_");
 // files: dicionário { "caminho/arquivo.ext": Uint8Array  ou  [Uint8Array, opts] }
 const files={};
-// 1) PDF Croqui — em iOS é PULADO automaticamente
-// v251: html2pdf trava persistentemente em iOS 18.x mesmo com:
-//   - pré-carga de imagens base64
-//   - scale 1.0 (ultra-leve)
-//   - timeouts de 120s + 90s
-// O usuário relatou 3min30s perdidos sem PDF. Em iOS, pulamos direto pra
-// poupar tempo do usuário e adicionamos o HTML do croqui dentro do ZIP
-// (em /croqui.html). Usuário pode abrir no PC e gerar PDF lá, ou usar
-// o botão "Salvar PDF (AirPrint)" individual da aba Exportar.
-if(isIOS()){
-  upd(15,"Croqui PDF (pulado)","iOS detectado — incluindo HTML em vez de PDF");
-  try{const croquiHtml=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>Croqui — Oc. ${oc}/${ano}</title><style>body{font-family:-apple-system,Arial,sans-serif;padding:24px;color:#222;font-size:12px;line-height:1.5;background:#fff;max-width:800px;margin:0 auto}@media print{body{padding:8mm;font-size:10px}}</style></head><body>${bPDF()}</body></html>`;files[`Croqui_Oc-${oc}-${ano}.html`]=strToU8(croquiHtml);}catch(eHtml){console.warn("[ZIP] HTML croqui falhou:",eHtml);failures.push("Croqui HTML");}
-  failures.push("Croqui PDF (gerar no computador — abrir Croqui_*.html e imprimir como PDF)");
-}else{
-upd(15,"Gerando Croqui PDF","Renderizando (modo rápido)…");
-let croquiOK=false;
-try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",90000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);croquiOK=true;}
-catch(e1){const msg1=String(e1&&e1.message||e1||"desconhecido").slice(0,80);console.warn("[ZIP] Croqui PDF 1ª tentativa falhou:",e1);
-// 2ª tentativa: ainda mais leve (xLight)
-upd(15,"Gerando Croqui PDF","Tentando modo ultra-leve…");
-try{const croquiBlob2=await genPdfBlobFromHtml(bPDF(),"Croqui",60000,{fast:true,xLight:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob2);croquiOK=true;showToast("⚠ Croqui gerado em modo ultra-leve");}
-catch(e2){const msg2=String(e2&&e2.message||e2||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou nas 2 tentativas:",e2);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg:`1ª: ${msg1} · 2ª: ${msg2}`,stack:String(e2&&e2.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`Croqui PDF (${msg2})`);}}}
-// 2) RRV NÃO é mais incluído no ZIP (v247)
-//    Motivo: RRV requer assinatura do papiloscopista, geralmente feita em
-//    momento separado. Incluir antes do RRV ser válido confunde a cadeia
-//    documental. Use o botão "RRV PDF" individual quando o papiloscopista
-//    estiver disponível pra assinar.
-// 3) DOCX (tolerante a falha) — timeout maior pra montagem grande
-upd(50,"Gerando DOCX","Montando documento Word…");try{const docxPromise=saveCroquiDocx(true);const docxTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 60s no DOCX")),60000));const docxBlob=await Promise.race([docxPromise,docxTimer]);if(docxBlob)files[mkFileName("docx")]=await blobToU8(docxBlob);}catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`DOCX (${msg})`);}
-// 4) Fotos individuais — STORE (level 0, sem re-comprimir JPEG)
+// v253: ZIP simplificado — só DOCX (Croqui + RRV) + JSON + fotos + desenhos do canvas.
+// Removida toda a tentativa de gerar PDF dentro do ZIP (causava travas em iOS 18 e era
+// fonte do "ZIP gerado parcial"). Quem precisa de PDF rápido usa os botões individuais.
+// 1) Croqui DOCX
+upd(15,"Gerando Croqui DOCX","Montando documento Word…");
+try{const docxPromise=saveCroquiDocx(true);const docxTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 90s no Croqui DOCX")),90000));const docxBlob=await Promise.race([docxPromise,docxTimer]);if(docxBlob)files[mkFileName("docx","Croqui")]=await blobToU8(docxBlob);}
+catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] Croqui DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push("Croqui DOCX ("+msg+")");}
+// 2) RRV DOCX
+upd(40,"Gerando RRV DOCX","Montando documento Word…");
+try{const rrvPromise=saveRRVDocx(true);const rrvTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 60s no RRV DOCX")),60000));const rrvBlob=await Promise.race([rrvPromise,rrvTimer]);if(rrvBlob)files[mkFileName("docx","RRV")]=await blobToU8(rrvBlob);}
+catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] RRV DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-rrv-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push("RRV DOCX ("+msg+")");}
+// 3) Fotos individuais — STORE (level 0, sem re-comprimir JPEG)
 // v244: agora geradas ANTES do JSON pra que o JSON possa apenas REFERENCIAR
 // os arquivos da pasta /fotos/ (em vez de incluir base64 das mesmas fotos).
 // Resultado: ZIP 30-50% menor + JSON.stringify muito mais rápido.
@@ -2198,13 +2304,57 @@ if(fotos&&fotos.length>0){upd(70,"Adicionando fotos",`${fotos.length} foto(s)…
 // versão "lite" da foto pro JSON: tudo MENOS dataUrl, com _file apontando pro arquivo
 const{dataUrl,...meta}=f;fotosLite.push({...meta,_file:safeName});
 if(i%5===0)upd(70+Math.round((i/fotos.length)*15),"Adicionando fotos",`${i+1}/${fotos.length}`);}catch(e){console.warn("Foto skip:",e);fotosLite.push(f);}}}else{/* nenhuma foto */}
+// 4) Desenhos do canvas (croquis) também em /fotos/ — v253
+// Cada folha de desenho (imgRef.current[idx]) é exportada como PNG dentro de /fotos/
+// com nome 'croqui_NN_<label>.png'. Assim o perito tem TUDO numa pasta só.
+upd(82,"Adicionando croquis","Desenhos do canvas…");
+try{
+  const allDrawKeys=imgRef.current?Object.keys(imgRef.current).filter(k=>imgRef.current[k]):[];
+  const sanitDraw=(s)=>String(s||"").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,30);
+  allDrawKeys.forEach((dk,di)=>{
+    const dataUrl=imgRef.current[dk];
+    if(!dataUrl)return;
+    try{
+      const m=String(dataUrl).match(/^data:image\/[a-z]+;base64,(.+)$/);
+      if(!m)return;
+      const labelObj=desenhos[+dk];
+      const label=sanitDraw(labelObj?labelObj.label:("Croqui_"+(+dk+1)));
+      const seq=String(di+1).padStart(2,"0");
+      const safeName="fotos/croqui_"+seq+"_"+label+".png";
+      files[safeName]=[b64ToU8(m[1]),{level:0}];
+    }catch(eDr){console.warn("Desenho skip:",eDr);}
+  });
+}catch(eOuter){console.warn("Bloco de desenhos falhou:",eOuter);}
 // 5) JSON Backup — agora SEM fotos em base64 (referencia /fotos/* via _file)
 // Quando reimportado o ZIP, o app reconstrói os dataUrl em memória a partir
 // dos arquivos da pasta. Backup standalone (botão "Baixar JSON") continua
 // embutindo as fotos completas pra ser auto-suficiente.
 upd(86,"Backup JSON","Empacotando dados…");const backupObj={_v:APP_VERSION,_format:"zip",dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos:fotosLite,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()};files[mkFileName("json","Backup")]=strToU8(JSON.stringify(backupObj,null,2));
-// 6) README
-upd(88,"Finalizando","Gerando documentação…");const failuresNote=failures.length?`\n\n⚠️ Parcial — falharam: ${failures.join(", ")}. Use os botões individuais para tentar de novo cada um.`:"";const isIOSnote=isIOS();const croquiLine=isIOSnote?`- Croqui_Oc-${oc}-${ano}.html — Croqui em HTML (abrir no PC e gerar PDF lá, ou usar AirPrint)`:`- ${mkFileName("pdf","Croqui")} — Croqui de Levantamento`;const readme=`Xandroid — Pacote de exportação\n${"=".repeat(40)}\n\nOcorrência: ${oc}/${ano}\nDP: ${dp}\nPerito: ${loginName||"___"} (mat. ${loginMat})\nGerado em: ${fmtDt(new Date())}\nVersão app: ${APP_VERSION}${failuresNote}\n\nConteúdo:\n${croquiLine}\n- ${mkFileName("docx")} — Laudo DOCX (editável)\n- ${mkFileName("json","Backup")} — Backup (referencia /fotos/ — importe o ZIP inteiro)\n${fotos.length>0?`- /fotos/ — ${fotos.length} foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg`:""}\n\n⚠️ RRV (Registro de Recolhimento de Vestígios) NÃO está incluído neste pacote.\n   Motivo: o RRV requer assinatura do papiloscopista responsável.\n   Para gerar o RRV, use o botão "RRV PDF" individual na aba Exportar.\n${isIOSnote?`\n📱 NOTA SOBRE IPHONE/IPAD:\n   A geração de PDF nativa do Croqui falha em iOS 18.x por bug do html2pdf+\n   Safari. Por isso, o pacote inclui Croqui_*.html em vez de Croqui_*.pdf.\n   Pra ter o PDF do Croqui:\n   - Opção A: abra o Croqui_*.html no computador (Chrome/Firefox/Safari) e\n     use Ctrl+P / Cmd+P → Salvar como PDF.\n   - Opção B: no iPhone, use o botão "🖨 Imprimir/PDF (iOS)" da aba Exportar\n     → AirPrint → Salvar em Arquivos.\n`:""}\nCOMO IMPORTAR DE VOLTA:\n  Abra o Xandroid → "Importar backup" → selecione este arquivo .zip\n  As fotos serão reconectadas aos respectivos campos do croqui.\n`;files["LEIA-ME.txt"]=strToU8(readme);
+// 6) README — v253: ZIP só com DOCX (Croqui + RRV) + JSON + fotos
+upd(88,"Finalizando","Gerando documentação…");
+const failuresNote=failures.length?("\n\n⚠ Parcial — falharam: "+failures.join(", ")+". Use os botões individuais para tentar de novo cada um."):"";
+const drawCount=imgRef.current?Object.keys(imgRef.current).filter(k=>imgRef.current[k]).length:0;
+const fotosLine=fotos.length>0?("- /fotos/*.jpg — "+fotos.length+" foto(s) JPEG em resolução máxima (sem re-compressão)\n  Nome: <seq>_<categoria>_<fase>_<ref>_<descrição>.jpg\n"):"";
+const drawLine=drawCount>0?("- /fotos/croqui_*.png — "+drawCount+" desenho(s) do canvas (croquis em PNG)\n"):"";
+const readme="Xandroid — Pacote de exportação\n"+("=".repeat(40))+"\n\n"+
+"Ocorrência: "+oc+"/"+ano+"\n"+
+"DP: "+dp+"\n"+
+"Perito: "+(loginName||"___")+" (mat. "+loginMat+")\n"+
+"Gerado em: "+fmtDt(new Date())+"\n"+
+"Versão app: "+APP_VERSION+failuresNote+"\n\n"+
+"Conteúdo:\n"+
+"- "+mkFileName("docx","Croqui")+" — Croqui de Levantamento de Local (DOCX editável)\n"+
+"- "+mkFileName("docx","RRV")+" — Registro de Recolhimento de Vestígios (DOCX editável)\n"+
+"- "+mkFileName("json","Backup")+" — Backup completo (referencia /fotos/ — importe o ZIP inteiro)\n"+
+fotosLine+drawLine+"\n"+
+"COMO GERAR PDF:\n"+
+"  Abra o DOCX no Word / Pages / Google Docs / LibreOffice e use \"Salvar como PDF\".\n"+
+"  Os botões individuais \"Croqui PDF\" e \"RRV PDF\" da aba Exportar também geram PDF\n"+
+"  (em iPhone via AirPrint, em Windows/Android via download direto).\n\n"+
+"COMO IMPORTAR DE VOLTA:\n"+
+"  Abra o Xandroid → \"Importar backup\" → selecione este arquivo .zip\n"+
+"  As fotos serão reconectadas aos respectivos campos do croqui.\n";
+files["LEIA-ME.txt"]=strToU8(readme);
 // Gerar ZIP final via fflate — sem callback de progresso, mas é rápido
 upd(90,"Compactando","Comprimindo arquivos…");const zipU8=await fflateZipAsync(files,{level:6});const zipBlob=new Blob([zipU8],{type:"application/zip"});const zipName=`${baseName}_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.zip`;
 // Web Share API
@@ -3351,13 +3501,7 @@ if(tab===TAB_EXPORTAR){if(exportView==="pdf"||exportView==="rrv")return(<div sty
 return(<><div style={{background:t.successBgS,border:`1.5px solid ${t.successBd}`,borderRadius:12,padding:14,marginBottom:12,display:"flex",flexWrap:"wrap",gap:12,justifyContent:"center"}}>{[["📋",data.oc?`Oc.${data.oc}/${(data.oc_ano||"").slice(-2)}`:"—"],["🏢",data.dp||"—"],["🧪",`${vestigios.filter(v=>v.desc).length} vest.`],["💀",`${cadaveres.filter((_,ci)=>{const cx2="c"+ci+"_";return data[cx2+"fx"]||data[cx2+"dg"]||data[cx2+"sx"]||wounds.some(w=>w.cadaver===ci);}).length} cad.`],["📷",`${fotos.length} fotos`],["🚗",`${veiculos.filter((_,i)=>data["v"+i+"_tipo"]||data["v"+i+"_placa"]).length} veíc.`],["🩸",`${trilhas.length} trilhas`]].map(([ic,tx],i)=><span key={i} style={{display:"inline-flex",alignItems:"center",fontSize:12,color:t.tx,fontWeight:600,padding:"6px 11px",borderRadius:100,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)"}`,letterSpacing:-0.1}}><AppIcon name={ic} size={16} mr={5}/>{tx}</span>)}</div>{(()=>{const warns=checkCampos();if(!warns.length)return null;const byAba={};warns.forEach(w=>{if(!byAba[w.aba])byAba[w.aba]=[];byAba[w.aba].push(w.campo);});return(<div style={{background:t.warningBg,border:`1.5px solid ${t.warningBd}`,borderRadius:12,padding:14,marginBottom:12}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:18}}>⚠️</span><span style={{fontSize:14,fontWeight:700,color:dark?"#ffcc00":"#856404"}}>{warns.length} campo{warns.length>1?"s":""} não preenchido{warns.length>1?"s":""}</span></div>{Object.entries(byAba).map(([aba,campos])=>(<div key={aba} style={{marginBottom:6}}><span style={{fontSize:12,fontWeight:700,color:dark?"#ffcc00":"#856404"}}>{aba}:</span><span style={{fontSize:12,color:dark?"#ddd":"#664400",marginLeft:4}}>{campos.join(", ")}</span></div>))}</div>);})()}{(()=>{const fotoKB=fotos.reduce((s,f)=>s+(f.sizeKB||0),0);let dadosKB=0;try{dadosKB=Math.round(new Blob([JSON.stringify({dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,ppm})]).size/1024);}catch(e){dadosKB=0;}const totalKB=fotoKB+dadosKB;const limitKB=quotaKB;const pct=Math.min(100,Math.round(totalKB/limitKB*100));const warn=pct>=90;const mid=pct>=70&&!warn;const barColor=warn?t.no:(mid?"#ff9500":t.ok);const fmtMB=(kb)=>kb>=1048576?(kb/1048576).toFixed(2)+" GB":kb>=1024?(kb/1024).toFixed(2)+" MB":kb+" KB";return(<div style={{background:t.cd,borderRadius:14,padding:"14px 18px",marginBottom:14,boxShadow:dark?"0 1px 3px rgba(0,0,0,0.4),0 0 0 0.5px rgba(255,255,255,0.05)":"0 1px 3px rgba(0,0,0,0.06),0 0 0 0.5px rgba(0,0,0,0.04)"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:8}}><HardDrive size={16} color={t.t2}/><span style={{fontSize:14,fontWeight:700,color:t.tx}}>Armazenamento</span></div><span style={{fontSize:13,fontWeight:600,color:barColor}}>{fmtMB(totalKB)} <span style={{color:t.t3,fontWeight:500}}>/ {fmtMB(quotaKB)}</span></span></div><div style={{height:8,background:t.bg3,borderRadius:4,overflow:"hidden",marginBottom:8}}><div style={{width:pct+"%",height:"100%",background:barColor,transition:"width 0.3s"}}/></div><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:t.t2}}><span><AppIcon name="📝" size={14} mr={4}/>Dados: <b style={{color:t.tx}}>{fmtMB(dadosKB)}</b></span><span><AppIcon name="📷" size={14} mr={4}/>Fotos: <b style={{color:t.tx}}>{fmtMB(fotoKB)}</b> ({fotos.length})</span><span style={{color:barColor,fontWeight:600}}>{pct}%</span></div>{warn&&<p style={{fontSize:11,color:t.no,margin:"8px 0 0",lineHeight:1.4}}>⚠️ Próximo do limite. Considere baixar backup e iniciar um novo croqui, ou desligar <b>alta qualidade</b> (📷✨) antes de tirar mais fotos.</p>}{mid&&!warn&&<p style={{fontSize:11,color:"#b26a00",margin:"8px 0 0",lineHeight:1.4}}>💡 Uso moderado. Ainda cabem fotos, mas já dá pra pensar em backup preventivo.</p>}</div>);})()}
 {/* === PACOTE COMPLETO — ação principal === */}
 <Cd_ styles={ST} title="Pacote Completo" aria-label="Pacote Completo" icon="📦" variant="success">
-<p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Gera um ZIP com: <b>Croqui PDF + DOCX + Backup JSON{fotos.length>0?` + ${fotos.length} foto(s)`:""}</b>.</p>
-<div style={{fontSize:11,color:dark?"#ffcc00":"#856404",background:dark?"rgba(255,204,0,0.08)":"rgba(255,204,0,0.15)",border:`1px solid ${dark?"rgba(255,204,0,0.25)":"rgba(255,204,0,0.4)"}`,borderRadius:8,padding:"8px 10px",marginBottom:12,lineHeight:1.45,display:"flex",gap:6,alignItems:"flex-start"}}><span style={{fontSize:14,flexShrink:0}}>ℹ️</span><span><b>RRV não vai no pacote.</b> Como precisa da assinatura do papiloscopista, gere ele separado pelo botão <b>"RRV PDF"</b> abaixo no momento que ele estiver disponível.</span></div>
-{/* v252: aviso iOS atualizado — agora o caminho oficial é AirPrint */}
-{isIOS()&&<div style={{fontSize:11,color:dark?"#7dc3ff":"#0050b5",background:dark?"rgba(0,122,255,0.08)":"rgba(0,122,255,0.08)",border:`1px solid ${dark?"rgba(0,122,255,0.25)":"rgba(0,122,255,0.3)"}`,borderRadius:10,padding:"10px 12px",marginBottom:12,lineHeight:1.5}}>
-<div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:6}}><span style={{fontSize:15,flexShrink:0}}>📱</span><b style={{color:dark?"#7dc3ff":"#0050b5"}}>iPhone/iPad — como salvar PDF</b></div>
-<div style={{paddingLeft:21,fontSize:10.5}}>Os botões <b>Croqui PDF</b> e <b>RRV PDF</b> abrem nova aba pronta pra imprimir. Lá:<br/>1️⃣ Toque em <b>Compartilhar (⎘)</b> ou no botão "🖨 Imprimir" no banner azul<br/>2️⃣ Escolha <b>Imprimir</b> · 3️⃣ Toque em <b>"Salvar em Arquivos"</b> · 4️⃣ PDF criado!<br/><br/>O <b>Pacote ZIP</b> inclui Croqui em HTML (gera PDF perfeito ao abrir no PC).<br/><i>Por quê? Geração de PDF nativa trava em iOS 18 — bug público do html2pdf+WebKit.</i></div>
-</div>}
+{(()=>{const drawCount=imgRef.current?Object.keys(imgRef.current).filter(k=>imgRef.current[k]).length:0;const partes=["Croqui DOCX","RRV DOCX","Backup JSON"];if(fotos.length>0)partes.push(fotos.length+" foto(s)");if(drawCount>0)partes.push(drawCount+" croqui(s)");return(<p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Gera um ZIP com: <b>{partes.join(" + ")}</b>. Para PDF, abra os DOCX no Word/Pages e use "Salvar como PDF".</p>);})()}
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 <button type="button" style={{...bt,background:`linear-gradient(135deg,${t.ac} 0%,${t.ac}cc 100%)`,color:"#fff",fontWeight:700,boxShadow:`0 2px 8px ${t.ac}55`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(true)} aria-label="Compartilhar pacote ZIP"><AppIcon name="📤" size={16} mr={4}/>Compartilhar ZIP</button>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1.5px solid ${t.bd}`,padding:"12px 16px",fontSize:14,flex:1,minWidth:140,textAlign:"center",justifyContent:"center"}} onClick={()=>exportAllZip(false)} aria-label="Baixar pacote ZIP"><AppIcon name="💾" size={16} mr={4}/>Baixar ZIP</button>
@@ -3379,7 +3523,7 @@ return(<span style={{position:"relative",display:"inline-flex"}}><button type="b
 
 {/* === BACKUP JSON === */}
 <Cd_ styles={ST} title="Backup" aria-label="Backup" icon="💾" variant="primary">
-<p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Salva ou restaura todos os dados deste laudo num arquivo JSON. Útil para mover de celular ou guardar offline.</p>
+<p style={{fontSize:12,color:t.t2,margin:"0 0 12px",lineHeight:1.5}}>Salva ou restaura todos os dados deste croqui num arquivo JSON. Útil para mover de celular ou guardar offline.</p>
 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
 <button type="button" style={{...bt,background:t.ac,color:"#fff"}} onClick={()=>{try{const bk=JSON.stringify({_v:APP_VERSION,dados:data,vestigios,canvasVest,vestes,papilos,wounds,edificacoes,veiVest,trilhas,cadaveres,veiculos,desenho:imgRef.current,desenhos,stampObjs,fotos,ppm,perito:loginName,matricula:loginMat,timestamp:new Date().toISOString()});const blob=new Blob([bk],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=mkFileName("json","Backup");document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),5000);showToast("✅ Backup baixado!");}catch(e){showToast("❌ Erro: "+e.message);}}}><AppIcon name="💾" size={14} mr={4}/>Baixar JSON</button>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>pickFile({accept:".json,.zip",onPick:(fls)=>doImportBackupFile(fls[0])})}><AppIcon name="📂" size={14} mr={4}/>Importar JSON / ZIP</button>
