@@ -1,3 +1,23 @@
+## v254 — ZIP descontinuado, qualidade máxima, fix burst e bug do "+ Cadáver"
+
+- **ZIP "Pacote Completo" REMOVIDO** da aba Exportar. Cada saída agora é um botão individual: travas grandes nunca mais.
+- **Aba Exportar reorganizada em cards por documento**:
+  - **Croqui de Levantamento**: Croqui PDF + Croqui DOCX + Compartilhar
+  - **RRV**: RRV PDF + RRV DOCX (NOVO botão de download direto) + Compartilhar (NOVO via Web Share)
+  - **Fotos**: novo botão "Salvar N fotos" — usa Web Share API para o usuário escolher destino (Arquivos, Drive, AirDrop). Sem ZIP, sem compressão extra.
+  - **Outros**: Texto resumo
+  - **Backup**: Baixar JSON / Importar (mantido)
+- **Toggle HQ ✨ removido** — fotos sempre em qualidade máxima (2400 px / JPEG 0.92). Sem mais escolha "Normal vs HQ".
+- **Bug do burst (várias fotos) corrigido**:
+  - `objectFit: cover` no `<video>` — preenche a tela inteira em landscape, sem mais bordas pretas.
+  - Constraints de câmera elevadas pra `width: ideal 3840`, `height: ideal 2160` — iOS entrega o melhor possível.
+  - Delay de 280 ms entre clique e captura → autofoco do iOS pega o frame nítido (não borrado).
+  - Qualidade de captura igual à individual (0.92 JPEG / 2400 px).
+- **Bug do botão "+ Cadáver" sumindo corrigido**:
+  - Reestruturação do card Cadáveres em 2 linhas: seletor + botões em cima (sticky), faixa de fotos em baixo com scroll horizontal.
+  - Mesma fix aplicada à aba Veículos.
+- **Função `saveRRVDocx` exposta como botão individual** ("RRV DOCX") — não fica mais escondida só dentro do antigo ZIP.
+
 ## v253 — ZIP simplificado: só DOCX + JSON + fotos + desenhos
 
 - **Pacote ZIP refeito**: agora contém apenas
