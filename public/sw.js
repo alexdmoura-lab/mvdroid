@@ -1,14 +1,12 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (Opção A — atualização silenciosa)
-// CACHE_VERSION: xandroid-v16 (App v247 — pacote 5: header + cronômetro
-//   + RRV separado + fix bug ZIP após primeira execução.
-//   Header: "Novo" virou só "+" sem texto, toggle de alta resolução
-//   removido (defaultava off mesmo). Cronômetro de cena no header
-//   aparece quando dt_che é preenchido (mostra "1h 25m" desde a chegada).
-//   ZIP: RRV não vai mais no pacote (precisa assinatura papiloscopista).
-//   Aviso visível no card "Pacote Completo". Timeouts maiores
-//   (Croqui 30s→45s, DOCX agora tem 60s). FIX: setTimeout de 3s do
-//   "limpar progress" da chamada anterior zerava o progress da próxima.)
+// CACHE_VERSION: xandroid-v17 (App v248 — fix Croqui PDF falhando no ZIP +
+//   reset defensivo de lock preso. Removidas opções suspeitas do html2canvas
+//   que introduzi na v246 (removeContainer, letterRendering, imageTimeout) —
+//   algumas versões da lib rejeitavam silenciosamente e quebravam Croqui PDF.
+//   Reset defensivo: se exportingZipRef ficou preso há mais de 6 min, libera
+//   automaticamente. Logs detalhados em window.__xandroidErrors quando algo
+//   falhar — visível em "Aba Exportar > Avançado > Diagnóstico".)
 // ════════════════════════════════════════════════════════════════
 // IMPORTANTE: o prefixo do cache mudou de "mvdroid-" para "xandroid-".
 // O bloco de activate (mais abaixo) limpa caches antigos com prefixo
@@ -32,7 +30,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v16';
+const CACHE_VERSION = 'xandroid-v17';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

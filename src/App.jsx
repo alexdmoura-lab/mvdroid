@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v247-Xandroid";
+const APP_VERSION="v248-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -834,7 +834,7 @@ const[confirmBack,setConfirmBack]=useState(null);
 // Haptic patterns inspirados em UIKit Feedback Generator (iOS)
 const haptic=(type=50)=>{try{if(typeof type==="number"){navigator.vibrate?.(type);return;}// Patterns nomeados (estilo iOS)
 const patterns={selection:10,light:15,medium:30,heavy:50,success:[15,40,15],warning:[30,80,30],error:[50,80,50,80,50],pulse:[20,60,20]};const p=patterns[type]||30;navigator.vibrate?.(p);}catch(e){/* vibrate não suportado, ok */}};
-const backupTimerRef=useRef(null);const savingRef=useRef(false);const pendingSaveRef=useRef(false);const exportingZipRef=useRef(false);const zipCancelRef=useRef(false);const zipProgressTimerRef=useRef(null);
+const backupTimerRef=useRef(null);const savingRef=useRef(false);const pendingSaveRef=useRef(false);const exportingZipRef=useRef(false);const zipCancelRef=useRef(false);const zipProgressTimerRef=useRef(null);const zipStartedAtRef=useRef(0);
 // ── STATE REF — stable reference for saveBackup (avoids 17+ dependencies) ──
 const stateSnap=useRef({});
 // Update stateSnap ref directly (no useEffect needed)
@@ -2041,18 +2041,21 @@ const smartSavePdf=async(blobOrUrl,title)=>{
 // Helper: gera blob PDF a partir de HTML (reusado por exportAllZip)
 // v232: ID único pra evitar colisão se duas chamadas concorrerem.
 // Timeout opcional (default 60s) — html2pdf pode travar em silêncio em iOS.
-// v246: opts.fast=true reduz scale do html2canvas (2 → 1.4) e timeout (60s → 30s).
-// Usado pelo ZIP completo onde 2 PDFs em série dobravam o tempo total.
-// Para PDF avulso (botão "Croqui PDF" sozinho) mantém scale 2 (qualidade Apple Retina).
-const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const tMs=timeoutMs||(fast?30000:60000);const scale=fast?1.4:2;const html2pdf=await loadH2P();
+// v246: opts.fast=true reduz scale (2 → 1.4) — pra ZIP onde tempo importa mais que qualidade.
+// v248: removidas as opções `removeContainer`, `letterRendering`, `imageTimeout`, `compress`
+// que tinham introduzido na v246 e estavam causando falhas silenciosas no Croqui PDF
+// dentro do ZIP (algumas versões do html2canvas/jsPDF não aceitam essas chaves e
+// rejeitam a Promise sem mensagem clara). Voltei pra config conservadora que funcionava
+// na v245, mantendo só o `scale` dinâmico.
+const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const tMs=timeoutMs||(fast?45000:60000);const scale=fast?1.4:2;const html2pdf=await loadH2P();
 const uniqueId="pdf-export-tmp-"+Date.now()+"-"+Math.floor(Math.random()*100000);
 const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssText="position:fixed;top:-99999px;left:-99999px;width:800px;padding:24px 20px;color:#222;font-size:12px;line-height:1.5;background:#fff;font-family:-apple-system,Arial,sans-serif;";tempEl.innerHTML=html;document.body.appendChild(tempEl);try{
-// dá um respiro pro DOM renderizar antes do html2canvas começar (evita race em iOS)
-await new Promise(r=>setTimeout(r,30));
-const work=html2pdf().set({margin:[14,8,14,8],filename:mkFileName("pdf",title==="RRV"?"RRV":"Croqui"),image:{type:"jpeg",quality:fast?0.85:0.95},html2canvas:{scale,useCORS:true,logging:false,removeContainer:true,letterRendering:false,imageTimeout:5000},jsPDF:{unit:"mm",format:"a4",orientation:"portrait",compress:true},pagebreak:{mode:["avoid-all","css","legacy"]}}).from(tempEl).toPdf().get("pdf");
+// respiro pro DOM renderizar antes do html2canvas começar (evita race em iOS)
+await new Promise(r=>setTimeout(r,50));
+const work=html2pdf().set({margin:[14,8,14,8],filename:mkFileName("pdf",title==="RRV"?"RRV":"Croqui"),image:{type:"jpeg",quality:fast?0.85:0.95},html2canvas:{scale,useCORS:true,logging:false},jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},pagebreak:{mode:["avoid-all","css","legacy"]}}).from(tempEl).toPdf().get("pdf");
 const timer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout "+(tMs/1000)+"s gerando "+title+" (html2pdf travou)")),tMs));
 const pdfObj=await Promise.race([work,timer]);
-const totalPages=pdfObj.internal.getNumberOfPages();const pageW=pdfObj.internal.pageSize.getWidth();const pageH=pdfObj.internal.pageSize.getHeight();for(let i=1;i<=totalPages;i++){pdfObj.setPage(i);pdfObj.setFontSize(7);pdfObj.setTextColor(150);pdfObj.text(`Oc.: ${data.oc||"___"}/${data.oc_ano||""} | DP: ${data.dp||""} | Perito: ${data.p1||"___"}`,pageW/2,8,{align:"center"});pdfObj.text(`Página ${i} de ${totalPages}`,pageW/2,pageH-5,{align:"center"});}return pdfObj.output("blob");}finally{try{tempEl.innerHTML="";}catch(e){}try{document.body.removeChild(tempEl);}catch(e){}}};
+const totalPages=pdfObj.internal.getNumberOfPages();const pageW=pdfObj.internal.pageSize.getWidth();const pageH=pdfObj.internal.pageSize.getHeight();for(let i=1;i<=totalPages;i++){pdfObj.setPage(i);pdfObj.setFontSize(7);pdfObj.setTextColor(150);pdfObj.text(`Oc.: ${data.oc||"___"}/${data.oc_ano||""} | DP: ${data.dp||""} | Perito: ${data.p1||"___"}`,pageW/2,8,{align:"center"});pdfObj.text(`Página ${i} de ${totalPages}`,pageW/2,pageH-5,{align:"center"});}return pdfObj.output("blob");}finally{try{document.body.removeChild(tempEl);}catch(e){}}};
 
 // Helpers fflate: converter blob → Uint8Array e base64 → Uint8Array
 const blobToU8=async(b)=>new Uint8Array(await b.arrayBuffer());
@@ -2114,10 +2117,16 @@ const doImportBackupFile=async(file,onDone)=>{
 // fflate não tem callback de progresso na compactação — em troca a etapa
 // é tão rápida que não precisa.
 const exportAllZip=async(useShare=false)=>{
-// v247: cancela timeout de "limpar progress após 3s" da CHAMADA ANTERIOR — evitava
-// que uma segunda geração tivesse seu progress zerado depois de 3 segundos.
+// v247/v248: cancela timeout de "limpar progress após 3s" da CHAMADA ANTERIOR.
 if(zipProgressTimerRef.current){clearTimeout(zipProgressTimerRef.current);zipProgressTimerRef.current=null;}
+// v248: RESET DEFENSIVO — se exportingZipRef ficou preso por mais de 6 minutos
+// (tempo máximo realista de uma geração mesmo grande), considera que a chamada
+// anterior morreu silenciosamente e libera o lock. Resolve o bug "botões parados
+// após primeira geração" mesmo que algum erro silencioso tenha pulado o finally.
+const stuckMs=zipStartedAtRef.current?Date.now()-zipStartedAtRef.current:0;
+if(exportingZipRef.current&&stuckMs>360000){console.warn("[ZIP] reset defensivo — lock preso há",Math.round(stuckMs/1000),"s");exportingZipRef.current=false;setZipProgress(null);}
 if(exportingZipRef.current){showToast("⏳ Já está gerando — aguarde");haptic("warning");return;}
+zipStartedAtRef.current=Date.now();
 // v245: aviso pré-ZIP quando há muitas fotos (250+) — alerta o usuário sobre
 // tempo e risco de OOM em iPhone com pouca RAM
 const photoCount=fotos?.length||0;
@@ -2126,14 +2135,14 @@ exportingZipRef.current=true;zipCancelRef.current=false;let stage="iniciando";co
 // files: dicionário { "caminho/arquivo.ext": Uint8Array  ou  [Uint8Array, opts] }
 const files={};
 // 1) PDF Croqui (tolerante a falha) — timeout 45s pra cobrir cenários grandes
-upd(15,"Gerando Croqui PDF","Renderizando (modo rápido)…");try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",45000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);}catch(e){console.error("[ZIP] Croqui PDF falhou:",e);failures.push("Croqui PDF");}
+upd(15,"Gerando Croqui PDF","Renderizando (modo rápido)…");try{const croquiBlob=await genPdfBlobFromHtml(bPDF(),"Croqui",45000,{fast:true});files[mkFileName("pdf","Croqui")]=await blobToU8(croquiBlob);}catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.error("[ZIP] Croqui PDF falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-croqui-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`Croqui (${msg})`);}
 // 2) RRV NÃO é mais incluído no ZIP (v247)
 //    Motivo: RRV requer assinatura do papiloscopista, geralmente feita em
 //    momento separado. Incluir antes do RRV ser válido confunde a cadeia
 //    documental. Use o botão "RRV PDF" individual quando o papiloscopista
 //    estiver disponível pra assinar.
 // 3) DOCX (tolerante a falha) — timeout maior pra montagem grande
-upd(50,"Gerando DOCX","Montando documento Word…");try{const docxPromise=saveCroquiDocx(true);const docxTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 60s no DOCX")),60000));const docxBlob=await Promise.race([docxPromise,docxTimer]);if(docxBlob)files[mkFileName("docx")]=await blobToU8(docxBlob);}catch(e){console.warn("DOCX falhou, continuando sem:",e);failures.push("DOCX");}
+upd(50,"Gerando DOCX","Montando documento Word…");try{const docxPromise=saveCroquiDocx(true);const docxTimer=new Promise((_,rej)=>setTimeout(()=>rej(new Error("Timeout 60s no DOCX")),60000));const docxBlob=await Promise.race([docxPromise,docxTimer]);if(docxBlob)files[mkFileName("docx")]=await blobToU8(docxBlob);}catch(e){const msg=String(e&&e.message||e||"desconhecido").slice(0,80);console.warn("[ZIP] DOCX falhou:",e);try{if(typeof window!=="undefined"&&window.__xandroidErrors)window.__xandroidErrors.unshift({t:new Date().toISOString(),type:"zip-docx-fail",msg,stack:String(e&&e.stack||"").slice(0,1500),extra:""});}catch(_){}failures.push(`DOCX (${msg})`);}
 // 4) Fotos individuais — STORE (level 0, sem re-comprimir JPEG)
 // v244: agora geradas ANTES do JSON pra que o JSON possa apenas REFERENCIAR
 // os arquivos da pasta /fotos/ (em vez de incluir base64 das mesmas fotos).
