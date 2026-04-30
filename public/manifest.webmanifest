@@ -1,14 +1,19 @@
 {
+  "id": "/?source=pwa",
   "name": "Xandroid — SCPe/PCDF",
   "short_name": "Xandroid",
   "description": "App de documentação forense de cenas de crime — SCPe / Polícia Civil do Distrito Federal",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0a1420",
   "theme_color": "#0a1420",
   "lang": "pt-BR",
+  "dir": "ltr",
   "scope": "/",
+  "categories": ["productivity", "utilities", "government"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
@@ -33,6 +38,29 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova cena",
+      "short_name": "Nova cena",
+      "description": "Iniciar levantamento de uma cena nova",
+      "url": "/?action=new&source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Capturar foto",
+      "short_name": "Foto",
+      "description": "Abrir câmera direto",
+      "url": "/?action=capture&source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Exportar última cena",
+      "short_name": "Exportar",
+      "description": "Ir direto para a aba Exportar",
+      "url": "/?action=export&source=shortcut",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
