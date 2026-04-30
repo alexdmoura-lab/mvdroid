@@ -53,7 +53,7 @@ import html2pdf from "html2pdf.js";
 import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v257-Xandroid";
+const APP_VERSION="v258-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2959,84 +2959,61 @@ return h;};
 const BF=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 400 850" style={{width:"100%",maxWidth:374}}>
 <image href={I.anterior} x="0" y="0" width="400" height="830" preserveAspectRatio="xMidYMid meet"/>
 <text x="200" y="846" textAnchor="middle" fontSize="11" fontWeight="600" fill="#999">ANTERIOR {fem?"♀":"♂"}</text>
-{/* Pescoço */}
-<Rg_ id="f_cerv_ant" x={165} y={108} w={70} h={32} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
-{/* Ombros (supraclavicular) */}
-<Rg_ id="f_supraclav_d" x={95} y={140} w={70} h={32} n="Ombro D" count={wc("f_supraclav_d")} onClick={aw}/>
-<Rg_ id="f_supraclav_e" x={235} y={140} w={70} h={32} n="Ombro E" count={wc("f_supraclav_e")} onClick={aw}/>
-{/* Tórax (peito D / esterno / peito E) */}
-<Rg_ id="f_torac_d" x={108} y={172} w={70} h={50} n="Peito D" count={wc("f_torac_d")} onClick={aw}/>
-<Rg_ id="f_esternal" x={178} y={172} w={48} h={88} n="Esterno" count={wc("f_esternal")} onClick={aw}/>
-<Rg_ id="f_torac_e" x={226} y={172} w={70} h={50} n="Peito E" count={wc("f_torac_e")} onClick={aw}/>
-{/* Costelas baixas (hipocôndrio D/E) */}
-<Rg_ id="f_hipoc_d" x={108} y={222} w={70} h={42} n="Cost. D" count={wc("f_hipoc_d")} onClick={aw}/>
-<Rg_ id="f_hipoc_e" x={226} y={222} w={70} h={42} n="Cost. E" count={wc("f_hipoc_e")} onClick={aw}/>
-{/* Epigástrica (boca do estômago) */}
-<Rg_ id="f_epigast" x={150} y={264} w={100} h={36} n="Epigástr." count={wc("f_epigast")} onClick={aw}/>
-{/* Flancos D/E */}
-<Rg_ id="f_flanco_d" x={102} y={266} w={48} h={64} n="Flanco D" count={wc("f_flanco_d")} onClick={aw}/>
-<Rg_ id="f_flanco_e" x={250} y={266} w={48} h={64} n="Flanco E" count={wc("f_flanco_e")} onClick={aw}/>
-{/* Mesogástrica e hipogástrica */}
-<Rg_ id="f_mesogast" x={150} y={300} w={100} h={36} n="Abdômen" count={wc("f_mesogast")} onClick={aw}/>
-<Rg_ id="f_hipogast" x={150} y={336} w={100} h={36} n="Baixo abd." count={wc("f_hipogast")} onClick={aw}/>
-{/* Pubiana / Genital */}
-<Rg_ id="f_pubiana" x={150} y={372} w={100} h={28} n="Púbis" count={wc("f_pubiana")} onClick={aw}/>
-<Rg_ id="f_genital" x={170} y={400} w={60} h={32} n="Genital" count={wc("f_genital")} onClick={aw}/>
-{/* Coxas */}
-<Rg_ id="f_coxa_d" x={130} y={432} w={70} h={120} n="Coxa D" count={wc("f_coxa_d")} onClick={aw}/>
-<Rg_ id="f_coxa_e" x={200} y={432} w={70} h={120} n="Coxa E" count={wc("f_coxa_e")} onClick={aw}/>
-{/* Joelhos */}
-<Rg_ id="f_joelho_d" x={130} y={552} w={70} h={48} n="Joel. D" count={wc("f_joelho_d")} onClick={aw}/>
-<Rg_ id="f_joelho_e" x={200} y={552} w={70} h={48} n="Joel. E" count={wc("f_joelho_e")} onClick={aw}/>
-{/* Pernas (canela) */}
-<Rg_ id="f_perna_d" x={130} y={600} w={70} h={140} n="Perna D" count={wc("f_perna_d")} onClick={aw}/>
-<Rg_ id="f_perna_e" x={200} y={600} w={70} h={140} n="Perna E" count={wc("f_perna_e")} onClick={aw}/>
-{/* Braços (frente) */}
-<Rg_ id="f_braco_d" x={50} y={172} w={50} h={130} n="Braço D" count={wc("f_braco_d")} onClick={aw}/>
-<Rg_ id="f_braco_e" x={300} y={172} w={50} h={130} n="Braço E" count={wc("f_braco_e")} onClick={aw}/>
-{/* Cotovelos (cubital) */}
-<Rg_ id="f_cubital_d" x={42} y={302} w={58} h={32} n="Cot. D" count={wc("f_cubital_d")} onClick={aw}/>
-<Rg_ id="f_cubital_e" x={300} y={302} w={58} h={32} n="Cot. E" count={wc("f_cubital_e")} onClick={aw}/>
-{/* Antebraços */}
-<Rg_ id="f_antebr_d" x={20} y={334} w={70} h={120} n="Antebr. D" count={wc("f_antebr_d")} onClick={aw}/>
-<Rg_ id="f_antebr_e" x={310} y={334} w={70} h={120} n="Antebr. E" count={wc("f_antebr_e")} onClick={aw}/>
+{/* v258: áreas reduzidas ~25% para visual mais limpo */}
+<Rg_ id="f_cerv_ant" x={175} y={114} w={50} h={24} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
+<Rg_ id="f_supraclav_d" x={108} y={146} w={52} h={24} n="Ombro D" count={wc("f_supraclav_d")} onClick={aw}/>
+<Rg_ id="f_supraclav_e" x={240} y={146} w={52} h={24} n="Ombro E" count={wc("f_supraclav_e")} onClick={aw}/>
+<Rg_ id="f_torac_d" x={118} y={178} w={52} h={38} n="Peito D" count={wc("f_torac_d")} onClick={aw}/>
+<Rg_ id="f_esternal" x={184} y={178} w={36} h={66} n="Esterno" count={wc("f_esternal")} onClick={aw}/>
+<Rg_ id="f_torac_e" x={232} y={178} w={52} h={38} n="Peito E" count={wc("f_torac_e")} onClick={aw}/>
+<Rg_ id="f_hipoc_d" x={118} y={224} w={52} h={32} n="Cost. D" count={wc("f_hipoc_d")} onClick={aw}/>
+<Rg_ id="f_hipoc_e" x={232} y={224} w={52} h={32} n="Cost. E" count={wc("f_hipoc_e")} onClick={aw}/>
+<Rg_ id="f_epigast" x={162} y={266} w={76} h={28} n="Epigástr." count={wc("f_epigast")} onClick={aw}/>
+<Rg_ id="f_flanco_d" x={114} y={272} w={36} h={50} n="Flanco D" count={wc("f_flanco_d")} onClick={aw}/>
+<Rg_ id="f_flanco_e" x={252} y={272} w={36} h={50} n="Flanco E" count={wc("f_flanco_e")} onClick={aw}/>
+<Rg_ id="f_mesogast" x={162} y={302} w={76} h={28} n="Abdômen" count={wc("f_mesogast")} onClick={aw}/>
+<Rg_ id="f_hipogast" x={162} y={336} w={76} h={28} n="Baixo ab." count={wc("f_hipogast")} onClick={aw}/>
+<Rg_ id="f_pubiana" x={162} y={374} w={76} h={22} n="Púbis" count={wc("f_pubiana")} onClick={aw}/>
+<Rg_ id="f_genital" x={178} y={402} w={44} h={26} n="Genital" count={wc("f_genital")} onClick={aw}/>
+<Rg_ id="f_coxa_d" x={140} y={438} w={52} h={94} n="Coxa D" count={wc("f_coxa_d")} onClick={aw}/>
+<Rg_ id="f_coxa_e" x={208} y={438} w={52} h={94} n="Coxa E" count={wc("f_coxa_e")} onClick={aw}/>
+<Rg_ id="f_joelho_d" x={140} y={554} w={52} h={38} n="Joel. D" count={wc("f_joelho_d")} onClick={aw}/>
+<Rg_ id="f_joelho_e" x={208} y={554} w={52} h={38} n="Joel. E" count={wc("f_joelho_e")} onClick={aw}/>
+<Rg_ id="f_perna_d" x={140} y={604} w={52} h={108} n="Perna D" count={wc("f_perna_d")} onClick={aw}/>
+<Rg_ id="f_perna_e" x={208} y={604} w={52} h={108} n="Perna E" count={wc("f_perna_e")} onClick={aw}/>
+<Rg_ id="f_braco_d" x={58} y={180} w={38} h={100} n="Braço D" count={wc("f_braco_d")} onClick={aw}/>
+<Rg_ id="f_braco_e" x={304} y={180} w={38} h={100} n="Braço E" count={wc("f_braco_e")} onClick={aw}/>
+<Rg_ id="f_cubital_d" x={50} y={304} w={44} h={26} n="Cot. D" count={wc("f_cubital_d")} onClick={aw}/>
+<Rg_ id="f_cubital_e" x={306} y={304} w={44} h={26} n="Cot. E" count={wc("f_cubital_e")} onClick={aw}/>
+<Rg_ id="f_antebr_d" x={28} y={336} w={54} h={94} n="Antebr.D" count={wc("f_antebr_d")} onClick={aw}/>
+<Rg_ id="f_antebr_e" x={318} y={336} w={54} h={94} n="Antebr.E" count={wc("f_antebr_e")} onClick={aw}/>
 </svg>);};
 
   // ── COSTAS ──
 const BB=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 400 850" style={{width:"100%",maxWidth:374}}>
 <image href={I.posterior} x="0" y="0" width="400" height="830" preserveAspectRatio="xMidYMid meet"/>
 <text x="200" y="846" textAnchor="middle" fontSize="11" fontWeight="600" fill="#999">POSTERIOR {fem?"♀":"♂"}</text>
-{/* Pescoço atrás (cervical posterior) */}
-<Rg_ id="b_cerv_post" x={170} y={100} w={60} h={32} n="Pescoço" count={wc("b_cerv_post")} onClick={aw}/>
-{/* Ombros atrás (deltóide) */}
-<Rg_ id="b_deltoid_d" x={90} y={132} w={75} h={36} n="Ombro D" count={wc("b_deltoid_d")} onClick={aw}/>
-<Rg_ id="b_deltoid_e" x={235} y={132} w={75} h={36} n="Ombro E" count={wc("b_deltoid_e")} onClick={aw}/>
-{/* Omoplatas (escapular) */}
-<Rg_ id="b_escapular_d" x={108} y={170} w={84} h={64} n="Ompla D" count={wc("b_escapular_d")} onClick={aw}/>
-<Rg_ id="b_escapular_e" x={208} y={170} w={84} h={64} n="Ompla E" count={wc("b_escapular_e")} onClick={aw}/>
-{/* Dorsal (costas alta - centro) */}
-<Rg_ id="b_dorsal" x={170} y={170} w={60} h={84} n="Dorsal" count={wc("b_dorsal")} onClick={aw}/>
-{/* Lombar D/E */}
-<Rg_ id="b_lombar_d" x={108} y={234} w={92} h={50} n="Lomb. D" count={wc("b_lombar_d")} onClick={aw}/>
-<Rg_ id="b_lombar_e" x={200} y={234} w={92} h={50} n="Lomb. E" count={wc("b_lombar_e")} onClick={aw}/>
-{/* Sacral D/E */}
-<Rg_ id="b_sacro_d" x={130} y={284} w={70} h={42} n="Sacro D" count={wc("b_sacro_d")} onClick={aw}/>
-<Rg_ id="b_sacro_e" x={200} y={284} w={70} h={42} n="Sacro E" count={wc("b_sacro_e")} onClick={aw}/>
-{/* Nádegas */}
-<Rg_ id="b_glutea_d" x={120} y={326} w={80} h={70} n="Nádega D" count={wc("b_glutea_d")} onClick={aw}/>
-<Rg_ id="b_glutea_e" x={200} y={326} w={80} h={70} n="Nádega E" count={wc("b_glutea_e")} onClick={aw}/>
-{/* Braços atrás */}
-<Rg_ id="b_braco_d" x={50} y={170} w={50} h={130} n="Braço D" count={wc("b_braco_d")} onClick={aw}/>
-<Rg_ id="b_braco_e" x={300} y={170} w={50} h={130} n="Braço E" count={wc("b_braco_e")} onClick={aw}/>
-{/* Antebraços atrás */}
-<Rg_ id="b_antebr_d" x={20} y={300} w={70} h={130} n="Antebr. D" count={wc("b_antebr_d")} onClick={aw}/>
-<Rg_ id="b_antebr_e" x={310} y={300} w={70} h={130} n="Antebr. E" count={wc("b_antebr_e")} onClick={aw}/>
-{/* Coxas atrás */}
-<Rg_ id="b_coxa_d" x={130} y={400} w={70} h={120} n="Coxa D" count={wc("b_coxa_d")} onClick={aw}/>
-<Rg_ id="b_coxa_e" x={200} y={400} w={70} h={120} n="Coxa E" count={wc("b_coxa_e")} onClick={aw}/>
-{/* Panturrilhas */}
-<Rg_ id="b_perna_d" x={130} y={566} w={70} h={140} n="Pantr. D" count={wc("b_perna_d")} onClick={aw}/>
-<Rg_ id="b_perna_e" x={200} y={566} w={70} h={140} n="Pantr. E" count={wc("b_perna_e")} onClick={aw}/>
+{/* v258: áreas reduzidas ~25% */}
+<Rg_ id="b_cerv_post" x={178} y={106} w={44} h={24} n="Pescoço" count={wc("b_cerv_post")} onClick={aw}/>
+<Rg_ id="b_deltoid_d" x={102} y={138} w={56} h={28} n="Ombro D" count={wc("b_deltoid_d")} onClick={aw}/>
+<Rg_ id="b_deltoid_e" x={242} y={138} w={56} h={28} n="Ombro E" count={wc("b_deltoid_e")} onClick={aw}/>
+<Rg_ id="b_escapular_d" x={120} y={176} w={62} h={48} n="Ompla D" count={wc("b_escapular_d")} onClick={aw}/>
+<Rg_ id="b_escapular_e" x={218} y={176} w={62} h={48} n="Ompla E" count={wc("b_escapular_e")} onClick={aw}/>
+<Rg_ id="b_dorsal" x={184} y={176} w={32} h={64} n="Dorsal" count={wc("b_dorsal")} onClick={aw}/>
+<Rg_ id="b_lombar_d" x={120} y={240} w={70} h={38} n="Lomb. D" count={wc("b_lombar_d")} onClick={aw}/>
+<Rg_ id="b_lombar_e" x={210} y={240} w={70} h={38} n="Lomb. E" count={wc("b_lombar_e")} onClick={aw}/>
+<Rg_ id="b_sacro_d" x={140} y={290} w={52} h={32} n="Sacro D" count={wc("b_sacro_d")} onClick={aw}/>
+<Rg_ id="b_sacro_e" x={208} y={290} w={52} h={32} n="Sacro E" count={wc("b_sacro_e")} onClick={aw}/>
+<Rg_ id="b_glutea_d" x={132} y={330} w={60} h={54} n="Nádega D" count={wc("b_glutea_d")} onClick={aw}/>
+<Rg_ id="b_glutea_e" x={208} y={330} w={60} h={54} n="Nádega E" count={wc("b_glutea_e")} onClick={aw}/>
+<Rg_ id="b_braco_d" x={58} y={178} w={38} h={100} n="Braço D" count={wc("b_braco_d")} onClick={aw}/>
+<Rg_ id="b_braco_e" x={304} y={178} w={38} h={100} n="Braço E" count={wc("b_braco_e")} onClick={aw}/>
+<Rg_ id="b_antebr_d" x={28} y={302} w={54} h={100} n="Antebr.D" count={wc("b_antebr_d")} onClick={aw}/>
+<Rg_ id="b_antebr_e" x={318} y={302} w={54} h={100} n="Antebr.E" count={wc("b_antebr_e")} onClick={aw}/>
+<Rg_ id="b_coxa_d" x={140} y={406} w={52} h={94} n="Coxa D" count={wc("b_coxa_d")} onClick={aw}/>
+<Rg_ id="b_coxa_e" x={208} y={406} w={52} h={94} n="Coxa E" count={wc("b_coxa_e")} onClick={aw}/>
+<Rg_ id="b_perna_d" x={140} y={570} w={52} h={108} n="Pantr. D" count={wc("b_perna_d")} onClick={aw}/>
+<Rg_ id="b_perna_e" x={208} y={570} w={52} h={108} n="Pantr. E" count={wc("b_perna_e")} onClick={aw}/>
 </svg>);};
 
   // ── LATERAIS (esquerdo + direito) — v256: usa imagens H/M de corpo inteiro de perfil ──
@@ -3044,36 +3021,36 @@ const BLat=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaver
 <svg viewBox="0 0 200 800" style={{width:"48%",maxWidth:200}}>
 <image href={I.latD} x="0" y="0" width="200" height="780" preserveAspectRatio="xMidYMid meet"/>
 <text x="100" y="796" textAnchor="middle" fontSize="9" fontWeight="600" fill="#999">DIREITO {fem?"♀":"♂"}</text>
-<Rg_ id="h_temporal_d" x={50} y={20} w={100} h={84} n="Cabeça" count={wc("h_temporal_d")} onClick={aw}/>
-<Rg_ id="f_cerv_ant" x={70} y={104} w={70} h={28} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
-<Rg_ id="f_supraclav_d" x={50} y={132} w={90} h={32} n="Ombro" count={wc("f_supraclav_d")} onClick={aw}/>
-<Rg_ id="f_torac_d" x={40} y={164} w={110} h={50} n="Tórax" count={wc("f_torac_d")} onClick={aw}/>
-<Rg_ id="f_braco_d" x={130} y={164} w={50} h={100} n="Braço" count={wc("f_braco_d")} onClick={aw}/>
-<Rg_ id="f_hipoc_d" x={40} y={214} w={110} h={42} n="Costelas" count={wc("f_hipoc_d")} onClick={aw}/>
-<Rg_ id="f_flanco_d" x={40} y={256} w={110} h={50} n="Flanco" count={wc("f_flanco_d")} onClick={aw}/>
-<Rg_ id="f_antebr_d" x={130} y={264} w={50} h={100} n="Antebr." count={wc("f_antebr_d")} onClick={aw}/>
-<Rg_ id="f_mesogast" x={40} y={306} w={110} h={50} n="Abdômen" count={wc("f_mesogast")} onClick={aw}/>
-<Rg_ id="b_glutea_d" x={40} y={356} w={110} h={68} n="Quadril" count={wc("b_glutea_d")} onClick={aw}/>
-<Rg_ id="f_coxa_d" x={48} y={424} w={100} h={130} n="Coxa" count={wc("f_coxa_d")} onClick={aw}/>
-<Rg_ id="f_joelho_d" x={50} y={554} w={100} h={50} n="Joelho" count={wc("f_joelho_d")} onClick={aw}/>
-<Rg_ id="f_perna_d" x={50} y={604} w={100} h={140} n="Perna" count={wc("f_perna_d")} onClick={aw}/>
+<Rg_ id="h_temporal_d" x={62} y={28} w={76} h={68} n="Cabeça" count={wc("h_temporal_d")} onClick={aw}/>
+<Rg_ id="f_cerv_ant" x={78} y={108} w={54} h={22} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
+<Rg_ id="f_supraclav_d" x={62} y={134} w={68} h={26} n="Ombro" count={wc("f_supraclav_d")} onClick={aw}/>
+<Rg_ id="f_torac_d" x={52} y={166} w={84} h={40} n="Tórax" count={wc("f_torac_d")} onClick={aw}/>
+<Rg_ id="f_braco_d" x={138} y={170} w={40} h={80} n="Braço" count={wc("f_braco_d")} onClick={aw}/>
+<Rg_ id="f_hipoc_d" x={52} y={216} w={84} h={32} n="Costelas" count={wc("f_hipoc_d")} onClick={aw}/>
+<Rg_ id="f_flanco_d" x={52} y={258} w={84} h={40} n="Flanco" count={wc("f_flanco_d")} onClick={aw}/>
+<Rg_ id="f_antebr_d" x={138} y={266} w={40} h={80} n="Antebr" count={wc("f_antebr_d")} onClick={aw}/>
+<Rg_ id="f_mesogast" x={52} y={308} w={84} h={40} n="Abdômen" count={wc("f_mesogast")} onClick={aw}/>
+<Rg_ id="b_glutea_d" x={52} y={358} w={84} h={54} n="Quadril" count={wc("b_glutea_d")} onClick={aw}/>
+<Rg_ id="f_coxa_d" x={58} y={426} w={80} h={104} n="Coxa" count={wc("f_coxa_d")} onClick={aw}/>
+<Rg_ id="f_joelho_d" x={60} y={556} w={80} h={40} n="Joelho" count={wc("f_joelho_d")} onClick={aw}/>
+<Rg_ id="f_perna_d" x={60} y={606} w={80} h={114} n="Perna" count={wc("f_perna_d")} onClick={aw}/>
 </svg>
 <svg viewBox="0 0 200 800" style={{width:"48%",maxWidth:200}}>
 <image href={I.latE} x="0" y="0" width="200" height="780" preserveAspectRatio="xMidYMid meet"/>
 <text x="100" y="796" textAnchor="middle" fontSize="9" fontWeight="600" fill="#999">ESQUERDO {fem?"♀":"♂"}</text>
-<Rg_ id="h_temporal_e" x={50} y={20} w={100} h={84} n="Cabeça" count={wc("h_temporal_e")} onClick={aw}/>
-<Rg_ id="f_cerv_ant" x={70} y={104} w={70} h={28} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
-<Rg_ id="f_supraclav_e" x={60} y={132} w={90} h={32} n="Ombro" count={wc("f_supraclav_e")} onClick={aw}/>
-<Rg_ id="f_torac_e" x={50} y={164} w={110} h={50} n="Tórax" count={wc("f_torac_e")} onClick={aw}/>
-<Rg_ id="f_braco_e" x={20} y={164} w={50} h={100} n="Braço" count={wc("f_braco_e")} onClick={aw}/>
-<Rg_ id="f_hipoc_e" x={50} y={214} w={110} h={42} n="Costelas" count={wc("f_hipoc_e")} onClick={aw}/>
-<Rg_ id="f_flanco_e" x={50} y={256} w={110} h={50} n="Flanco" count={wc("f_flanco_e")} onClick={aw}/>
-<Rg_ id="f_antebr_e" x={20} y={264} w={50} h={100} n="Antebr." count={wc("f_antebr_e")} onClick={aw}/>
-<Rg_ id="f_hipogast" x={50} y={306} w={110} h={50} n="Abdômen" count={wc("f_hipogast")} onClick={aw}/>
-<Rg_ id="b_glutea_e" x={50} y={356} w={110} h={68} n="Quadril" count={wc("b_glutea_e")} onClick={aw}/>
-<Rg_ id="f_coxa_e" x={52} y={424} w={100} h={130} n="Coxa" count={wc("f_coxa_e")} onClick={aw}/>
-<Rg_ id="f_joelho_e" x={50} y={554} w={100} h={50} n="Joelho" count={wc("f_joelho_e")} onClick={aw}/>
-<Rg_ id="f_perna_e" x={50} y={604} w={100} h={140} n="Perna" count={wc("f_perna_e")} onClick={aw}/>
+<Rg_ id="h_temporal_e" x={62} y={28} w={76} h={68} n="Cabeça" count={wc("h_temporal_e")} onClick={aw}/>
+<Rg_ id="f_cerv_ant" x={78} y={108} w={54} h={22} n="Pescoço" count={wc("f_cerv_ant")} onClick={aw}/>
+<Rg_ id="f_supraclav_e" x={70} y={134} w={68} h={26} n="Ombro" count={wc("f_supraclav_e")} onClick={aw}/>
+<Rg_ id="f_torac_e" x={64} y={166} w={84} h={40} n="Tórax" count={wc("f_torac_e")} onClick={aw}/>
+<Rg_ id="f_braco_e" x={22} y={170} w={40} h={80} n="Braço" count={wc("f_braco_e")} onClick={aw}/>
+<Rg_ id="f_hipoc_e" x={64} y={216} w={84} h={32} n="Costelas" count={wc("f_hipoc_e")} onClick={aw}/>
+<Rg_ id="f_flanco_e" x={64} y={258} w={84} h={40} n="Flanco" count={wc("f_flanco_e")} onClick={aw}/>
+<Rg_ id="f_antebr_e" x={22} y={266} w={40} h={80} n="Antebr" count={wc("f_antebr_e")} onClick={aw}/>
+<Rg_ id="f_hipogast" x={64} y={308} w={84} h={40} n="Abdômen" count={wc("f_hipogast")} onClick={aw}/>
+<Rg_ id="b_glutea_e" x={64} y={358} w={84} h={54} n="Quadril" count={wc("b_glutea_e")} onClick={aw}/>
+<Rg_ id="f_coxa_e" x={62} y={426} w={80} h={104} n="Coxa" count={wc("f_coxa_e")} onClick={aw}/>
+<Rg_ id="f_joelho_e" x={60} y={556} w={80} h={40} n="Joelho" count={wc("f_joelho_e")} onClick={aw}/>
+<Rg_ id="f_perna_e" x={60} y={606} w={80} h={114} n="Perna" count={wc("f_perna_e")} onClick={aw}/>
 </svg></div>);};
   // ══════════════════════════════════════════
   // SVGs DA CABEÇA — 4 vistas com imagens
@@ -3082,7 +3059,7 @@ const BLat=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaver
 // v257: HS recalibrado — 5 vistas em 1 imagem (800x560)
 // quadrantes da imagem: TL=frente (x≈100-310,y≈10-220), TR=nuca (x≈460-720,y≈10-220),
 // BL=face D (x≈40-260,y≈285-490), BC=cima (x≈285-490,y≈275-510), BR=face E (x≈540-770,y≈285-490)
-const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:950}}>
+const HS=()=>{const I=bodyImgs(g(`c${cadaverIdx}_sx`));const fem=g(`c${cadaverIdx}_sx`)==="Feminino";return(<svg viewBox="0 0 800 580" style={{width:"100%",maxWidth:1150}}>
 <image href={I.cabeca} x="0" y="0" width="800" height="540" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="572" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">CABEÇA — 5 vistas {fem?"♀":"♂"}</text>
 {/* === Vista 1: FACE (FRENTE) === */}
