@@ -8,8 +8,7 @@
 // ╚══════════════════════════════════════════════════════════════╝
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import html2pdf from "html2pdf.js";
-import JSZip from "jszip"; // v241: reintroduzido — saveCroquiDocx ainda usa (migração para fflate fica para a v242)
-import { unzipSync, strFromU8 } from "fflate";
+import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
 const APP_VERSION="v278-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
@@ -944,8 +943,7 @@ useEffect(()=>{if(!loggedIn||showStartMenu)return;isDirtyRef.current=true;setSav
 // salva últimas 10 ocorrências em window.__xandroidErrors (sobrevive enquanto
 // app está aberto). O usuário pode acessar via tela "🔍 Diagnóstico".
 useEffect(()=>{if(typeof window==="undefined")return;if(!window.__xandroidErrors)window.__xandroidErrors=[];const log=(type,err,extra)=>{try{const entry={t:new Date().toISOString(),type,msg:String(err&&err.message||err||"sem mensagem").slice(0,500),stack:String(err&&err.stack||"sem stack").slice(0,2000),extra:extra?String(extra).slice(0,300):""};window.__xandroidErrors.unshift(entry);if(window.__xandroidErrors.length>10)window.__xandroidErrors.length=10;}catch(_){}};const onErr=(ev)=>log("window.error",ev.error||ev.message,ev.filename+":"+ev.lineno);const onRej=(ev)=>log("unhandledrejection",ev.reason,"");window.addEventListener("error",onErr);window.addEventListener("unhandledrejection",onRej);return()=>{window.removeEventListener("error",onErr);window.removeEventListener("unhandledrejection",onRej);};},[]);
-useEffect(()=>{if(!loggedIn||pdfReady)return;setPdfReady("loading");(async()=>{try{await loadH2P();// Pré-carrega JSZip também (background, não bloqueia)
-loadJSZip().catch(e=>console.warn("CQ jszip preload:",e));setPdfReady("ok");}catch(e){console.warn("CQ pdf preload:",e);setPdfReady("fail");}})();},[loggedIn]);// eslint-disable-line react-hooks/exhaustive-deps
+useEffect(()=>{if(!loggedIn||pdfReady)return;setPdfReady("loading");(async()=>{try{await loadH2P();setPdfReady("ok");}catch(e){console.warn("CQ pdf preload:",e);setPdfReady("fail");}})();},[loggedIn]);// eslint-disable-line react-hooks/exhaustive-deps
 // Track recently used DPs (top 5) — adds to history when DP value stable for 2s
 
 // Restore backup on mount — scan ALL slots, show start menu
@@ -1567,14 +1565,14 @@ setStampObjs(so=>so.filter(s2=>s2.sheet!==desenhoIdx));setSelStamp(null);};
 
 // Export
 const pCSS=`@page{size:A4;margin:25mm 15mm 20mm 15mm}@page{@bottom-center{content:"Croqui de Levantamento de Local — pág. " counter(page) " de " counter(pages) " — SCPe/IC/DPT/PCDF";font-size:9px;color:#666;font-family:Arial,Helvetica,sans-serif}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body,html{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#1A1A1A;line-height:1.55;padding:15px;margin:0}table{width:100%;border-collapse:collapse}td,th{line-height:1.5}img{max-width:100%}h2,h3,h4,h5,h6{font-family:Arial,Helvetica,sans-serif}`;
-// v235: bibliotecas (html2pdf, JSZip) agora vêm do bundle local via import,
-// não mais via fetch a CDN com cache em localStorage. Vantagens:
+// Bibliotecas (html2pdf, fflate) vêm do bundle local via import, não mais via
+// fetch a CDN com cache em localStorage. Vantagens:
 //  • Sem risco de cdnjs comprometido executar código no app forense
 //  • Sem cache de 30 dias em localStorage que poderia perpetuar comprometimento
 //  • Funciona offline desde a primeira carga (sem precisar baixar de rede)
 //  • CSP mais restritiva (script-src 'self') passa a ser viável
-// Mantemos as funções loadH2P/loadJSZip como wrappers async para preservar
-// a assinatura usada no resto do código (await loadH2P()).
+// loadH2P fica como wrapper async pra preservar a assinatura `await loadH2P()`
+// usada no resto do código.
 const loadH2P=async()=>html2pdf;
   // ──────────────────────────────────────────
   // MAPA — Abre Google Maps + sobe screenshot como base do canvas
@@ -1620,7 +1618,7 @@ const loadH2P=async()=>html2pdf;
   // ──────────────────────────────────────────
   // EXPORTAÇÃO — PDF, DOCX e funções auxiliares
   // savePDF: gera PDF via html2pdf.js
-  // saveCroquiDocx: gera .docx real (OOXML/JSZip) direto dos dados
+  // saveCroquiDocx: gera .docx real (OOXML via fflate) direto dos dados
   // copyHTML: copia HTML para clipboard
   // ──────────────────────────────────────────
 
@@ -1635,16 +1633,20 @@ setPdfBusy(true);setCopyOk("Gerando PDF…");if(pdfDataUrl)try{URL.revokeObjectU
 // v239: baixa direto, sem mostrar passo intermediário com botões "Visualizar/Baixar".
 await smartSavePdf(blob,title);
 }catch(e){setCopyOk("Erro: "+e.message);setTimeout(()=>setCopyOk(""),6000);}finally{setPdfBusy(false);}};
-const loadJSZip=async()=>JSZip;
+// Wrapper com a mesma API do JSZip (file/generateAsync), mas usando fflate por baixo.
+// Saída: Blob DOCX pronto pra download/share. Mantém a interface do código antigo
+// minimizando o diff dentro de saveCroquiDocx/saveRRVDocx.
+const mkDocxZip=()=>{const files={};return{
+  file:(path,content)=>{const u8=typeof content==="string"?strToU8(content):content;files[path]=[u8,{level:6}];},
+  generateAsync:()=>new Promise((resolve,reject)=>{fflateZip(files,{level:6},(err,u8)=>{if(err)reject(err);else resolve(new Blob([u8],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));});})
+};};
 const X=(s)=>{if(!s)return"";const v=Array.isArray(s)?s.join(", "):String(s);return v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
 const saveCroquiDocx=async(returnBlobOnly=false)=>{
   /* v201: forceSaveCanvas pode falhar (canvas vazio/quebrado) — não pode bloquear o DOCX */
   try{forceSaveCanvas();}catch(eFsc){console.warn("forceSaveCanvas falhou (continuando):",eFsc);}
   try{
     if(!returnBlobOnly)showToast("⏳ Gerando Croqui...");
-    const JSZip=await loadJSZip();
-    if(!JSZip)throw new Error("Não foi possível carregar JSZip — verifique sua internet");
-    const zip=new JSZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");
+    const zip=mkDocxZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");
 /* v201: esc2 reforçado — strip de control chars que quebram XML (zero-width, BOMs etc.) */
 const esc2=(s)=>String(s??"").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
 const Pp=(text,opts={})=>{const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?`<w:color w:val="${opts.color}"/>`:"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:"";const ind=opts.indFirst?`<w:ind w:firstLine="${opts.indFirst}"/>`:"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing=`<w:spacing w:before="${spBef}" w:after="${spAft}" w:line="320" w:lineRule="auto"/>`;const brd=opts.border?`<w:pBdr>${opts.border}</w:pBdr>`:"";const keepNext=opts.keepNext?'<w:keepNext/>':"";const keepLines=opts.keepLines?'<w:keepLines/>':"";const pPr=`<w:pPr>${keepNext}${keepLines}${center}${brd}${spacing}${ind}${shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:""}<w:rPr>${bold}${italic}<w:sz w:val="${sz}"/>${color}</w:rPr></w:pPr>`;return`<w:p>${pPr}<w:r><w:rPr>${bold}${italic}${caps}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${color}</w:rPr><w:t xml:space="preserve">${esc2(text)}</w:t></w:r></w:p>`;};
@@ -2034,9 +2036,7 @@ showToast("✅ Croqui gerado!");
 const saveRRVDocx=async(returnBlobOnly=false)=>{
 try{
 if(!returnBlobOnly)showToast("Gerando RRV...");
-const JSZip=await loadJSZip();
-if(!JSZip)throw new Error("Nao foi possivel carregar JSZip");
-const zip=new JSZip();const d=data;
+const zip=mkDocxZip();const d=data;
 const oc=d.oc||"___";const ano=d.oc_ano||"____";
 const dpResolvedRRV=d.dp==="Outro"?(d.dp_outro||""):(d.dp||"");
 const dpFooter=dpResolvedRRV.replace(/[ªº\s]/g,"")||"___";
@@ -3875,7 +3875,7 @@ return(<div key={si} style={{background:isActive?(dark?"#1a2a1a":"#e8f5e9"):(dar
 {/* Diagnóstico + Reset libs */}
 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,fontSize:12}} onClick={()=>setShowDiag(true)} aria-label="Tela de diagnóstico"><AppIcon name="🔍" size={14} mr={4}/>Diagnóstico</button>
-<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.wn}`,fontSize:12}} onClick={async()=>{try{let removed=0;for(const k of Object.keys(localStorage)){if(k.startsWith("cq_lib_")){localStorage.removeItem(k);removed++;}}delete window.html2pdf;delete window.JSZip;setPdfReady(false);showToast(`✅ ${removed} bibliotecas resetadas — recarregando…`);haptic("medium");setTimeout(()=>window.location.reload(),1500);}catch(e){showToast("❌ "+e.message);}}} aria-label="Resetar cache de bibliotecas e recarregar app"><AppIcon name="🔄" size={14} mr={4}/>Resetar libs</button>
+<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.wn}`,fontSize:12}} onClick={async()=>{try{let removed=0;for(const k of Object.keys(localStorage)){if(k.startsWith("cq_lib_")){localStorage.removeItem(k);removed++;}}delete window.html2pdf;setPdfReady(false);showToast(`✅ ${removed} bibliotecas resetadas — recarregando…`);haptic("medium");setTimeout(()=>window.location.reload(),1500);}catch(e){showToast("❌ "+e.message);}}} aria-label="Resetar cache de bibliotecas e recarregar app"><AppIcon name="🔄" size={14} mr={4}/>Resetar libs</button>
 </div>
 
 {/* Limpeza de memória */}
@@ -4054,7 +4054,7 @@ return(<button type="button" key={slot} style={{background:dark?"rgba(52,199,89,
 </div>
 </div>);})()}
 {burstCtx&&<BurstModal rk={burstCtx.rk} onClose={()=>setBurstCtx(null)} onConfirm={(novas)=>{setFotos(p=>[...p,...novas]);haptic("heavy");showToast("📷 "+novas.length+" foto"+(novas.length>1?"s":"")+" adicionada"+(novas.length>1?"s":""));setBurstCtx(null);}} utils={{uid,mkAutoLegend,captureGPS,haptic,compressImg,pickFile,showToast}}/>}
-{showDiag&&(()=>{const errs=(typeof window!=="undefined"&&window.__xandroidErrors)||[];const cacheKeys=(()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith("cq_lib_"));}catch(_){return[];}})();const libs=[];try{libs.push("html2pdf:"+(typeof window.html2pdf==="function"?"OK (função)":typeof window.html2pdf==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}try{libs.push("JSZip:"+(typeof window.JSZip==="function"?"OK (função)":typeof window.JSZip==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}const fullText=`Xandroid Diagnóstico — ${new Date().toLocaleString("pt-BR")}\nVersão: ${APP_VERSION}\nUserAgent: ${navigator.userAgent}\nLibs: ${libs.join(" | ")}\nCache libs: ${cacheKeys.join(", ")||"(vazio)"}\n\n=== Últimos ${errs.length} erros ===\n${errs.map((e,i)=>`[${i+1}] ${e.t}\nTipo: ${e.type}\nMsg: ${e.msg}\nExtra: ${e.extra}\nStack: ${e.stack}\n`).join("\n---\n")||"Nenhum erro registrado."}`;return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:14,padding:20,maxWidth:600,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}><div style={{fontSize:18,fontWeight:800,color:t.ac,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><AppIcon name="🔍" size={20} mr={0}/>Diagnóstico</div><p style={{fontSize:11,color:t.t2,margin:"0 0 12px",lineHeight:1.4}}>Estado interno do app, bibliotecas carregadas, e últimos erros. Útil para reportar problemas.</p><div style={{flex:1,overflowY:"auto",background:t.bg3,padding:12,borderRadius:8,fontFamily:"monospace",fontSize:11,color:t.tx,whiteSpace:"pre-wrap",lineHeight:1.5}}>{fullText}</div><div style={{display:"flex",gap:8,marginTop:12}}><button type="button" style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={()=>{const fb=()=>{const ta=document.createElement("textarea");ta.value=fullText;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");showToast("✅ Diagnóstico copiado!");}catch(e){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(()=>showToast("✅ Diagnóstico copiado!")).catch(fb);}else{fb();}}}><AppIcon name="📋" size={14} mr={4}/>Copiar tudo</button><button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,textAlign:"center"}} onClick={()=>setShowDiag(false)}>Fechar</button></div></div></div>);})()}
+{showDiag&&(()=>{const errs=(typeof window!=="undefined"&&window.__xandroidErrors)||[];const cacheKeys=(()=>{try{return Object.keys(localStorage).filter(k=>k.startsWith("cq_lib_"));}catch(_){return[];}})();const libs=[];try{libs.push("html2pdf:"+(typeof window.html2pdf==="function"?"OK (função)":typeof window.html2pdf==="object"?"⚠️ OBJECT (corrompido)":"não carregado"));}catch(_){}libs.push("fflate: bundled");const fullText=`Xandroid Diagnóstico — ${new Date().toLocaleString("pt-BR")}\nVersão: ${APP_VERSION}\nUserAgent: ${navigator.userAgent}\nLibs: ${libs.join(" | ")}\nCache libs: ${cacheKeys.join(", ")||"(vazio)"}\n\n=== Últimos ${errs.length} erros ===\n${errs.map((e,i)=>`[${i+1}] ${e.t}\nTipo: ${e.type}\nMsg: ${e.msg}\nExtra: ${e.extra}\nStack: ${e.stack}\n`).join("\n---\n")||"Nenhum erro registrado."}`;return(<div role="dialog" aria-modal="true" className="modal-overlay" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:2500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><div className="modal-box" style={{background:t.cd,borderRadius:14,padding:20,maxWidth:600,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}><div style={{fontSize:18,fontWeight:800,color:t.ac,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><AppIcon name="🔍" size={20} mr={0}/>Diagnóstico</div><p style={{fontSize:11,color:t.t2,margin:"0 0 12px",lineHeight:1.4}}>Estado interno do app, bibliotecas carregadas, e últimos erros. Útil para reportar problemas.</p><div style={{flex:1,overflowY:"auto",background:t.bg3,padding:12,borderRadius:8,fontFamily:"monospace",fontSize:11,color:t.tx,whiteSpace:"pre-wrap",lineHeight:1.5}}>{fullText}</div><div style={{display:"flex",gap:8,marginTop:12}}><button type="button" style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={()=>{const fb=()=>{const ta=document.createElement("textarea");ta.value=fullText;ta.style.cssText="position:fixed;left:-9999px";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");showToast("✅ Diagnóstico copiado!");}catch(e){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(()=>showToast("✅ Diagnóstico copiado!")).catch(fb);}else{fb();}}}><AppIcon name="📋" size={14} mr={4}/>Copiar tudo</button><button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`,flex:1,textAlign:"center"}} onClick={()=>setShowDiag(false)}>Fechar</button></div></div></div>);})()}
 {toast&&(()=>{const isOK=toast.startsWith("✅")||toast.includes("Salvo")||toast.includes("Copiado");const isErr=toast.startsWith("❌")||toast.startsWith("⚠");const isCam=toast.startsWith("📷");const bg=isOK?"linear-gradient(180deg,#34c759,#28a745)":isErr?"linear-gradient(180deg,#ff453a,#d12822)":isCam?"linear-gradient(180deg,#ff9500,#cc7700)":"linear-gradient(180deg,#0a84ff,#0066cc)";return(<div className="di-toast" style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 8px)",left:"50%",transform:"translateX(-50%)",background:bg,color:"#fff",padding:"10px 18px",borderRadius:24,fontSize:14,fontWeight:600,letterSpacing:-0.2,zIndex:9999,boxShadow:"0 8px 24px rgba(0,0,0,0.35),0 0 0 0.5px rgba(255,255,255,0.15) inset",maxWidth:"90vw",textAlign:"center",pointerEvents:"none",display:"inline-flex",alignItems:"center",gap:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><IconText text={toast} size={16}/></div>);})()}
 {/* v242: banner sticky vermelho pulsando — fotos não salvaram, AVISO PESADO pra não fechar o app */}
 {photoSaveStuck&&<div role="alert" aria-live="assertive" className="photo-stuck-banner" style={{position:"fixed",top:"calc(env(safe-area-inset-top) + 56px)",left:8,right:8,zIndex:9998,background:"linear-gradient(180deg,#ff3b30,#c0271e)",color:"#fff",padding:"12px 16px",borderRadius:14,fontSize:13,fontWeight:700,letterSpacing:-0.2,boxShadow:"0 4px 16px rgba(255,59,48,0.45),inset 0 1px 0 rgba(255,255,255,0.18)",display:"flex",alignItems:"center",gap:10,lineHeight:1.35}}><span style={{fontSize:22,flexShrink:0}}>🚨</span><span style={{flex:1,minWidth:0}}>FOTOS NÃO FORAM SALVAS — <b>NÃO feche o app.</b> Reta tentando ({backupStatus}).</span><button type="button" aria-label="Tentar salvar agora" onClick={()=>saveBackup()} style={{background:"rgba(255,255,255,0.22)",color:"#fff",border:"1px solid rgba(255,255,255,0.4)",borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Tentar agora</button></div>}

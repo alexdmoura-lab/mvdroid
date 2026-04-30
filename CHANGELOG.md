@@ -1,4 +1,12 @@
-## v278 — Auditoria de saneamento (rodada 1)
+## v278 — Auditoria de saneamento (rodadas 1 e 2)
+
+**Rodada 2 — refatoração de bundle:**
+
+- **JSZip removido**: a dependência `jszip` (~104 KB minificado) saiu do projeto. As funções `saveCroquiDocx` e `saveRRVDocx` agora usam `fflate` (já presente, ~28 KB) por baixo de um wrapper `mkDocxZip()` que mantém a mesma API (`.file()`, `.generateAsync()`). Resultado: ~80 KB a menos no bundle, mesmo comportamento. Os comentários de v241 que diziam "migração para fflate fica para a v242" finalmente foram cumpridos (37 versões depois).
+- **Code-splitting** configurado no `vite.config.js`: `react-vendor`, `pdf` (html2pdf), `zip` (fflate), `sanitize` (dompurify) e `icons` (lucide-react) agora viram chunks separados. Em rede ruim, o primeiro carregamento fica mais leve — html2pdf só desce quando o usuário vai gerar PDF.
+- **Pré-carregamento residual do JSZip removido** do `useEffect` (não fazia mais sentido com fflate sendo bundled). Painel de Diagnóstico e botão "Resetar libs" também atualizados.
+
+**Rodada 1 — saneamento inicial:**
 
 - **Versões sincronizadas**: `APP_VERSION` e `CACHE_VERSION` do Service Worker agora andam juntas (`v278` em ambos). A partir de agora, cada bump do App precisa bumpar o SW também — caso contrário usuários ficam presos no cache antigo e não recebem a versão nova.
 - **Cabeçalho do `App.jsx` enxuto**: removido o histórico v201-v210 que estava duplicando o `CHANGELOG.md` e desorientando.
