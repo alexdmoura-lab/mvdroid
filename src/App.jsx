@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v284-Xandroid";
+const APP_VERSION="v285-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -1895,7 +1895,11 @@ try{
   });
   if(veiVest&&veiVest.length){
     const views=mkVeiViews(veiVest,d,veiculos);
+    _diagLog("info","mkVeiViews: "+veiVest.length+" vestígios → "+views.length+" views",
+      "tipos="+(veiculos||[]).map((_,vi)=>d["v"+vi+"_tipo"]||"").join(","));
     views.forEach(v=>allRasterTasks.push({type:"vei",view:v}));
+  }else{
+    _diagLog("info","mkVeiViews skip: veiVest.length="+(veiVest?veiVest.length:"undef"));
   }
   _diagLog("info","raster batch start: "+allRasterTasks.length+" tasks");
   if(allRasterTasks.length&&!returnBlobOnly){
@@ -2247,36 +2251,59 @@ zip.file("[Content_Types].xml",ctXml);
 zip.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
 zip.file("word/document.xml",docXml);
 zip.file("word/_rels/document.xml.rels",relsXml);
+_diagLog("info","docx zip files added, body bytes="+body.length);
 /* v201: generateAsync sem mimeType (não é opção válida), download mais robusto p/ iOS */
 const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+_diagLog("info","docx blob ready",blob.size+" bytes");
 if(returnBlobOnly)return blob;
-/* v234: iOS Safari PWA standalone bloqueia <a download> com blob URL silenciosamente.
-   Detecta e usa Web Share API direto nesse caso. */
 const fileName=mkFileName("docx");
 const isStandalonePWA=(typeof navigator!=="undefined"&&navigator.standalone===true)||(typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+_diagLog("info","docx download path",`standalone=${isStandalonePWA} iOS=${isIOS} canShare=${!!navigator.canShare}`);
 if(isStandalonePWA&&isIOS&&navigator.canShare){
-  // PWA iOS: usa share sheet (Files.app, AirDrop, etc)
   try{
     const file=new File([blob],fileName,{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
     if(navigator.canShare({files:[file]})){
+      _diagLog("info","docx share sheet");
       await navigator.share({files:[file],title:`Xandroid — Oc. ${data.oc||"___"}/${(data.oc_ano||"").slice(-2)}`,text:`Croqui DOCX — Ocorrência ${data.oc||"___"}/${data.oc_ano||""}`});
+      _diagLog("info","docx shared OK");
       showToast("✅ Compartilhado! Use 'Salvar em Arquivos' para salvar.");
       return;
+    }else{
+      _diagLog("warn","docx canShare={files} returned false, fallback to <a download>");
     }
   }catch(e){
-    if(e.name==="AbortError"){showToast("Cancelado");return;}
-    console.warn("Share fallback falhou, tentando download:",e);
+    if(e.name==="AbortError"){_diagLog("info","docx share AbortError");showToast("Cancelado");return;}
+    _diagLog("warn","docx share err, trying <a download>",e&&e.message||e);
   }
 }
-// Fluxo padrão (browser comum, Android, desktop, navegador iOS não-standalone)
+// Tentativa 1: <a download> tradicional. Em iOS Safari standalone pode falhar silencioso.
 const url=URL.createObjectURL(blob);
 const a=document.createElement("a");a.href=url;a.download=fileName;a.rel="noopener";
 document.body.appendChild(a);a.click();document.body.removeChild(a);
 setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(e){/* noop */}},10000);
+_diagLog("info","docx <a download> click sent");
+// Tentativa 2 (só iOS): em Safari iOS o <a download> tem alta taxa de falha
+// silenciosa. Oferece o share sheet 400ms depois — usuário escolhe ou ignora.
+if(isIOS&&navigator.canShare){
+  try{
+    const file=new File([blob],fileName,{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+    if(navigator.canShare({files:[file]})){
+      setTimeout(async()=>{
+        try{
+          await navigator.share({files:[file],title:`Xandroid — ${fileName}`,text:`Croqui DOCX`});
+          _diagLog("info","docx share sheet OK (fallback iOS)");
+        }catch(eShare){
+          if(eShare.name!=="AbortError")_diagLog("warn","docx share fallback err",eShare&&eShare.message||eShare);
+        }
+      },400);
+    }
+  }catch(eFb){_diagLog("warn","docx share fallback setup err",eFb&&eFb.message||eFb);}
+}
 showToast("✅ Croqui gerado!");
 }catch(e){
   const msg=e?.message||String(e)||"erro desconhecido";
+  _diagLog("warn","saveCroquiDocx CATCH",msg+" / "+(e&&e.stack||"").slice(0,200));
   console.error("DOCX error:",e);
   showToast("❌ Erro DOCX: "+msg);
   setTimeout(()=>showToast(""),6000);

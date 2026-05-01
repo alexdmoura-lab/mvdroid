@@ -7,6 +7,30 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v285 — Logs após rasterização + fallback de download iOS
+
+Diagnóstico da v284 mostrou que a rasterização TERMINA com sucesso (5 PNGs
+do cadáver gerados, ok=1, ok=1...) mas o DOCX nunca chega ao usuário no
+iPhone. Algo entre "raster batch done" e o download está falhando
+silenciosamente.
+
+Adicionado:
+- Logs em pontos críticos depois da rasterização: zip files added (com
+  body.length), blob ready (com size), download path (standalone/iOS/
+  canShare flags), share start, share OK, click <a download>, catch fatal.
+- Log no `mkVeiViews` pra entender por que `vei=0` mesmo com vestígios
+  veiculares marcados (provavelmente tipo de veículo fora da lista
+  sedan/hatch/suv/caminhonete).
+- **Fallback duplo de download em iOS**: depois do `<a download>`
+  tradicional disparar, em iOS o app também aciona o share sheet 400ms
+  depois. Em iOS Safari não-standalone o `<a download>` falha silencioso
+  com frequência; o share sheet é o backup.
+- Se generateAsync falhar ou catch global pegar erro, agora é registrado
+  no Diagnóstico com a stack trace (até 200 chars).
+
+Próxima falha: o Diagnóstico vai mostrar EXATAMENTE em qual passo do
+download travou (zip files, blob ready, share start, click sent, etc.).
+
 ## v284 — Telemetria + timeout global pra DOCX/PDF (debug iOS)
 
 DOCX da v283 ainda travava em "Renderizando 5 ilustrações" no iPhone, sem
