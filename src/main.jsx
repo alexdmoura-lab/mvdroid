@@ -350,6 +350,16 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         });
 
         // Quando uma nova versão é detectada
+        // v295: dispara evento `xandroid:update-available` pra UI mostrar toast
+        // ao usuário ("Nova versão disponível"). Antes era atualização silenciosa
+        // sem nenhum feedback visual.
+        const notifyUpdate = () => {
+          try {
+            window.dispatchEvent(new CustomEvent('xandroid:update-available'));
+          } catch (e) {
+            console.warn('[Xandroid] notifyUpdate err:', e);
+          }
+        };
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
@@ -360,6 +370,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('[Xandroid] Nova versão pronta. Aplicando quando o app estiver ocioso.');
               waitingWorker = newWorker;
+              notifyUpdate();
               // Tenta aplicar imediatamente se estiver ocioso
               tryApplyUpdate();
             }
@@ -370,6 +381,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         if (reg.waiting && navigator.serviceWorker.controller) {
           console.log('[Xandroid] Versão pendente encontrada. Aplicando quando ocioso.');
           waitingWorker = reg.waiting;
+          notifyUpdate();
           tryApplyUpdate();
         }
       })

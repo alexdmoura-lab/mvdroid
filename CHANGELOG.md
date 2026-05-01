@@ -7,6 +7,64 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v295 — 10 slots, expiração 30 dias, "O que mudou" no login, DOCX com Sumário, Vitest
+
+**1. Slots de salvamento — 5 → 10 + tamanho visível + 30 dias**
+
+- **10 gavetas** em vez de 5 (atende quem cobre múltiplas DPs).
+- Cada slot mostra o **tamanho aproximado** (KB/MB) na caixa, ajudando
+  a decidir o que apagar quando o iPhone reclamar de espaço.
+- Expiração **30 dias** (era 48 horas). Slots antigos são apagados
+  automaticamente ao logar.
+
+**2. "O que mudou" — modal ao logar com versão nova**
+
+Constante `WHATS_NEW` lista as melhorias mais visíveis de cada versão.
+Quando o usuário loga com versão diferente da última vista, modal
+mostra todas as entradas entre as duas versões agrupadas. Toca
+"Entendi" e marca como vista.
+
+Primeiro login (matrícula nova): só marca a versão atual sem mostrar
+modal — não atrapalha quem está estreando.
+
+**3. Banner "Nova versão disponível"**
+
+Quando o Service Worker termina de baixar uma versão nova, dispara
+evento `xandroid:update-available` e a UI mostra banner azul com
+botão "Recarregar" + ✕ pra dispensar. Antes era atualização silenciosa.
+
+**4. DOCX com estilos nomeados (Heading 1/2/3)**
+
+Adicionado `word/styles.xml` ao DOCX com definições de Heading1/2/3
+(referenciados por `<w:pStyle>` nos parágrafos H1/H2/H3). Resultado:
+**Word reconhece os títulos** e gera Sumário automático em 1 clique
+(Referências → Sumário).
+
+**5. Limite de 30 templates customizados**
+
+Antes era ilimitado — usuário podia salvar 200 templates e detonar
+quota. Agora bloqueia com aviso "apague algum antes" ao atingir 30.
+
+**6. Acessibilidade — imagens com `alt` e `aria-hidden`**
+
+Imagens decorativas (thumbnails de slot) ganharam `aria-hidden="true"`.
+Imagens de fotos ganharam `alt={f.desc || "Foto sem descrição"}`.
+Leitor de tela do iOS agora descreve fotos corretamente.
+
+**7. Vitest configurado + primeiros testes**
+
+- `npm test` → modo watch
+- `npm run test:run` → 1× e sai
+- `src/utils/forensic.js` extrai helpers puros (`tpStr`, `tpHas`,
+  `normMat`, `lookupPerito`, `toTitleCase`, `escHtml`).
+- `tests/forensic.test.js` cobre todos eles com casos típicos +
+  edge cases. Mais testes podem ser adicionados conforme novos
+  helpers forem extraídos do `App.jsx`.
+
+**8. CSP do Vercel** — verificado: `nominatim.openstreetmap.org` já
+está liberado em `connect-src`. Reverse-geocoding funciona em
+produção.
+
 ## v294 — Quick wins de UX: confirmações, toast persistente, fix de slot
 
 **1. Modais customizados em vez de `window.confirm`**
