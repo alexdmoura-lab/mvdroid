@@ -1,3 +1,27 @@
+# Changelog — Xandroid
+
+Histórico de versões do app de documentação forense.
+
+> **Formato:** versão · descrição curta · detalhes (quando houver)
+> **Padrão:** [Keep a Changelog](https://keepachangelog.com/), adaptado.
+
+---
+
+## v279 — Auditoria de saneamento (rodadas 4 e 5)
+
+**Rodada 4 — qualidade de código:**
+
+- **Helpers DOCX deduplicados**: `Pp`, `SPACER`, `PAGE_BREAK`, `ROW_GOLD_GROUP`, `esc2` e o XML do `header1.xml` (com logos PCDF/DF) viviam em duas cópias paralelas dentro de `saveCroquiDocx` e `saveRRVDocx`. Agora vivem em uma única função-helper compartilhada (`docxHelpers`). Resultado: ~150 linhas de código duplicado a menos, e correções num só lugar valem para os dois documentos.
+- **Auto-save mais limpo**: removido o `setInterval(30s)` que rodava em paralelo com o auto-save por mudança (4s) e o de `visibilitychange` — eram três timers redundantes. Agora só sobram os dois eventos que importam: usuário parou de mexer ou minimizou o app.
+- **`console.warn`/`log` silenciados em produção**: override de 4 linhas no `main.jsx` (entry point) — em `import.meta.env.PROD`, vira no-op. `console.error` fica intacto pra erros reais. Atinge o objetivo (não poluir console do iPhone com avisos do app + de libs terceiras como html2pdf) sem precisar reescrever as 45 chamadas individuais. O logger global (`window.__xandroidErrors`) e a tela de Diagnóstico continuam funcionando normalmente.
+- **CHANGELOG.md consolidado**: header movido pro topo, duplicatas v200/v201/v202 e entradas "(anterior)" sem conteúdo removidas.
+
+**Rodada 5 — estrutura:**
+
+- **`AUDITORIA_*.md` movidos** para `docs/auditorias/`. Antes ficavam na raiz junto com código — atrapalhava ler o repo.
+- **Lista de PERITOS externalizada** para `public/peritos.json`. O app carrega esse JSON no boot; se falhar (sem rede + cache vazio), cai num fallback hardcoded mínimo. Agora dá pra adicionar/remover perito sem abrir PR — basta editar o JSON e fazer push.
+- **ESLint mínimo configurado** (`.eslintrc.json` + script `npm run lint`). Não bloqueia build — é diagnóstico opcional. Pega bugs como o do botão "Croqui DOCX" da v278 (função passada direto pro `onClick` com parâmetro default sobrescrito pelo evento).
+
 ## v278 — Auditoria de saneamento (rodadas 1 e 2)
 
 **Rodada 2 — refatoração de bundle:**
@@ -82,15 +106,6 @@
 - **Linhas-monstro quebradas**: maior linha caiu de 18.392 → 6.189 chars
 - **Cabeçalho enxuto**: histórico v115-v200 movido para CHANGELOG.md
 
-# Changelog — Xandroid
-
-Histórico de versões do app de documentação forense.
-
-> **Formato:** versão · descrição curta · detalhes (quando houver)
-> **Padrão:** [Keep a Changelog](https://keepachangelog.com/), adaptado.
-
----
-
 ## v201 — Correções de UX e DOCX
 
 - **RRV**: assinatura do 2º perito removida (apenas P1 + Papiloscopista)
@@ -109,18 +124,6 @@ Histórico de versões do app de documentação forense.
 - Fases: `antes`, `durante`, `apos`, `sem_fase`
 - Sem LEIA-ME interno em `/fotos/` (estrutura mais simples)
 - Versão resetada (203 → 200)
-
-## v202 — Exportar tudo em ZIP + Web Share API
-
-- `saveCroquiDocx` aceita parâmetro `returnBlobOnly`
-- Novo helper `genPdfBlobFromHtml()` reusa lógica de PDF
-- Toast progressivo: "Gerando Croqui PDF…" → "RRV…" etc.
-- Haptic feedback ao iniciar e ao completar
-- Nome do ZIP: `MVDroiD_<oc>-<ano>_DP<dp>_<YYYYMMDD>.zip`
-
-## v201 (anterior) — Limpeza pós-auditoria
-
-## v200 (anterior) — Fim das sugestões de cartão de crédito
 
 ## v199 — Auto-preenche matrícula + placeholder genérico
 

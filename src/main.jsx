@@ -23,6 +23,21 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 
 // ════════════════════════════════════════════════════════════════
+// LOG SILENCIOSO EM PRODUÇÃO
+// ════════════════════════════════════════════════════════════════
+// Em produção (PWA no iPhone), console.warn/log do app e de bibliotecas
+// terceiras (html2pdf, fflate) só sujam o devtools sem trazer informação
+// útil pro usuário. Silenciamos os dois aqui.
+//
+// console.error fica INTACTO de propósito — o logger global em App.jsx
+// (window.__xandroidErrors) e a tela de Diagnóstico continuam mostrando
+// erros reais que aconteceram durante o uso.
+if (import.meta.env.PROD) {
+  console.warn = () => {};
+  console.log = () => {};
+}
+
+// ════════════════════════════════════════════════════════════════
 // SHIM DO window.storage — IndexedDB com fallback para localStorage
 // ════════════════════════════════════════════════════════════════
 // Antes (até v220): window.storage usava localStorage por baixo. No iOS, o
