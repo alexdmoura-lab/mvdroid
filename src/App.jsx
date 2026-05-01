@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v291-Xandroid";
+const APP_VERSION="v292-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -88,8 +88,13 @@ const WT=["1. Orifício entrada (PAF)","2. Orifício saída (PAF)","3. Escoriaç
 const RF=[{id:"f_cerv_ant",l:"Pescoço frente (Cervical anterior)"},{id:"f_esternal",l:"Centro do peito (Esternal)"},{id:"f_torac_d",l:"Peito direito (Torácica D)"},{id:"f_torac_e",l:"Peito esquerdo (Torácica E)"},{id:"f_epigast",l:"Boca do estômago (Epigástrica)"},{id:"f_hipoc_d",l:"Costelas baixas D (Hipocôndrio D)"},{id:"f_hipoc_e",l:"Costelas baixas E (Hipocôndrio E)"},{id:"f_mesogast",l:"Meio do abdômen (Mesogástrica)"},{id:"f_hipogast",l:"Baixo ventre (Hipogástrica)"},{id:"f_flanco_d",l:"Lateral barriga D (Flanco D)"},{id:"f_flanco_e",l:"Lateral barriga E (Flanco E)"},{id:"f_pubiana",l:"Acima do púbis (Púbica)"},{id:"f_genital",l:"Região genital (Genital)"},{id:"f_supraclav_d",l:"Acima da clavícula D (Supraclavicular D)"},{id:"f_supraclav_e",l:"Acima da clavícula E (Supraclavicular E)"},{id:"f_braco_d",l:"Braço D (frente)"},{id:"f_braco_e",l:"Braço E (frente)"},{id:"f_cubital_d",l:"Dobra do cotovelo D (Cubital D)"},{id:"f_cubital_e",l:"Dobra do cotovelo E (Cubital E)"},{id:"f_antebr_d",l:"Antebraço D (frente)"},{id:"f_antebr_e",l:"Antebraço E (frente)"},{id:"f_coxa_d",l:"Coxa D (frente)"},{id:"f_coxa_e",l:"Coxa E (frente)"},{id:"f_joelho_d",l:"Joelho D (frente)"},{id:"f_joelho_e",l:"Joelho E (frente)"},{id:"f_perna_d",l:"Canela D (Perna anterior D)"},{id:"f_perna_e",l:"Canela E (Perna anterior E)"}];
 const RB=[{id:"b_cerv_post",l:"Pescoço atrás (Cervical posterior)"},{id:"b_escapular_d",l:"Omoplata D (Escapular D)"},{id:"b_escapular_e",l:"Omoplata E (Escapular E)"},{id:"b_dorsal",l:"Costas alta (Dorsal)"},{id:"b_lombar_d",l:"Cintura D (Lombar D)"},{id:"b_lombar_e",l:"Cintura E (Lombar E)"},{id:"b_sacro_d",l:"Acima da nádega D (Sacral D)"},{id:"b_sacro_e",l:"Acima da nádega E (Sacral E)"},{id:"b_glutea_d",l:"Nádega D (Glútea D)"},{id:"b_glutea_e",l:"Nádega E (Glútea E)"},{id:"b_coxa_d",l:"Coxa atrás D (Posterior D)"},{id:"b_coxa_e",l:"Coxa atrás E (Posterior E)"},{id:"b_perna_d",l:"Panturrilha D (Gemelar D)"},{id:"b_perna_e",l:"Panturrilha E (Gemelar E)"},{id:"b_deltoid_d",l:"Ombro D (Deltoidiana D)"},{id:"b_deltoid_e",l:"Ombro E (Deltoidiana E)"},{id:"b_braco_d",l:"Braço atrás D (Posterior D)"},{id:"b_braco_e",l:"Braço atrás E (Posterior E)"},{id:"b_antebr_d",l:"Antebraço atrás D (Posterior D)"},{id:"b_antebr_e",l:"Antebraço atrás E (Posterior E)"}];
 const RH=[{id:"h_frontal",l:"Testa (Frontal)"},{id:"h_parietal_d",l:"Lateral cabeça D (Parietal D)"},{id:"h_parietal_e",l:"Lateral cabeça E (Parietal E)"},{id:"h_temporal_d",l:"Têmpora D (Temporal D)"},{id:"h_temporal_e",l:"Têmpora E (Temporal E)"},{id:"h_occipital",l:"Nuca (Occipital)"},{id:"h_vertex",l:"Topo da cabeça (Vértex)"},{id:"h_orbit_d",l:"Olho D (Orbitária D)"},{id:"h_orbit_e",l:"Olho E (Orbitária E)"},{id:"h_nasal",l:"Nariz (Nasal)"},{id:"h_labial_sup",l:"Lábio superior (Labial superior)"},{id:"h_labial_inf",l:"Lábio inferior (Labial inferior)"},{id:"h_mentoniana",l:"Queixo (Mentoniana)"},{id:"h_auricular_d",l:"Orelha D (Auricular D)"},{id:"h_auricular_e",l:"Orelha E (Auricular E)"}];
-const RMD=[{id:"md_palma",l:"Palma da mão D (Palmar D)"},{id:"md_dorso",l:"Dorso da mão D (Dorsal D)"},{id:"md_polegar",l:"Polegar D (1º quirodáctilo D)"},{id:"md_indicador",l:"Indicador D (2º quirodáctilo D)"},{id:"md_medio",l:"Dedo médio D (3º quirodáctilo D)"},{id:"md_anelar",l:"Anelar D (4º quirodáctilo D)"},{id:"md_minimo",l:"Mindinho D (5º quirodáctilo D / Mínimo D)"},{id:"md_punho",l:"Punho D (Carpo D)"}];
-const RME=[{id:"me_palma",l:"Palma da mão E (Palmar E)"},{id:"me_dorso",l:"Dorso da mão E (Dorsal E)"},{id:"me_polegar",l:"Polegar E (1º quirodáctilo E)"},{id:"me_indicador",l:"Indicador E (2º quirodáctilo E)"},{id:"me_medio",l:"Dedo médio E (3º quirodáctilo E)"},{id:"me_anelar",l:"Anelar E (4º quirodáctilo E)"},{id:"me_minimo",l:"Mindinho E (5º quirodáctilo E / Mínimo E)"},{id:"me_punho",l:"Punho E (Carpo E)"}];
+// v292: dedos das mãos agora têm IDs separados pra palma e dorso
+// (md_polegar_palma vs md_polegar_dorso, etc). Antes era só md_polegar
+// genérico. Os IDs antigos (md_polegar, md_indicador...) ficam mantidos
+// pra compatibilidade com backups antigos — só não são mais usados em
+// novas inserções via SVG.
+const RMD=[{id:"md_palma",l:"Palma da mão D (Palmar D)"},{id:"md_dorso",l:"Dorso da mão D (Dorsal D)"},{id:"md_polegar_palma",l:"Polegar D — palma (1º quirodáctilo D, palmar)"},{id:"md_polegar_dorso",l:"Polegar D — dorso (1º quirodáctilo D, dorsal)"},{id:"md_indicador_palma",l:"Indicador D — palma (2º quirodáctilo D, palmar)"},{id:"md_indicador_dorso",l:"Indicador D — dorso (2º quirodáctilo D, dorsal)"},{id:"md_medio_palma",l:"Dedo médio D — palma (3º quirodáctilo D, palmar)"},{id:"md_medio_dorso",l:"Dedo médio D — dorso (3º quirodáctilo D, dorsal)"},{id:"md_anelar_palma",l:"Anelar D — palma (4º quirodáctilo D, palmar)"},{id:"md_anelar_dorso",l:"Anelar D — dorso (4º quirodáctilo D, dorsal)"},{id:"md_minimo_palma",l:"Mindinho D — palma (5º quirodáctilo D, palmar)"},{id:"md_minimo_dorso",l:"Mindinho D — dorso (5º quirodáctilo D, dorsal)"},{id:"md_punho",l:"Punho D (Carpo D)"},{id:"md_polegar",l:"Polegar D (1º quirodáctilo D)"},{id:"md_indicador",l:"Indicador D (2º quirodáctilo D)"},{id:"md_medio",l:"Dedo médio D (3º quirodáctilo D)"},{id:"md_anelar",l:"Anelar D (4º quirodáctilo D)"},{id:"md_minimo",l:"Mindinho D (5º quirodáctilo D / Mínimo D)"}];
+const RME=[{id:"me_palma",l:"Palma da mão E (Palmar E)"},{id:"me_dorso",l:"Dorso da mão E (Dorsal E)"},{id:"me_polegar_palma",l:"Polegar E — palma (1º quirodáctilo E, palmar)"},{id:"me_polegar_dorso",l:"Polegar E — dorso (1º quirodáctilo E, dorsal)"},{id:"me_indicador_palma",l:"Indicador E — palma (2º quirodáctilo E, palmar)"},{id:"me_indicador_dorso",l:"Indicador E — dorso (2º quirodáctilo E, dorsal)"},{id:"me_medio_palma",l:"Dedo médio E — palma (3º quirodáctilo E, palmar)"},{id:"me_medio_dorso",l:"Dedo médio E — dorso (3º quirodáctilo E, dorsal)"},{id:"me_anelar_palma",l:"Anelar E — palma (4º quirodáctilo E, palmar)"},{id:"me_anelar_dorso",l:"Anelar E — dorso (4º quirodáctilo E, dorsal)"},{id:"me_minimo_palma",l:"Mindinho E — palma (5º quirodáctilo E, palmar)"},{id:"me_minimo_dorso",l:"Mindinho E — dorso (5º quirodáctilo E, dorsal)"},{id:"me_punho",l:"Punho E (Carpo E)"},{id:"me_polegar",l:"Polegar E (1º quirodáctilo E)"},{id:"me_indicador",l:"Indicador E (2º quirodáctilo E)"},{id:"me_medio",l:"Dedo médio E (3º quirodáctilo E)"},{id:"me_anelar",l:"Anelar E (4º quirodáctilo E)"},{id:"me_minimo",l:"Mindinho E (5º quirodáctilo E / Mínimo E)"}];
 const RPD=[{id:"pd_planta",l:"Planta do pé D (Plantar D)"},{id:"pd_dorso",l:"Peito do pé D (Dorsal D)"},{id:"pd_calcanhar",l:"Calcanhar D — peito (Calcâneo D, Dorsal)"},{id:"pd_dedao",l:"Dedão D — peito (Hálux D, Dorsal)"},{id:"pd_2dedo",l:"2º dedo D — peito (2º pododáctilo D)"},{id:"pd_3dedo",l:"3º dedo D — peito (3º pododáctilo D)"},{id:"pd_4dedo",l:"4º dedo D — peito (4º pododáctilo D)"},{id:"pd_mindinho",l:"Mindinho D — peito (5º pododáctilo D)"},{id:"pd_tornoz",l:"Tornozelo D — peito (Tarso D, Dorsal)"},{id:"pd_pl_calcanhar",l:"Calcanhar D — sola (Calcâneo D, Plantar)"},{id:"pd_pl_dedao",l:"Dedão D — sola (Hálux D, Plantar)"},{id:"pd_pl_2dedo",l:"2º dedo D — sola (2º pododáctilo D, Plantar)"},{id:"pd_pl_3dedo",l:"3º dedo D — sola (3º pododáctilo D, Plantar)"},{id:"pd_pl_4dedo",l:"4º dedo D — sola (4º pododáctilo D, Plantar)"},{id:"pd_pl_mindinho",l:"Mindinho D — sola (5º pododáctilo D, Plantar)"},{id:"pd_pl_tornoz",l:"Tornozelo D — sola (Tarso D, Plantar)"}];
 const RPE=[{id:"pe_planta",l:"Planta do pé E (Plantar E)"},{id:"pe_dorso",l:"Peito do pé E (Dorsal E)"},{id:"pe_calcanhar",l:"Calcanhar E — peito (Calcâneo E, Dorsal)"},{id:"pe_dedao",l:"Dedão E — peito (Hálux E, Dorsal)"},{id:"pe_2dedo",l:"2º dedo E — peito (2º pododáctilo E)"},{id:"pe_3dedo",l:"3º dedo E — peito (3º pododáctilo E)"},{id:"pe_4dedo",l:"4º dedo E — peito (4º pododáctilo E)"},{id:"pe_mindinho",l:"Mindinho E — peito (5º pododáctilo E)"},{id:"pe_tornoz",l:"Tornozelo E — peito (Tarso E, Dorsal)"},{id:"pe_pl_calcanhar",l:"Calcanhar E — sola (Calcâneo E, Plantar)"},{id:"pe_pl_dedao",l:"Dedão E — sola (Hálux E, Plantar)"},{id:"pe_pl_2dedo",l:"2º dedo E — sola (2º pododáctilo E, Plantar)"},{id:"pe_pl_3dedo",l:"3º dedo E — sola (3º pododáctilo E, Plantar)"},{id:"pe_pl_4dedo",l:"4º dedo E — sola (4º pododáctilo E, Plantar)"},{id:"pe_pl_mindinho",l:"Mindinho E — sola (5º pododáctilo E, Plantar)"},{id:"pe_pl_tornoz",l:"Tornozelo E — sola (Tarso E, Plantar)"}];
 const AR=[...RF,...RB,...RH,...RMD,...RME,...RPD,...RPE];
@@ -1861,8 +1866,18 @@ const X=(s)=>{if(!s)return"";const v=Array.isArray(s)?s.join(", "):String(s);ret
 const saveCroquiDocx=async(returnBlobOnly=false)=>{
   /* v201: forceSaveCanvas pode falhar (canvas vazio/quebrado) — não pode bloquear o DOCX */
   try{forceSaveCanvas();}catch(eFsc){console.warn("forceSaveCanvas falhou (continuando):",eFsc);}
+  // v292: timer ao vivo no toast — atualiza a cada segundo com o estágio atual.
+  // Evita a sensação de "travou" quando a renderização demora.
+  const _t0=Date.now();
+  let _stage="Iniciando";
+  let _toastTimer=null;
+  const _setStage=(s)=>{_stage=s;if(!returnBlobOnly){const sec=Math.round((Date.now()-_t0)/1000);setToast(`⏳ ${_stage} · ${sec}s`);}};
+  if(!returnBlobOnly){
+    setToast(`⏳ ${_stage} · 0s`);
+    _toastTimer=setInterval(()=>{const sec=Math.round((Date.now()-_t0)/1000);setToast(`⏳ ${_stage} · ${sec}s`);},1000);
+  }
   try{
-    if(!returnBlobOnly)showToast("⏳ Gerando Croqui...");
+    _setStage("Gerando Croqui");
     const zip=mkDocxZip();const d=data;const oc=d.oc||"___";const ano=d.oc_ano||"____";const dp=d.dp==="Outro"?(d.dp_outro||"___"):(d.dp||"___");
 /* v201: esc2 reforçado — strip de control chars que quebram XML (zero-width, BOMs etc.) */
 const esc2=(s)=>String(s??"").replace(/[ --￾￿]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
@@ -1923,14 +1938,23 @@ try{
     _diagLog("info","mkVeiViews skip: veiVest.length="+(veiVest?veiVest.length:"undef"));
   }
   _diagLog("info","raster batch start: "+allRasterTasks.length+" tasks");
-  if(allRasterTasks.length&&!returnBlobOnly){
-    showToast(`⏳ Renderizando ${allRasterTasks.length} ilustração${allRasterTasks.length>1?"ões":""}...`);
+  if(allRasterTasks.length){
+    _setStage(`Renderizando ${allRasterTasks.length} ilustraç${allRasterTasks.length>1?"ões":"ão"}`);
   }
   // Timeout global: se o batch inteiro demorar > 60s, abandona e gera DOCX
   // sem as imagens (graceful fallback). Sem isso, o iOS pode pendurar tudo.
   const batchTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error("batch raster timeout 60s")),60000));
-  const batchWork=(async()=>{
-    for(const task of allRasterTasks){
+  // v292: paralelização com concorrência limitada (3 simultâneas).
+  // Sequencial em iOS demorava 3-5s por figura; com 3 paralelas cai pra
+  // ~30-40% do tempo total. Limite de 3 evita OOM em iPhone modesto.
+  const CONCURRENCY=3;
+  let _doneCount=0;
+  const total=allRasterTasks.length;
+  const queue=[...allRasterTasks];
+  const runOne=async()=>{
+    while(queue.length){
+      const task=queue.shift();
+      if(!task)break;
       try{
         _diagLog("info","raster task: "+task.type+" "+task.view.label);
         const fullSvg=`<svg viewBox="${task.view.vb}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${task.view.svgInner}</svg>`;
@@ -1942,18 +1966,22 @@ try{
       }catch(e){
         _diagLog("warn","raster task fail: "+task.view.label,e&&e.message||e);
       }
+      _doneCount++;
+      _setStage(`Renderizando ${_doneCount}/${total}`);
     }
-  })();
+  };
+  const batchWork=Promise.all(Array.from({length:Math.min(CONCURRENCY,total)},runOne));
   try{
     await Promise.race([batchWork,batchTimeout]);
     _diagLog("info","raster batch done: cad="+Object.values(cadaverPngsByCi).flat().length+" vei="+veiPngs.length);
   }catch(e){
     _diagLog("warn","raster batch timeout — gerando DOCX sem ilustrações",e&&e.message||e);
-    if(!returnBlobOnly)showToast("⚠ Ilustrações puladas — gerando DOCX só com texto");
+    _setStage("⚠ Ilustrações puladas, finalizando");
   }
 }catch(e){
   _diagLog("warn","raster setup err",e&&e.message||e);
 }
+_setStage("Montando documento");
 // ═════════════ BODY ═════════════
 let body="";
 // v281: nextRid/imgRels declarados aqui pra permitir embed de imagens
@@ -2311,12 +2339,14 @@ _diagLog("info","docx zip files added, body bytes="+body.length);
 // recomprimia PNGs já compactados — agora PNGs vão como STORE (level:0)
 // no mkDocxZip, então o zip é praticamente instantâneo. 60s é margem
 // generosa caso ainda haja algo lento.
+_setStage("Comprimindo arquivo");
 const blob=await Promise.race([
   zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}}),
   new Promise((_,rej)=>setTimeout(()=>rej(new Error("zip generateAsync timeout 60s")),60000))
 ]);
 _diagLog("info","docx blob ready",blob.size+" bytes");
-if(returnBlobOnly)return blob;
+if(returnBlobOnly){if(_toastTimer){clearInterval(_toastTimer);_toastTimer=null;}return blob;}
+_setStage("Salvando arquivo");
 const fileName=mkFileName("docx");
 const isStandalonePWA=(typeof navigator!=="undefined"&&navigator.standalone===true)||(typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
@@ -2361,8 +2391,12 @@ if(isIOS&&navigator.canShare){
     }
   }catch(eFb){_diagLog("warn","docx share fallback setup err",eFb&&eFb.message||eFb);}
 }
-showToast("✅ Croqui gerado!");
+// v292: para o timer e mostra tempo total no toast final
+if(_toastTimer){clearInterval(_toastTimer);_toastTimer=null;}
+const _totalSec=Math.round((Date.now()-_t0)/1000);
+showToast(`✅ Croqui gerado em ${_totalSec}s!`);
 }catch(e){
+  if(_toastTimer){clearInterval(_toastTimer);_toastTimer=null;}
   const msg=e?.message||String(e)||"erro desconhecido";
   _diagLog("warn","saveCroquiDocx CATCH",msg+" / "+(e&&e.stack||"").slice(0,200));
   console.error("DOCX error:",e);
@@ -2956,7 +2990,21 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
     else if(cat==="bicicleta")viewsForCat=biciViews();
     else if(cat==="onibus"||cat==="ônibus")viewsForCat=busViews();
     else viewsForCat=carroViews(); // sedan/hatch/suv/caminhonete e default
-    viewsForCat.forEach(v=>{if(v)allViews.push(v);});
+    // v292: fallback — se a categoria selecionada não rendeu NENHUMA vista
+    // (porque os vestígios usam IDs de outro tipo, ex: usuário trocou
+    // categoria depois de tagar), tenta TODOS os outros tipos. Garante que
+    // o usuário não fique com Veículo "fantasma" no DOCX.
+    const builtViews=viewsForCat.filter(Boolean);
+    if(builtViews.length===0){
+      const fallback=[...carroViews(),...motoViews(),...biciViews(),...busViews()].filter(Boolean);
+      if(fallback.length){
+        _diagLog&&_diagLog("info","mkVeiViews fallback acionado pra Veículo "+(vi+1)+" (cat="+cat+") — vestígios não batem com a categoria",
+          "ids="+vests.map(v=>v.region).join(","));
+        fallback.forEach(v=>allViews.push(v));
+      }
+    }else{
+      builtViews.forEach(v=>allViews.push(v));
+    }
   });
   return allViews;
 };
@@ -2993,9 +3041,18 @@ const POS_CABECA_E={"h_temporal_e":[665,325],"h_auricular_e":[735,395]};
 const POS_CABECA_D={"h_temporal_d":[135,325],"h_auricular_d":[65,395]};
 // v260: POS atualizadas com a ordem correta dos dedos no novo layout das imagens.
 // Mão D — polegar à esq (palma e dorso). Ordem polegar→mínimo da esq pra dir.
-const POS_MAO_D={md_palma:[200,345],md_dorso:[600,345],md_polegar:[70,275],md_indicador:[145,155],md_medio:[195,140],md_anelar:[245,155],md_minimo:[295,175],md_punho:[200,495]};
+// v292: posições adicionadas pra IDs separados por face de cada dedo.
+//   Vista 1 (x≈0-400) = palma da mão D
+//   Vista 2 (x≈400-800) = dorso da mão D
+const POS_MAO_D={md_palma:[200,345],md_dorso:[600,345],md_polegar:[70,275],md_indicador:[145,155],md_medio:[195,140],md_anelar:[245,155],md_minimo:[295,175],md_punho:[200,495],
+md_polegar_palma:[70,275],md_indicador_palma:[145,155],md_medio_palma:[195,140],md_anelar_palma:[245,155],md_minimo_palma:[295,175],
+md_polegar_dorso:[470,275],md_indicador_dorso:[545,155],md_medio_dorso:[595,140],md_anelar_dorso:[645,155],md_minimo_dorso:[695,175]};
 // Mão E — polegar à dir (dorso e palma). Ordem mínimo→polegar da esq pra dir.
-const POS_MAO_E={me_dorso:[200,345],me_palma:[600,345],me_minimo:[95,175],me_anelar:[145,155],me_medio:[195,140],me_indicador:[245,155],me_polegar:[330,275],me_punho:[200,495]};
+//   Vista 1 (x≈0-400) = dorso da mão E
+//   Vista 2 (x≈400-800) = palma da mão E
+const POS_MAO_E={me_dorso:[200,345],me_palma:[600,345],me_minimo:[95,175],me_anelar:[145,155],me_medio:[195,140],me_indicador:[245,155],me_polegar:[330,275],me_punho:[200,495],
+me_minimo_dorso:[95,175],me_anelar_dorso:[145,155],me_medio_dorso:[195,140],me_indicador_dorso:[245,155],me_polegar_dorso:[330,275],
+me_minimo_palma:[495,175],me_anelar_palma:[545,155],me_medio_palma:[595,140],me_indicador_palma:[645,155],me_polegar_palma:[730,275]};
 // v262: POS dos pés atualizadas — v1 com dedão à direita (mín→dedão), v2 com dedão à esquerda (dedão→mín)
 // Pé D: v1=sola D, v2=peito D
 const POS_PE_D={pd_planta:[190,240],pd_dorso:[590,230],pd_pl_calcanhar:[200,445],pd_calcanhar:[600,445],pd_tornoz:[200,355],pd_pl_mindinho:[45,85],pd_pl_4dedo:[100,75],pd_pl_3dedo:[150,70],pd_pl_2dedo:[200,75],pd_pl_dedao:[267,80],pd_dedao:[457,80],pd_2dedo:[520,75],pd_3dedo:[570,70],pd_4dedo:[620,75],pd_mindinho:[675,85]};
@@ -3565,36 +3622,38 @@ return(<svg viewBox="0 0 800 600" style={{width:"100%",maxWidth:760}}>
 <image href={img} x="0" y="0" width="800" height="580" preserveAspectRatio="xMidYMid meet"/>
 <text x="400" y="595" textAnchor="middle" fontSize="16" fontWeight="800" fill="#333">MÃO {side} — palma + dorso</text>
 {/* === Vista 1 (x≈0-400) — ordem dos dedos depende de qual mão === */}
+{/* v292: cada dedo agora tem ID distinto pra palma vs dorso. Sufixo _v1
+   (palma na mão D, dorso na mão E) e _v2 (oposto) */}
 <Rg_ id={p+"_"+v1} x={120} y={260} w={170} h={170} n={v1==="palma"?"Palma":"Dorso"} count={wc(p+"_"+v1)} onClick={aw}/>
 <Rg_ id={p+"_punho"} x={120} y={430} w={170} h={130} n="Punho" count={wc(p+"_punho")} onClick={aw}/>
 {isD?<>{/* Mão D v1 (palma): polegar esq → mínimo dir */}
-<Rg_ id={p+"_polegar"} x={20} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={120} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={170} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={220} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_minimo"} x={270} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+<Rg_ id={p+"_polegar_"+v1} x={20} y={200} w={100} h={150} n={"Polegar "+(v1==="palma"?"P":"D")} count={wc(p+"_polegar_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_indicador_"+v1} x={120} y={50} w={50} h={210} n={"Ind "+(v1==="palma"?"P":"D")} count={wc(p+"_indicador_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_medio_"+v1} x={170} y={20} w={50} h={240} n={"Méd "+(v1==="palma"?"P":"D")} count={wc(p+"_medio_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_anelar_"+v1} x={220} y={50} w={50} h={210} n={"Anel "+(v1==="palma"?"P":"D")} count={wc(p+"_anelar_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_minimo_"+v1} x={270} y={90} w={50} h={170} n={"Mín "+(v1==="palma"?"P":"D")} count={wc(p+"_minimo_"+v1)} onClick={aw}/>
 </>:<>{/* Mão E v1 (dorso): mínimo esq → polegar dir */}
-<Rg_ id={p+"_minimo"} x={70} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={120} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={170} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={220} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_polegar"} x={280} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+<Rg_ id={p+"_minimo_"+v1} x={70} y={90} w={50} h={170} n={"Mín "+(v1==="palma"?"P":"D")} count={wc(p+"_minimo_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_anelar_"+v1} x={120} y={50} w={50} h={210} n={"Anel "+(v1==="palma"?"P":"D")} count={wc(p+"_anelar_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_medio_"+v1} x={170} y={20} w={50} h={240} n={"Méd "+(v1==="palma"?"P":"D")} count={wc(p+"_medio_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_indicador_"+v1} x={220} y={50} w={50} h={210} n={"Ind "+(v1==="palma"?"P":"D")} count={wc(p+"_indicador_"+v1)} onClick={aw}/>
+<Rg_ id={p+"_polegar_"+v1} x={280} y={200} w={100} h={150} n={"Polegar "+(v1==="palma"?"P":"D")} count={wc(p+"_polegar_"+v1)} onClick={aw}/>
 </>}
 {/* === Vista 2 (x≈400-800) === */}
 <Rg_ id={p+"_"+v2} x={510} y={260} w={170} h={170} n={v2==="palma"?"Palma":"Dorso"} count={wc(p+"_"+v2)} onClick={aw}/>
 <Rg_ id={p+"_punho"} x={510} y={430} w={170} h={130} n="Punho" count={wc(p+"_punho")} onClick={aw}/>
 {isD?<>{/* Mão D v2 (dorso): polegar esq → mínimo dir */}
-<Rg_ id={p+"_polegar"} x={420} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={520} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={570} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={620} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_minimo"} x={670} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
+<Rg_ id={p+"_polegar_"+v2} x={420} y={200} w={100} h={150} n={"Polegar "+(v2==="palma"?"P":"D")} count={wc(p+"_polegar_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_indicador_"+v2} x={520} y={50} w={50} h={210} n={"Ind "+(v2==="palma"?"P":"D")} count={wc(p+"_indicador_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_medio_"+v2} x={570} y={20} w={50} h={240} n={"Méd "+(v2==="palma"?"P":"D")} count={wc(p+"_medio_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_anelar_"+v2} x={620} y={50} w={50} h={210} n={"Anel "+(v2==="palma"?"P":"D")} count={wc(p+"_anelar_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_minimo_"+v2} x={670} y={90} w={50} h={170} n={"Mín "+(v2==="palma"?"P":"D")} count={wc(p+"_minimo_"+v2)} onClick={aw}/>
 </>:<>{/* Mão E v2 (palma): mínimo esq → polegar dir */}
-<Rg_ id={p+"_minimo"} x={470} y={90} w={50} h={170} n="Mínimo" count={wc(p+"_minimo")} onClick={aw}/>
-<Rg_ id={p+"_anelar"} x={520} y={50} w={50} h={210} n="Anelar" count={wc(p+"_anelar")} onClick={aw}/>
-<Rg_ id={p+"_medio"} x={570} y={20} w={50} h={240} n="Médio" count={wc(p+"_medio")} onClick={aw}/>
-<Rg_ id={p+"_indicador"} x={620} y={50} w={50} h={210} n="Indicad" count={wc(p+"_indicador")} onClick={aw}/>
-<Rg_ id={p+"_polegar"} x={680} y={200} w={100} h={150} n="Polegar" count={wc(p+"_polegar")} onClick={aw}/>
+<Rg_ id={p+"_minimo_"+v2} x={470} y={90} w={50} h={170} n={"Mín "+(v2==="palma"?"P":"D")} count={wc(p+"_minimo_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_anelar_"+v2} x={520} y={50} w={50} h={210} n={"Anel "+(v2==="palma"?"P":"D")} count={wc(p+"_anelar_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_medio_"+v2} x={570} y={20} w={50} h={240} n={"Méd "+(v2==="palma"?"P":"D")} count={wc(p+"_medio_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_indicador_"+v2} x={620} y={50} w={50} h={210} n={"Ind "+(v2==="palma"?"P":"D")} count={wc(p+"_indicador_"+v2)} onClick={aw}/>
+<Rg_ id={p+"_polegar_"+v2} x={680} y={200} w={100} h={150} n={"Polegar "+(v2==="palma"?"P":"D")} count={wc(p+"_polegar_"+v2)} onClick={aw}/>
 </>}
 </svg>);};
 

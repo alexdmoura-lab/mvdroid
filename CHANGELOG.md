@@ -7,6 +7,63 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v292 — Pendências dos testes: dedos palma/dorso, SUV, render paralelo, timer
+
+**1. Mãos — palma e dorso de cada dedo separados**
+
+Antes: clicar no polegar (em qualquer face) gerava o mesmo ID
+`md_polegar`. Não dava pra distinguir lesão na palma do dedão vs no
+dorso do dedão.
+
+Agora cada dedo tem 2 IDs distintos:
+- `md_polegar_palma` / `md_polegar_dorso`
+- `md_indicador_palma` / `md_indicador_dorso`
+- `md_medio_palma` / `md_medio_dorso`
+- `md_anelar_palma` / `md_anelar_dorso`
+- `md_minimo_palma` / `md_minimo_dorso`
+- (mesmo pra mão esquerda — `me_*`)
+
+Pés já tinham essa diferenciação desde a v262 (`pd_*` peito vs
+`pd_pl_*` sola).
+
+**Compatibilidade:** os IDs antigos (`md_polegar`, etc.) seguem
+válidos pra backups antigos — só não são mais usados em novas
+inserções.
+
+**2. Veículo — fallback quando vestígios não batem com a categoria**
+
+Bug encontrado nos testes: usuário trocou categoria do veículo (de
+Moto pra SUV) depois de já ter marcado vestígios. Resultado: o veículo
+sumia das figuras do PDF/DOCX porque os IDs `mle_motor`/`mle_roda_*`
+não casavam com nenhuma vista de SUV.
+
+Agora `mkVeiViews` tem fallback: se a categoria selecionada não
+produz nenhuma figura (zero matches), tenta TODOS os outros tipos
+(carro/moto/bici/ônibus). Renderiza o que conseguir, com aviso no
+log de Diagnóstico.
+
+**3. Renderização iOS paralelizada (3×)**
+
+Antes: rasterização SVG→PNG era sequencial — cada figura esperava a
+anterior. iPhone modesto podia levar 60s+ pra um cadáver com 7 vistas
+e 7 veículos.
+
+Agora: 3 figuras renderizam ao mesmo tempo (concurrency=3). Tempo
+total cai pra ~30-40% do anterior. Limite de 3 evita OOM em iPhones
+mais antigos.
+
+**4. Timer ao vivo no DOCX**
+
+Antes: toast mostrava "Renderizando 14 ilustrações..." e ficava
+parado. Sensação de travado.
+
+Agora: toast atualiza a cada segundo com:
+- Estágio atual (Renderizando · Montando documento · Comprimindo · Salvando)
+- Contador de figuras renderizadas (`Renderizando 5/14`)
+- Tempo decorrido (`⏱ 8s`)
+
+No final, mostra `✅ Croqui gerado em 23s!`.
+
 ## v291 — Canva uniformizado, faces internas/externas de vidros e portas
 
 **1. Canva — toolbar lateral unificada**
