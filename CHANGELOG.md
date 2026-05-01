@@ -7,6 +7,46 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v282 — Fix: silhuetas do corpo e veículo no DOCX + bug do modo claro
+
+**Bug crítico do DOCX (v281):** as silhuetas do corpo e do veículo não
+apareciam no Word — só as bolinhas numeradas em fundo branco. Causa: iOS
+Safari não baixa as `<image href="/img/...">` internas de um SVG quando ele
+é carregado via `blob:` URL. Correção:
+
+- Nova função `inlineImagesInSvg(svgStr)` que pré-carrega cada `<image>` do
+  SVG via `fetch` + `FileReader.readAsDataURL` e substitui no SVG por
+  `data:image/...;base64,...` antes de criar o blob. Cache `_IMG_DATAURL_CACHE`
+  evita refetch entre vistas.
+- `svgToPngU8` agora é `async` e chama `inlineImagesInSvg` antes de rasterizar.
+
+**Bug do modo claro:** os campos `<select>` (DP, Ano, Natureza, etc.)
+mostravam um padrão de chevrons (▼▼▼▼▼) preenchendo o input em vez de só
+1 chevron à direita. Causa: o `inp` usava `background: t.bg3` (shorthand
+CSS) que resetava `background-repeat` para `repeat` (default do shorthand),
+fazendo o ícone do chevron repetir. O `backgroundRepeat: "no-repeat"` do
+`sel` deveria sobrescrever, mas em ordem React a ordem ficou inconsistente.
+Correção: trocado `background` por `backgroundColor` (longhand) que afeta
+só a cor de fundo, sem mexer nas outras props de background.
+
+
+
+Bug detectado em teste no iPhone: o DOCX da v281 mostrava só as bolinhas
+numeradas (em pé no fundo branco) sem a silhueta do corpo nem do veículo
+por trás. Causa: iOS Safari não baixa as `<image href="/img/...">` internas
+de um SVG quando ele é carregado via `blob:` URL — o canvas é desenhado
+sem essas imagens (ficam transparentes).
+
+Correção: nova função `inlineImagesInSvg(svgStr)` que pré-carrega cada
+`<image href>` do SVG via `fetch` + `FileReader.readAsDataURL` e substitui
+no SVG por `data:image/...;base64,...` antes de criar o blob. Assim quando
+o canvas desenha o SVG, todas as imagens já estão embedded e renderizam
+corretamente. Cache `_IMG_DATAURL_CACHE` evita refetch entre vistas (cada
+veículo tem 4 vistas, mas só 1 fetch por imagem única).
+
+`svgToPngU8` agora é `async` e chama `await inlineImagesInSvg(svg)` antes
+de rasterizar.
+
 ## v281 — Croqui visual do cadáver E do veículo no DOCX (espelho do PDF)
 
 - **DOCX agora é o espelho do PDF**: as ilustrações do cadáver com lesões marcadas e do veículo com vestígios marcados — que antes só apareciam no Croqui PDF — agora também são embedadas no Croqui DOCX. O documento Word vira a réplica fiel do PDF.

@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v281-Xandroid";
+const APP_VERSION="v282-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -744,14 +744,46 @@ const docxHeader1Xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:
 // Se algo der errado (CORS, browser velho, OOM), lança e o caller
 // pula essa view — o DOCX continua sendo gerado sem essa imagem.
 // ──────────────────────────────────────────────────────────────────
-const svgToPngU8=(svgStr,width,height)=>new Promise((resolve,reject)=>{
+// Cache de imagens já convertidas em data URL — evita refetch nas múltiplas
+// vistas do mesmo veículo/cadáver. Vive enquanto a aba está aberta.
+const _IMG_DATAURL_CACHE={};
+// Pré-carrega todas as <image href="/img/..."> do SVG e substitui por data URL.
+// Necessário porque iOS Safari não baixa <image> internas quando o SVG vem
+// de um blob URL — fica em branco, só os marcadores aparecem.
+const inlineImagesInSvg=async(svgStr)=>{
+  const re=/(?:href|xlink:href)="\/((?:img|icon)[^"]+)"/g;
+  const paths=new Set();
+  let m;while((m=re.exec(svgStr))!==null)paths.add(m[1]);
+  for(const p of paths){
+    if(_IMG_DATAURL_CACHE[p])continue;
+    try{
+      const resp=await fetch("/"+p);
+      if(!resp.ok)continue;
+      const blob=await resp.blob();
+      const dataUrl=await new Promise((res,rej)=>{
+        const fr=new FileReader();
+        fr.onload=()=>res(fr.result);
+        fr.onerror=()=>rej(new Error("FileReader falhou"));
+        fr.readAsDataURL(blob);
+      });
+      _IMG_DATAURL_CACHE[p]=dataUrl;
+    }catch(e){
+      console.warn("[inlineImg] falha ao carregar",p,e);
+    }
+  }
+  return svgStr.replace(/(href|xlink:href)="\/((?:img|icon)[^"]+)"/g,(full,attr,path)=>
+    _IMG_DATAURL_CACHE[path]?`${attr}="${_IMG_DATAURL_CACHE[path]}"`:full
+  );
+};
+
+const svgToPngU8=async(svgStr,width,height)=>{
+  // Inline TODAS as <image href> como data URLs ANTES de criar o blob URL.
+  // Sem isso, iOS não desenha as imagens internas no canvas (ficam em branco).
+  const inlinedSvg=await inlineImagesInSvg(svgStr);
+  return new Promise((resolve,reject)=>{
   let url=null;
   try{
-    // Quando o SVG é carregado via blob URL, paths relativos (/img/...) NÃO
-    // resolvem (a base é o blob URL, não a página). Tornamos absolutos antes.
-    const origin=(typeof window!=="undefined"&&window.location)?window.location.origin:"";
-    const absSvg=origin?svgStr.replace(/(href|xlink:href)="\/((?:img|icon)[^"]*)"/g,`$1="${origin}/$2"`):svgStr;
-    const blob=new Blob([absSvg],{type:"image/svg+xml;charset=utf-8"});
+    const blob=new Blob([inlinedSvg],{type:"image/svg+xml;charset=utf-8"});
     url=URL.createObjectURL(blob);
     const img=new Image();
     // Sem crossOrigin: imagens internas (/img/anatomy/, /img/vehicles/) são
@@ -790,7 +822,8 @@ const svgToPngU8=(svgStr,width,height)=>new Promise((resolve,reject)=>{
     if(url){try{URL.revokeObjectURL(url);}catch(_){}}
     reject(e);
   }
-});
+  });
+};
 
 // ════════════════════════════════════════════════════════════════
 // APP PRINCIPAL
@@ -1192,7 +1225,11 @@ const t=useMemo(()=>{const isPink=accent==="pink";const acDark=isPink?"#e85b8a":
   // ──────────────────────────────────────────
   // EFEITO — Login: carrega backup e slots
   // ──────────────────────────────────────────
-const {inp,sel,ta,lb,ch,tY,tN,bt,abtn,tb,segTab,segContainer,ST}=useMemo(()=>{const inp={width:"100%",background:t.bg3,border:`1.5px solid ${t.bd}`,borderRadius:10,padding:"11px 14px",fontSize:17,color:t.tx,fontFamily:"inherit",outline:"none",transition:"box-shadow 0.15s",boxSizing:"border-box"};
+const {inp,sel,ta,lb,ch,tY,tN,bt,abtn,tb,segTab,segContainer,ST}=useMemo(()=>{
+// v282: backgroundColor (longhand) em vez de background (shorthand) pra
+// evitar que o select com chevron SVG repita o ícone preenchendo o campo
+// (em modo claro o shorthand resetava background-repeat pra "repeat").
+const inp={width:"100%",backgroundColor:t.bg3,border:`1.5px solid ${t.bd}`,borderRadius:10,padding:"11px 14px",fontSize:17,color:t.tx,fontFamily:"inherit",outline:"none",transition:"box-shadow 0.15s",boxSizing:"border-box"};
 const sel={...inp,appearance:"none",WebkitAppearance:"none",MozAppearance:"none",minHeight:44,paddingRight:34,backgroundImage:`url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='${encodeURIComponent(t.t2)}' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,backgroundRepeat:"no-repeat",backgroundPosition:"right 12px center",backgroundSize:"12px 12px",cursor:"pointer"};const ta={...inp,resize:"vertical",minHeight:72,lineHeight:1.45};
 const lb={fontSize:13,fontWeight:600,color:t.t2,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6,marginLeft:0,paddingLeft:4,display:"block"};
 const ch=a=>({padding:"7px 14px",fontSize:14,borderRadius:20,border:`1px solid ${a?t.ac:t.bd}`,background:a?t.ab:"transparent",color:a?t.ac:t.t2,cursor:"pointer",fontFamily:"inherit",fontWeight:a?600:400,transition:"background 0.15s ease,border-color 0.15s ease,color 0.15s ease",animation:a?"snPickPop 0.35s cubic-bezier(0.34,1.56,0.64,1)":"none"});
