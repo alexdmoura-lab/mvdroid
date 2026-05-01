@@ -7,6 +7,47 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v294 — Quick wins de UX: confirmações, toast persistente, fix de slot
+
+**1. Modais customizados em vez de `window.confirm`**
+
+O alerta nativo do navegador ("Tem certeza?") aparecia em 2 lugares
+(remover template + cancelar burst) — ficava feio em iOS PWA e às vezes
+nem aparecia. Substituídos pelos modais bonitos do app.
+
+**2. BurstModal — confirma antes de descartar fotos**
+
+Antes: tirou 30 fotos, tocou "Cancelar" sem querer → perdeu tudo
+silenciosamente. Agora um modal grande aparece avisando "Você vai perder
+N fotos — não dá pra desfazer".
+
+**3. Reverse geocoding pergunta antes de sobrescrever endereço**
+
+Antes: se você já tinha digitado endereço, o GPS pulava silencioso
+(não dava pra atualizar sem apagar manual primeiro).
+
+Agora: se há endereço digitado, modal mostra atual vs sugerido pelo GPS
+com 2 botões: "Manter atual" / "Substituir".
+
+**4. Toast de erro fica visível até toque**
+
+Antes: todo toast (erro ou sucesso) sumia em 3 segundos. Erro passava
+despercebido se o usuário estava olhando pra outro lugar.
+
+Agora: ❌ erros e ⚠ avisos ficam fixos com indicação "· toque pra fechar
+✕". Sucesso (✅) e câmera (📷) continuam sumindo em 3s.
+
+**5. Bug do slot — clearBackup apagava slot errado**
+
+Bug encontrado durante revisão: ao sobrescrever um slot DIFERENTE do
+ativo (ex: você está no slot 2 e escolhe sobrescrever o slot 5), o
+`clearBackup` estava apagando o slot 2 (ativo) em vez do 5 (alvo).
+Causa: stale closure do React — `setSlotIdx(novo)` é assíncrono mas
+`clearBackup()` rodava em seguida com o slotIdx antigo.
+
+Fix: `clearBackup(slotOverride)` aceita o slot alvo explicitamente e
+`resetAll` passa `nextSlot` em vez de usar o closure.
+
 ## v293 — Numeração dinâmica das seções, GPS com erros específicos
 
 **1. Numeração dinâmica em PDF e DOCX**
