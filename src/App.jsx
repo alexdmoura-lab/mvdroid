@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v286-Xandroid";
+const APP_VERSION="v287-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -1835,8 +1835,19 @@ await smartSavePdf(blob,title);
 // Wrapper com a mesma API do JSZip (file/generateAsync), mas usando fflate por baixo.
 // Saída: Blob DOCX pronto pra download/share. Mantém a interface do código antigo
 // minimizando o diff dentro de saveCroquiDocx/saveRRVDocx.
+// v287: file() aceita opts.level. PNG/JPEG já são compactados — passar
+// level:0 (STORE) evita recompressão que travava o fflate no iOS Safari.
+// Detecção automática pela extensão se opts não for passado.
 const mkDocxZip=()=>{const files={};return{
-  file:(path,content)=>{const u8=typeof content==="string"?strToU8(content):content;files[path]=[u8,{level:6}];},
+  file:(path,content,opts)=>{
+    const u8=typeof content==="string"?strToU8(content):content;
+    let level=(opts&&typeof opts.level==="number")?opts.level:6;
+    if(!opts||opts.level===undefined){
+      // auto: PNG/JPEG = STORE (já compactados)
+      if(/\.(png|jpe?g)$/i.test(path))level=0;
+    }
+    files[path]=[u8,{level}];
+  },
   generateAsync:()=>new Promise((resolve,reject)=>{fflateZip(files,{level:6},(err,u8)=>{if(err)reject(err);else resolve(new Blob([u8],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));});})
 };};
 const X=(s)=>{if(!s)return"";const v=Array.isArray(s)?s.join(", "):String(s);return v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");};
@@ -2255,12 +2266,13 @@ zip.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><
 zip.file("word/document.xml",docXml);
 zip.file("word/_rels/document.xml.rels",relsXml);
 _diagLog("info","docx zip files added, body bytes="+body.length);
-// v286: timeout no generateAsync — em iOS, zips com PNGs grandes podem
-// travar fflate sem callback. Race contra setTimeout 30s. Se travar, o
-// catch global pega e mostra erro visível em vez de hang silencioso.
+// v287: timeout 60s no generateAsync. Em v286 era 30s mas o fflate
+// recomprimia PNGs já compactados — agora PNGs vão como STORE (level:0)
+// no mkDocxZip, então o zip é praticamente instantâneo. 60s é margem
+// generosa caso ainda haja algo lento.
 const blob=await Promise.race([
   zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}}),
-  new Promise((_,rej)=>setTimeout(()=>rej(new Error("zip generateAsync timeout 30s")),30000))
+  new Promise((_,rej)=>setTimeout(()=>rej(new Error("zip generateAsync timeout 60s")),60000))
 ]);
 _diagLog("info","docx blob ready",blob.size+" bytes");
 if(returnBlobOnly)return blob;

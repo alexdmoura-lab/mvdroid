@@ -7,6 +7,28 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v287 — Fix DOCX trava no zip: PNG vai como STORE (sem recompressão)
+
+Diagnóstico v286 confirmou: rasterização ✅, mas `generateAsync timeout 30s`.
+fflate travava ao tentar comprimir 6 PNGs (~150-225KB cada). Causa real
+agora identificada: PNGs já são internamente compactados (Deflate). Ao
+forçar `level:6` (DEFLATE) em cima, o algoritmo gasta CPU sem reduzir
+muito o tamanho — em iOS Safari isso trava (provavelmente pela falta
+de WebWorkers no contexto async).
+
+Fix:
+- `mkDocxZip.file()` agora aceita `opts.level`. Sem opts, detecta pela
+  extensão: `.png/.jpg/.jpeg` → STORE (level 0, sem compressão), o resto
+  → DEFLATE level 6 (mesma compressão antiga pra XMLs).
+- DOCX final fica ~30% maior (porque imagens não são re-compactadas)
+  mas a geração é ~50× mais rápida e SEM TRAVAR.
+- Timeout do generateAsync subiu pra 60s só por margem (na prática termina
+  em <1s agora).
+
+Por que zipar? DOCX é tecnicamente um ZIP — formato oficial do Word.
+Word abre um .docx fazendo unzip e lendo os XMLs dentro. Não dá pra fazer
+DOCX sem zipar.
+
 ## v286 — Fix dois bugs do DOCX (Sedan rasterizado + zip travando)
 
 Diagnóstico da v285 revelou dois bugs reais com causa identificada:
