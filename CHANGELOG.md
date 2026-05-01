@@ -7,6 +7,14 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v280 — Croqui do veículo no PDF (com vestígios marcados)
+
+- **Croqui visual do veículo no Croqui PDF**: nova função `veiPdfSvg` similar ao `bodyPdfSvg` do cadáver. Pra cada veículo com vestígios veiculares marcados, o PDF agora mostra a imagem do carro nas vistas que têm vestígios (lateral E, lateral D, frente, traseira) com bolinhas vermelhas numeradas indicando exatamente onde cada vestígio foi marcado. Numeração bate com a tabela "Vestígios veiculares" acima.
+  - Coordenadas das regiões vêm sincronizadas dos componentes JSX do app (`VLatSvg`, `VFrenteSvg`, `VTrasSvg`).
+  - Funciona pra Sedan, Hatch, SUV e Caminhonete (que compartilham a mesma estrutura de regiões). Moto, bicicleta e ônibus ainda não têm coordenadas mapeadas — o vestígio aparece na tabela mas não no croqui visual.
+  - Suporta múltiplos vestígios na mesma região (bolinhas empilham horizontalmente).
+- **DOCX ainda não inclui o croqui visual** — fica para a v281. Embedar SVG no DOCX requer rasterização SVG→PNG via canvas (não trivial em iOS Safari), e quero fazer com testes específicos. Por enquanto, abrir o PDF é o caminho.
+
 ## v279 — Auditoria de saneamento (rodadas 4 e 5)
 
 **Rodada 4 — qualidade de código:**

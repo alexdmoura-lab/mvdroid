@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v279-Xandroid";
+const APP_VERSION="v280-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2502,6 +2502,87 @@ r+=ln("Pertences",d[cx2+"pert"])+ln("Observações gerais",d[cx2+"obs_geral"]);}
   // Renderiza apenas as vistas que têm feridas (mesmo princípio dos veículos)
   // Usa as mesmas imagens base64 e coordenadas exatas do app
   // ──────────────────────────────────────────
+
+// ──────────────────────────────────────────
+// veiPdfSvg: SVG do(s) veículo(s) com vestígios marcados (similar ao bodyPdfSvg).
+// Renderiza as 4 vistas principais (lateral E, lateral D, frente, traseira)
+// pra cada veículo que tem vestígios marcados. Marcadores são bolinhas
+// vermelhas numeradas, idênticas às do bodyPdfSvg do cadáver.
+// Coordenadas extraídas dos componentes JSX VLatSvg/VFrenteSvg/VTrasSvg
+// — manter sincronizado se as posições do app mudarem.
+// ──────────────────────────────────────────
+// Centros de cada região (pixel x,y) por vista. Para vistas laterais a
+// orientação difere: lat-E tem frente do carro à direita; lat-D ao contrário
+// (espelhado). Os IDs RVE/RVD têm a mesma sequência de regiões (porta_ant,
+// porta_pos, vidro_ant, vidro_pos, retrovisor, paralama_ant, paralama_pos,
+// parachoque_ant, parachoque_pos, roda_ant, roda_pos, pneu_ant, pneu_pos,
+// soleira, coluna_a, coluna_b, coluna_c).
+const POS_VEI_LAT_E={"ve_vidro_ant_e":[270,115],"ve_vidro_pos_e":[450,115],"ve_porta_ant_e":[275,195],"ve_porta_pos_e":[455,195],"ve_coluna_a_e":[198,115],"ve_coluna_b_e":[355,115],"ve_coluna_c_e":[590,115],"ve_retrovisor_e":[65,165],"ve_paralama_ant_e":[150,225],"ve_paralama_pos_e":[650,225],"ve_parachoque_ant_e":[45,265],"ve_parachoque_pos_e":[755,265],"ve_soleira_e":[400,268],"ve_roda_ant_e":[150,320],"ve_roda_pos_e":[650,320],"ve_pneu_ant_e":[150,365],"ve_pneu_pos_e":[650,365]};
+// Lat D — mesma estrutura mas espelhada (frente do carro à esquerda)
+const POS_VEI_LAT_D={"ve_vidro_ant_d":[510,115],"ve_vidro_pos_d":[330,115],"ve_porta_ant_d":[515,195],"ve_porta_pos_d":[335,195],"ve_coluna_a_d":[600,115],"ve_coluna_b_d":[455,115],"ve_coluna_c_d":[210,115],"ve_retrovisor_d":[735,165],"ve_paralama_ant_d":[650,225],"ve_paralama_pos_d":[150,225],"ve_parachoque_ant_d":[755,265],"ve_parachoque_pos_d":[45,265],"ve_soleira_d":[400,268],"ve_roda_ant_d":[650,320],"ve_roda_pos_d":[150,320],"ve_pneu_ant_d":[650,365],"ve_pneu_pos_d":[150,365]};
+// Frente: para-brisa, capô, faróis E/D, grade, para-choques, placa
+const POS_VEI_FRENTE={"ve_parabrisa":[400,105],"ve_capo":[400,205],"ve_farol_e":[205,275],"ve_farol_d":[595,275],"ve_grade":[400,275],"ve_parachoque_d_e":[215,330],"ve_parachoque_d_d":[585,330],"ve_placa_d":[400,324],"ve_parachoque_d_c":[400,356]};
+// Traseira: vidro traseiro, tampa porta-malas, lanternas E/D, placa, para-choques
+const POS_VEI_TRAS={"ve_vidro_tras":[400,110],"ve_portamalas":[400,215],"ve_lanterna_e":[200,235],"ve_lanterna_d":[600,235],"ve_placa_t":[400,259],"ve_parachoque_t_e":[215,330],"ve_parachoque_t_d":[585,330],"ve_parachoque_t_c":[400,330]};
+
+// Tipos com 4 vistas image-based no app: sedan/hatch/suv/caminhonete
+// (moto/bici/onibus têm imagens diferentes — ficam de fora dessa primeira versão).
+const VEI_TIPOS_COM_SVG=["sedan","hatch","suv","caminhonete"];
+
+const veiPdfSvg=(veiVestList,d,veiculos)=>{
+  if(!veiVestList||!veiVestList.length)return"";
+  // Agrupa vestígios por veículo
+  const vvByVei={};
+  veiVestList.forEach((v,i)=>{
+    const vi=v.veiculo==null?0:v.veiculo;
+    if(!vvByVei[vi])vvByVei[vi]=[];
+    vvByVei[vi].push({n:i+1,...v});
+  });
+  // Helper: gera marcadores (bolinhas vermelhas numeradas) pra um dict de posições
+  const markers=(positions,vestsForView,markerR=10)=>{
+    let m="";
+    // Agrupa por região pra empilhar quando há mais de 1 vestígio na mesma região
+    const byRegion={};
+    vestsForView.forEach(v=>{if(positions[v.region]){if(!byRegion[v.region])byRegion[v.region]=[];byRegion[v.region].push(v);}});
+    Object.entries(byRegion).forEach(([rid,vs])=>{
+      const pos=positions[rid];
+      vs.forEach((v,j)=>{
+        const ox=j*(markerR*2+2);
+        m+=`<circle cx="${pos[0]+ox}" cy="${pos[1]}" r="${markerR}" fill="#ff3b30" stroke="#fff" stroke-width="1.5" opacity="0.92"/><text x="${pos[0]+ox}" y="${pos[1]+4}" text-anchor="middle" font-size="${markerR+1}" font-weight="700" fill="#fff">${v.n}</text>`;
+      });
+    });
+    return m;
+  };
+  // Pra cada veículo, pra cada vista que tem vestígios, gera 1 SVG
+  const allViews=[];
+  Object.entries(vvByVei).forEach(([viStr,vests])=>{
+    const vi=+viStr;
+    const tipo=(d["v"+vi+"_tipo"]||"sedan").toLowerCase();
+    if(!VEI_TIPOS_COM_SVG.includes(tipo))return; // moto/bici/onibus: pula (sem coordenadas mapeadas)
+    const veiLabel=veiculos[vi]?.label||`Veículo ${vi+1}`;
+    const placa=d["v"+vi+"_placa"]?` (${d["v"+vi+"_placa"]})`:"";
+    const src=IMG_VEI[tipo]||IMG_VEI.sedan;
+    const mkView=(label,imgSrc,positions,vb,h)=>{
+      const vestsHere=vests.filter(v=>positions[v.region]);
+      if(!vestsHere.length)return null;
+      const svg=`<image href="${imgSrc}" x="0" y="0" width="800" height="${h}" preserveAspectRatio="xMidYMid meet"/><text x="400" y="${h+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#888">${label}</text>`+markers(positions,vestsHere,11);
+      return{vb,w:300,svg,label:`${veiLabel}${placa} — ${label}`};
+    };
+    const v1=mkView("LATERAL ESQUERDA",src.latE,POS_VEI_LAT_E,"0 0 800 400",380);
+    const v2=mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,"0 0 800 400",380);
+    const v3=mkView("FRENTE",src.ant,POS_VEI_FRENTE,"0 0 800 440",420);
+    const v4=mkView("TRASEIRA",src.pos,POS_VEI_TRAS,"0 0 800 440",420);
+    [v1,v2,v3,v4].forEach(v=>{if(v)allViews.push(v);});
+  });
+  if(!allViews.length)return"";
+  let html=`<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:14px 0;page-break-inside:avoid">`;
+  allViews.forEach(v=>{
+    html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.w}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svg}</svg></div>`;
+  });
+  html+=`</div>`;
+  return html;
+};
+
 const bodyPdfSvg=(woundsList,sx)=>{
 if(!woundsList||!woundsList.length)return"";
 // Numera todas as feridas globalmente
@@ -2754,7 +2835,7 @@ if(trilhas.length>0){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 
 edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Edificação ${ei+1}${e.tipo?" — "+esc(e.tipo):""}${e.nome?" ("+esc(e.nome)+")":""}</h5>`;h+=tblZ([e.tipo?["Tipo",e.tipo]:null,e.nome?["Descrição complementar",e.nome]:null,e.material?["Material",e.material]:null,e.andares?["Andares",e.andares]:null,e.cobertura?["Cobertura",e.cobertura]:null,e.estado?["Estado",e.estado]:null,e.muro?["Perímetro/muro",e.muro]:null,e.portao?["Portão",e.portao]:null,e.acesso?["Acesso",e.acesso]:null,e.n_entradas?["Entradas",e.n_entradas]:null,e.ilum_int?["Iluminação interna",e.ilum_int]:null,e.cameras?["Câmeras",e.cameras]:null,e.vizinhanca?["Vizinhança",e.vizinhanca]:null,e.comodos_list?.length?["Cômodos",e.comodos_list.join(", ")]:null,e.comodos_fato?.length?["Cômodos do fato",e.comodos_fato.join(", ")]:null,e.obs?["Observações",e.obs]:null]);if(e.comodos_fato_det&&e.comodos_fato?.length){e.comodos_fato.forEach(cf=>{const det=(e.comodos_fato_det||{})[cf];if(det){const allM2=[...(det.mr||[]),...(det.mi||[]),...(det.ma||[]),...(det.mac||[]),...(det.me||[]),...(det.mo||[])];if(det.estado||allM2.length||det.obs_manchas||det.obs_comodo){h+=`<h6 style="font-size:10px;color:${PRIMARY};margin:6px 0 3px;font-weight:700">📍 ${esc(cf)}</h6>`;h+=tblZ([det.estado?["Estado",det.estado]:null,allM2.length?["Manchas",allM2.join(", ")]:null,det.obs_manchas?["Obs manchas",det.obs_manchas]:null,det.obs_comodo?["Obs cômodo",det.obs_comodo]:null]);}}});}}});
 // 4.2 Do Veículo (se houver)
 const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
-if(veicsComData.length>0){h+=sec2("4.2","Do Veículo");veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(hasVehicleData(d,vi,veiVest)){if(veicsComData.length>1)h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Veículo ${vi+1}</h5>`;h+=tblZ([d[vx+"cat"]?["Categoria",d[vx+"cat"]]:null,d[vx+"tipo"]?["Tipo",d[vx+"tipo"]]:null,d[vx+"cor"]?["Cor",d[vx+"cor"]]:null,d[vx+"placa"]?["Placa",d[vx+"placa"]]:null,d[vx+"ano"]?["Ano",d[vx+"ano"]]:null,d[vx+"chassi"]?["Chassi",d[vx+"chassi"]]:null,d[vx+"km"]?["Hodômetro",d[vx+"km"]]:null,d[vx+"estado"]?["Estado",d[vx+"estado"]]:null,d[vx+"motor"]?["Motor",d[vx+"motor"]]:null,d[vx+"portas"]?["Portas travadas",d[vx+"portas"]]:null,d[vx+"vidros"]?["Vidros íntegros",d[vx+"vidros"]]:null,d[vx+"chave"]?["Chave",d[vx+"chave"]]:null,d[vx+"obs"]?["Observações",d[vx+"obs"]]:null]);}});if(veiVest.length){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Vestígios veiculares</h5>`;h+=tblList(veiVest,["Nº","Vestígio","Suporte"],(v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";const sup3=`${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}`;const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(sup3)}</td></tr>`;});}}
+if(veicsComData.length>0){h+=sec2("4.2","Do Veículo");veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(hasVehicleData(d,vi,veiVest)){if(veicsComData.length>1)h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Veículo ${vi+1}</h5>`;h+=tblZ([d[vx+"cat"]?["Categoria",d[vx+"cat"]]:null,d[vx+"tipo"]?["Tipo",d[vx+"tipo"]]:null,d[vx+"cor"]?["Cor",d[vx+"cor"]]:null,d[vx+"placa"]?["Placa",d[vx+"placa"]]:null,d[vx+"ano"]?["Ano",d[vx+"ano"]]:null,d[vx+"chassi"]?["Chassi",d[vx+"chassi"]]:null,d[vx+"km"]?["Hodômetro",d[vx+"km"]]:null,d[vx+"estado"]?["Estado",d[vx+"estado"]]:null,d[vx+"motor"]?["Motor",d[vx+"motor"]]:null,d[vx+"portas"]?["Portas travadas",d[vx+"portas"]]:null,d[vx+"vidros"]?["Vidros íntegros",d[vx+"vidros"]]:null,d[vx+"chave"]?["Chave",d[vx+"chave"]]:null,d[vx+"obs"]?["Observações",d[vx+"obs"]]:null]);}});if(veiVest.length){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Vestígios veiculares</h5>`;h+=tblList(veiVest,["Nº","Vestígio","Suporte"],(v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";const sup3=`${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}`;const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(sup3)}</td></tr>`;});h+=veiPdfSvg(veiVest,d,veiculos);}}
 // 4.3 Do Cadáver
 const subCadBase=veicsComData.length>0?"4.3":"4.2";
 cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1)h+=sec2(subCadBase,`Do Cadáver ${ci+1}`);else if(ci===0)h+=sec2(subCadBase,"Do Cadáver");
