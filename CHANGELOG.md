@@ -7,6 +7,32 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v288 — Veículo com 8 vistas no Croqui (interior + teto)
+
+DOCX da v287 funcionou (gerou rápido, com imagens) — ✅. Mas o usuário
+notou que vestígios marcados em **interior esquerdo, interior direito e
+teto** não viravam imagens. Eu só tinha mapeado 4 vistas externas
+(lateral E, lateral D, frente, traseira).
+
+Adicionado mapeamento de coordenadas (POS_VEI_*) para as 4 vistas que
+faltavam, totalizando 8 vistas:
+
+- **VISTA SUPERIOR** (teto): 8 áreas (capô D/E, teto ant D/E, teto pos
+  D/E, p-malas D/E)
+- **INTERIOR — VISTA SUPERIOR**: volante, painel, bancos motorista/
+  passageiro/traseiros, console, assoalho
+- **INTERIOR — LATERAL DIREITA**: vista de dentro com painel à direita
+  (porta-luvas, retrovisor, para-brisa, apoio de cabeça, cinto, forro)
+- **INTERIOR — LATERAL ESQUERDA**: espelhado (painel à esquerda)
+
+Coordenadas extraídas dos componentes JSX `VTetoSvg` e `VIntSvg` que já
+renderizam essas vistas na aba Veículo do app — agora 100% das regiões
+clicáveis viram bolinhas no PDF/DOCX.
+
+Tipos cobertos: Sedan, Hatch, SUV, Caminhonete (interior compartilhado).
+Moto/Bicicleta/Ônibus continuam só com tabela texto (estruturas
+diferentes — mapeamento dedicado em rodada futura).
+
 ## v287 — Fix DOCX trava no zip: PNG vai como STORE (sem recompressão)
 
 Diagnóstico v286 confirmou: rasterização ✅, mas `generateAsync timeout 30s`.

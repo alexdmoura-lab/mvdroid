@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v287-Xandroid";
+const APP_VERSION="v288-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2783,6 +2783,15 @@ const POS_VEI_LAT_D={"ve_vidro_ant_d":[510,115],"ve_vidro_pos_d":[330,115],"ve_p
 const POS_VEI_FRENTE={"ve_parabrisa":[400,105],"ve_capo":[400,205],"ve_farol_e":[205,275],"ve_farol_d":[595,275],"ve_grade":[400,275],"ve_parachoque_d_e":[215,330],"ve_parachoque_d_d":[585,330],"ve_placa_d":[400,324],"ve_parachoque_d_c":[400,356]};
 // Traseira: vidro traseiro, tampa porta-malas, lanternas E/D, placa, para-choques
 const POS_VEI_TRAS={"ve_vidro_tras":[400,110],"ve_portamalas":[400,215],"ve_lanterna_e":[200,235],"ve_lanterna_d":[600,235],"ve_placa_t":[400,259],"ve_parachoque_t_e":[215,330],"ve_parachoque_t_d":[585,330],"ve_parachoque_t_c":[400,330]};
+// Vista superior (teto): 8 áreas — capô D/E, teto ant D/E, teto pos D/E, p-malas D/E
+// Frente do carro à direita; lado D em cima; lado E embaixo. Coords v275.
+const POS_VEI_SUP={"ve_capo_d":[700,140],"ve_capo_e":[700,280],"ve_teto_ant_d":[530,140],"ve_teto_ant_e":[530,280],"ve_teto_pos_d":[340,140],"ve_teto_pos_e":[340,280],"ve_portamalas_d":[140,140],"ve_portamalas_e":[140,280]};
+// Interior — vista superior (de cima): volante à direita (motorista lado D)
+const POS_VEI_INT_SUP={"vi_volante":[640,210],"vi_painel":[680,95],"vi_banco_mot":[495,205],"vi_banco_pass":[495,375],"vi_console":[425,260],"vi_banco_tras_e":[190,375],"vi_banco_tras_c":[310,375],"vi_banco_tras_d":[250,205],"vi_assoalho_ant":[410,250],"vi_assoalho_pos":[90,250]};
+// Interior — lateral direita (vê painel à direita; volante = motorista)
+const POS_VEI_INT_D={"vi_banco_tras_e":[85,200],"vi_banco_tras_d":[215,200],"vi_banco_mot":[355,240],"vi_banco_pass":[480,245],"vi_apoio_cab_mot":[335,120],"vi_parabrisa_int":[450,55],"vi_retrovisor_int":[535,75],"vi_volante":[685,195],"vi_painel":[660,115],"vi_porta_luvas":[735,285],"vi_console":[600,295],"vi_cinto_seg":[410,205],"vi_assoalho_pos":[145,385],"vi_assoalho_ant":[500,385],"vi_forro_teto":[245,45]};
+// Interior — lateral esquerda (espelhado: painel à esquerda)
+const POS_VEI_INT_E={"vi_volante":[115,195],"vi_painel":[140,115],"vi_porta_luvas":[65,285],"vi_console":[200,295],"vi_parabrisa_int":[350,55],"vi_retrovisor_int":[265,75],"vi_banco_pass":[320,245],"vi_banco_mot":[445,240],"vi_apoio_cab_mot":[465,120],"vi_banco_tras_d":[585,200],"vi_banco_tras_e":[715,200],"vi_cinto_seg":[390,205],"vi_assoalho_ant":[300,385],"vi_assoalho_pos":[655,385],"vi_forro_teto":[555,45]};
 
 // Tipos com 4 vistas image-based no app: sedan/hatch/suv/caminhonete
 // (moto/bici/onibus têm imagens diferentes — ficam de fora dessa primeira versão).
@@ -2833,7 +2842,14 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
     const v2=mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,800,400,380);
     const v3=mkView("FRENTE",src.ant,POS_VEI_FRENTE,800,440,420);
     const v4=mkView("TRASEIRA",src.pos,POS_VEI_TRAS,800,440,420);
-    [v1,v2,v3,v4].forEach(v=>{if(v)allViews.push(v);});
+    // v288: vistas adicionais — teto (superior do veículo) e 3 vistas do interior
+    const v5=mkView("VISTA SUPERIOR",src.sup,POS_VEI_SUP,800,440,420);
+    // Interior compartilha imagens entre Sedan/Hatch/SUV (IMG_VEI.interior)
+    const intSrc=IMG_VEI.interior||{};
+    const v6=mkView("INTERIOR — VISTA SUPERIOR",intSrc.sup,POS_VEI_INT_SUP,800,440,420);
+    const v7=mkView("INTERIOR — LATERAL DIREITA",intSrc.d,POS_VEI_INT_D,800,440,420);
+    const v8=mkView("INTERIOR — LATERAL ESQUERDA",intSrc.e,POS_VEI_INT_E,800,440,420);
+    [v1,v2,v3,v4,v5,v6,v7,v8].forEach(v=>{if(v)allViews.push(v);});
   });
   return allViews;
 };
