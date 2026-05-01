@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v285-Xandroid";
+const APP_VERSION="v286-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -826,7 +826,10 @@ const svgToPngU8=async(svgStr,width,height)=>{
     img.onload=()=>{
       try{
         _diagLog("info","svgToPng image.onload");
-        const scale=2;
+        // v286: scale 1.0 (era 2.0). Cada PNG passou de ~600KB pra ~150KB.
+        // 5 PNGs antes = ~3MB → fflate travava no iOS Safari ao zipar.
+        // Visualmente continua nítido em A4 (impressa em ~7-8cm de largura).
+        const scale=1;
         const cv=document.createElement("canvas");
         cv.width=width*scale;
         cv.height=height*scale;
@@ -2252,8 +2255,13 @@ zip.file("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><
 zip.file("word/document.xml",docXml);
 zip.file("word/_rels/document.xml.rels",relsXml);
 _diagLog("info","docx zip files added, body bytes="+body.length);
-/* v201: generateAsync sem mimeType (não é opção válida), download mais robusto p/ iOS */
-const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+// v286: timeout no generateAsync — em iOS, zips com PNGs grandes podem
+// travar fflate sem callback. Race contra setTimeout 30s. Se travar, o
+// catch global pega e mostra erro visível em vez de hang silencioso.
+const blob=await Promise.race([
+  zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}}),
+  new Promise((_,rej)=>setTimeout(()=>rej(new Error("zip generateAsync timeout 30s")),30000))
+]);
 _diagLog("info","docx blob ready",blob.size+" bytes");
 if(returnBlobOnly)return blob;
 const fileName=mkFileName("docx");
@@ -2795,11 +2803,14 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
   const allViews=[];
   Object.entries(vvByVei).forEach(([viStr,vests])=>{
     const vi=+viStr;
-    const tipo=(d["v"+vi+"_tipo"]||"sedan").toLowerCase();
-    if(!VEI_TIPOS_COM_SVG.includes(tipo))return;
+    // v286: fix — antes lia "_tipo" (que é Tipo/Modelo texto livre, ex:
+    // "Civic 2010"). O correto é "_cat" (Categoria do botão: Sedan/Hatch/
+    // SUV/Caminhonete/Ônibus/Moto/Bicicleta). Default sedan se não setado.
+    const cat=(d["v"+vi+"_cat"]||"sedan").toLowerCase();
+    if(!VEI_TIPOS_COM_SVG.includes(cat))return;
     const veiLabel=veiculos[vi]?.label||`Veículo ${vi+1}`;
     const placa=d["v"+vi+"_placa"]?` (${d["v"+vi+"_placa"]})`:"";
-    const src=IMG_VEI[tipo]||IMG_VEI.sedan;
+    const src=IMG_VEI[cat]||IMG_VEI.sedan;
     const mkView=(viewLabel,imgSrc,positions,vbW,vbH,imgH)=>{
       const vestsHere=vests.filter(v=>positions[v.region]);
       if(!vestsHere.length)return null;

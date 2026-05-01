@@ -7,6 +7,31 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v286 — Fix dois bugs do DOCX (Sedan rasterizado + zip travando)
+
+Diagnóstico da v285 revelou dois bugs reais com causa identificada:
+
+**1) Veículo `vei=0` mesmo com Sedan + 3 vestígios marcados**
+A função `mkVeiViews` filtrava por `d["v0_tipo"]` (campo "Tipo/Modelo" texto
+livre tipo "Civic 2010"). O correto era `d["v0_cat"]` (botão Categoria:
+Sedan/Hatch/SUV/Caminhonete/Ônibus/Moto/Bicicleta). Como "Civic 2010" não
+está em `VEI_TIPOS_COM_SVG`, todos os veículos eram filtrados fora.
+
+Fix: ler `_cat` em vez de `_tipo` (com fallback "sedan" se não setado).
+Agora o croqui visual do veículo aparece pra qualquer Sedan/Hatch/SUV/
+Caminhonete cadastrado, mesmo se Tipo/Modelo for texto livre.
+
+**2) DOCX travado em `generateAsync` (silêncio após "zip files added")**
+PNGs estavam sendo gerados em scale=2x (alta nitidez) → cada PNG ~600KB,
+total ~3MB. fflate travava ao zipar isso em iOS Safari. Sem timeout, o
+`await` ficava infinito.
+
+Fix:
+- scale=1 (era 2): cada PNG ~150KB, total <1MB. Visualmente continua
+  nítido em A4 (impresso em ~7-8cm de largura).
+- Timeout de 30s no `generateAsync` via `Promise.race`. Se travar, o catch
+  global pega e mostra erro em vez de hang silencioso.
+
 ## v285 — Logs após rasterização + fallback de download iOS
 
 Diagnóstico da v284 mostrou que a rasterização TERMINA com sucesso (5 PNGs
