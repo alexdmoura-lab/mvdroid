@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v283-Xandroid";
+const APP_VERSION="v284-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -744,6 +744,24 @@ const docxHeader1Xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:
 // Se algo der errado (CORS, browser velho, OOM), lança e o caller
 // pula essa view — o DOCX continua sendo gerado sem essa imagem.
 // ──────────────────────────────────────────────────────────────────
+// _diagLog: registra etapa em window.__xandroidErrors pra aparecer no painel
+// Diagnóstico (em produção, console.warn é silenciado, então logs lá não
+// chegam ao usuário). type:"info" pra eventos OK, "warn" pra avisos.
+const _diagLog=(type,msg,extra)=>{
+  try{
+    if(typeof window==="undefined")return;
+    if(!window.__xandroidErrors)window.__xandroidErrors=[];
+    window.__xandroidErrors.unshift({
+      t:new Date().toISOString(),
+      type:"diag-"+type,
+      msg:String(msg||"").slice(0,300),
+      stack:"",
+      extra:extra?String(extra).slice(0,200):""
+    });
+    if(window.__xandroidErrors.length>30)window.__xandroidErrors.length=30;
+  }catch(_){}
+};
+
 // Cache de imagens já convertidas em data URL — evita refetch nas múltiplas
 // vistas do mesmo veículo/cadáver. Vive enquanto a aba está aberta.
 const _IMG_DATAURL_CACHE={};
@@ -758,15 +776,16 @@ const _fetchWithTimeout=(url,ms)=>Promise.race([
 ]);
 const inlineImagesInSvg=async(svgStr)=>{
   if(!svgStr)return svgStr;
-  // Pega tanto href= quanto xlink:href= e tanto src= (de <img>) quanto href= (de <image>)
   const re=/(?:href|xlink:href|src)="\/((?:img|icon)[^"]+)"/g;
   const paths=new Set();
   let m;while((m=re.exec(svgStr))!==null)paths.add(m[1]);
+  _diagLog("info","inlineImg start: "+paths.size+" path(s)");
+  let okCount=0,failCount=0,cachedCount=0;
   for(const p of paths){
-    if(_IMG_DATAURL_CACHE[p])continue;
+    if(_IMG_DATAURL_CACHE[p]){cachedCount++;continue;}
     try{
       const resp=await _fetchWithTimeout("/"+p,5000);
-      if(!resp.ok)continue;
+      if(!resp.ok){failCount++;_diagLog("warn","inlineImg fetch !ok",p+" status="+resp.status);continue;}
       const blob=await resp.blob();
       const dataUrl=await Promise.race([
         new Promise((res,rej)=>{
@@ -778,32 +797,35 @@ const inlineImagesInSvg=async(svgStr)=>{
         new Promise((_,rej)=>setTimeout(()=>rej(new Error("FileReader timeout 5s")),5000))
       ]);
       _IMG_DATAURL_CACHE[p]=dataUrl;
+      okCount++;
     }catch(e){
-      console.warn("[inlineImg] falha ao carregar",p,e);
+      failCount++;
+      _diagLog("warn","inlineImg fail",p+": "+(e&&e.message||e));
     }
   }
+  _diagLog("info","inlineImg done: ok="+okCount+" cached="+cachedCount+" fail="+failCount);
   return svgStr.replace(/(href|xlink:href|src)="\/((?:img|icon)[^"]+)"/g,(full,attr,path)=>
     _IMG_DATAURL_CACHE[path]?`${attr}="${_IMG_DATAURL_CACHE[path]}"`:full
   );
 };
 
 const svgToPngU8=async(svgStr,width,height)=>{
-  // Inline TODAS as <image href> como data URLs ANTES de criar o blob URL.
-  // Sem isso, iOS não desenha as imagens internas no canvas (ficam em branco).
+  _diagLog("info","svgToPng start "+width+"x"+height);
   const inlinedSvg=await inlineImagesInSvg(svgStr);
+  _diagLog("info","svgToPng inline-done, creating Image",inlinedSvg.length+" bytes");
   return new Promise((resolve,reject)=>{
   let url=null;
+  let resolved=false;
   try{
     const blob=new Blob([inlinedSvg],{type:"image/svg+xml;charset=utf-8"});
     url=URL.createObjectURL(blob);
     const img=new Image();
-    // Sem crossOrigin: imagens internas (/img/anatomy/, /img/vehicles/) são
-    // same-origin do Vercel, e crossOrigin="anonymous" exige headers CORS
-    // que o servidor não manda por padrão (causaria falha desnecessária).
     const cleanup=()=>{if(url){try{URL.revokeObjectURL(url);}catch(_){}url=null;}};
+    const safeReject=(reason)=>{if(resolved)return;resolved=true;cleanup();_diagLog("warn","svgToPng reject",reason);reject(new Error(reason));};
+    const safeResolve=(payload)=>{if(resolved)return;resolved=true;cleanup();resolve(payload);};
     img.onload=()=>{
       try{
-        // Renderiza em 2x pra ficar nítido (PNG fica leve por ser foto+vetor mistura)
+        _diagLog("info","svgToPng image.onload");
         const scale=2;
         const cv=document.createElement("canvas");
         cv.width=width*scale;
@@ -814,23 +836,23 @@ const svgToPngU8=async(svgStr,width,height)=>{
         ctx.scale(scale,scale);
         ctx.drawImage(img,0,0,width,height);
         const dataUrl=cv.toDataURL("image/png");
-        cleanup();
-        cv.width=0;cv.height=0; // libera memória do canvas (importante em iOS)
+        const finalW=cv.width;const finalH=cv.height;
+        cv.width=0;cv.height=0;
         const b64=dataUrl.split(",")[1];
-        if(!b64){reject(new Error("toDataURL retornou vazio"));return;}
+        if(!b64){safeReject("toDataURL vazio");return;}
         const bin=atob(b64);
         const u8=new Uint8Array(bin.length);
         for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
-        resolve({u8,width:cv.width||width*scale,height:cv.height||height*scale});
-      }catch(e){cleanup();reject(e);}
+        _diagLog("info","svgToPng done, bytes="+u8.length);
+        safeResolve({u8,width:finalW,height:finalH});
+      }catch(e){safeReject("onload err: "+(e&&e.message||e));}
     };
-    img.onerror=(e)=>{cleanup();reject(new Error("SVG falhou ao carregar como Image"));};
+    img.onerror=()=>{safeReject("Image.onerror");};
     img.src=url;
-    // Timeout de segurança: se o load nunca disparar (raro mas acontece em iOS),
-    // rejeita após 8s pra não pendurar a geração do DOCX.
-    setTimeout(()=>{cleanup();reject(new Error("svgToPngU8 timeout 8s"));},8000);
+    setTimeout(()=>{safeReject("svgToPng timeout 10s");},10000);
   }catch(e){
     if(url){try{URL.revokeObjectURL(url);}catch(_){}}
+    _diagLog("warn","svgToPng outer err",e&&e.message||e);
     reject(e);
   }
   });
@@ -1875,22 +1897,37 @@ try{
     const views=mkVeiViews(veiVest,d,veiculos);
     views.forEach(v=>allRasterTasks.push({type:"vei",view:v}));
   }
+  _diagLog("info","raster batch start: "+allRasterTasks.length+" tasks");
   if(allRasterTasks.length&&!returnBlobOnly){
     showToast(`⏳ Renderizando ${allRasterTasks.length} ilustração${allRasterTasks.length>1?"ões":""}...`);
   }
-  for(const task of allRasterTasks){
-    try{
-      const fullSvg=`<svg viewBox="${task.view.vb}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${task.view.svgInner}</svg>`;
-      const r=await svgToPngU8(fullSvg,task.view.vbW,task.view.vbH);
-      const entry={label:task.view.label,u8:r.u8,w:r.width,h:r.height};
-      if(task.type==="cad")cadaverPngsByCi[task.ci].push(entry);
-      else veiPngs.push(entry);
-    }catch(e){
-      console.warn("[DOCX] rasterização falhou para",task.view.label,e);
+  // Timeout global: se o batch inteiro demorar > 60s, abandona e gera DOCX
+  // sem as imagens (graceful fallback). Sem isso, o iOS pode pendurar tudo.
+  const batchTimeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error("batch raster timeout 60s")),60000));
+  const batchWork=(async()=>{
+    for(const task of allRasterTasks){
+      try{
+        _diagLog("info","raster task: "+task.type+" "+task.view.label);
+        const fullSvg=`<svg viewBox="${task.view.vb}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${task.view.svgInner}</svg>`;
+        const r=await svgToPngU8(fullSvg,task.view.vbW,task.view.vbH);
+        const entry={label:task.view.label,u8:r.u8,w:r.width,h:r.height};
+        if(task.type==="cad")cadaverPngsByCi[task.ci].push(entry);
+        else veiPngs.push(entry);
+        _diagLog("info","raster task ok: "+task.view.label);
+      }catch(e){
+        _diagLog("warn","raster task fail: "+task.view.label,e&&e.message||e);
+      }
     }
+  })();
+  try{
+    await Promise.race([batchWork,batchTimeout]);
+    _diagLog("info","raster batch done: cad="+Object.values(cadaverPngsByCi).flat().length+" vei="+veiPngs.length);
+  }catch(e){
+    _diagLog("warn","raster batch timeout — gerando DOCX sem ilustrações",e&&e.message||e);
+    if(!returnBlobOnly)showToast("⚠ Ilustrações puladas — gerando DOCX só com texto");
   }
 }catch(e){
-  console.warn("[DOCX] erro geral na rasterização (ignorado):",e);
+  _diagLog("warn","raster setup err",e&&e.message||e);
 }
 // ═════════════ BODY ═════════════
 let body="";

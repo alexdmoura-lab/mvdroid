@@ -7,6 +7,31 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v284 — Telemetria + timeout global pra DOCX/PDF (debug iOS)
+
+DOCX da v283 ainda travava em "Renderizando 5 ilustrações" no iPhone, sem
+gerar nada e sem registrar erro no Diagnóstico (porque os `console.warn`
+ficam silenciados em produção desde v279).
+
+Adições pra desbloquear e instrumentar:
+
+- **`_diagLog(type, msg, extra)`**: novo helper que registra eventos
+  diretamente em `window.__xandroidErrors` (mesmo logger global que captura
+  erros). Diferente do `console.warn`, esses logs APARECEM no painel
+  Diagnóstico mesmo em produção. Categoria `diag-info` pra eventos OK,
+  `diag-warn` pra avisos. Logs viram trilha do que aconteceu.
+- **Logging detalhado em `svgToPngU8` e `inlineImagesInSvg`**: cada etapa
+  (start, fetch, image.onload, toDataURL, etc.) registra no diag.
+- **Timeout global de 60s no batch de rasterização**: se a soma das
+  rasterizações exceder 1 minuto, a Promise.race aborta o batch e o DOCX
+  é gerado **sem as ilustrações** (graceful fallback). Toast avisa o
+  usuário: "⚠ Ilustrações puladas — gerando DOCX só com texto".
+- **Sem mais hangs eternos**: mesmo no pior caso onde toda rasterização
+  falha, o DOCX é gerado com tabelas + texto (comportamento da v279).
+
+Próxima vez que o DOCX falhar, abrir o Diagnóstico vai mostrar EXATAMENTE
+onde travou (qual fetch, qual imagem, qual etapa).
+
 ## v283 — Fix DOCX que travava + Imagem do veículo no PDF
 
 Dois bugs reportados em teste no iPhone:
