@@ -7,6 +7,31 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v293 — Numeração dinâmica das seções, GPS com erros específicos
+
+**1. Numeração dinâmica em PDF e DOCX**
+
+Antes a numeração era fixa: "Cadáver = 4.3", "Veículo = 4.2", etc. Se
+uma seção fosse pulada (sem dados), a próxima mantinha o número fixo
+(ficavam buracos: 1, 2, 3, 4, 5 com vários sub-itens vazios; ou pulava
+de "4.3.1 Descrição" pra "4.3.3 Perinecroscopia" se Vestes não existia).
+
+Agora os contadores `H1/H2/H3` (DOCX) e `sec1/sec2/sec3` (PDF) **incrementam
+automaticamente** na ordem em que as seções são emitidas. Se o cadáver é
+o 3º top-level emitido em vez do 4º, ele vira "3 Cadáver". Se "Vestes"
+é pulado, "Perinecroscopia" vira ".2" em vez de ".3".
+
+Funciona pra qualquer combinação: cenas só com Local, cenas com Local +
+Cadáver mas sem Veículo, cenas com 2 cadáveres, etc.
+
+**2. GPS — mensagens de erro específicas**
+
+- Antes: 3 cenários de erro caíam no mesmo "GPS indisponível".
+- Agora:
+  - Permissão negada: "🔒 GPS bloqueado — libere em Ajustes → Safari → Localização"
+  - Sem sinal: "📡 Sem sinal de satélite — vá pra área aberta e tente de novo"
+  - Timeout: "⏱ GPS demorou demais — sinal fraco, tente novamente"
+
 ## v292 — Pendências dos testes: dedos palma/dorso, SUV, render paralelo, timer
 
 **1. Mãos — palma e dorso de cada dedo separados**

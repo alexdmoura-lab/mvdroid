@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v292-Xandroid";
+const APP_VERSION="v293-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -1317,10 +1317,12 @@ p=>{const v=`${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)}`;
 try{const ac=new AbortController();const tid=setTimeout(()=>ac.abort(),6000);fetch(`https://nominatim.openstreetmap.org/reverse?lat=${p.coords.latitude}&lon=${p.coords.longitude}&format=json&addressdetails=1`,{headers:{"Accept-Language":"pt-BR"},signal:ac.signal}).then(r=>{clearTimeout(tid);return r.json();}).then(j=>{if(j&&j.display_name&&!data.end){const addr=j.display_name;s("end",addr);showToast("📍 Endereço: "+addr.slice(0,50)+"…");}}).catch(e=>{clearTimeout(tid);if(e.name!=="AbortError")console.warn("CQ geocoding:",e);});}catch(e){console.warn("CQ geocoding init:",e);}},
 // v242: distinguir 3 erros possíveis pra dar mensagem específica ao perito
 // (PERMISSION_DENIED=1, POSITION_UNAVAILABLE=2, TIMEOUT=3 — spec W3C Geolocation)
+// v293: mensagem refinada pro código 2 (sem sinal de satélite)
 (err)=>{setGpsLoading(false);s("gps_fallback","1");
 const code=err&&err.code;
-if(code===1){showToast("🔒 GPS bloqueado — libere a permissão nas Ajustes do navegador");}
-else if(code===3){showToast("⏱ GPS demorou demais — saia pro descampado e tente de novo");}
+if(code===1){showToast("🔒 GPS bloqueado — libere em Ajustes → Safari → Localização");}
+else if(code===2){showToast("📡 Sem sinal de satélite — vá pra área aberta e tente de novo");}
+else if(code===3){showToast("⏱ GPS demorou demais — sinal fraco, tente novamente");}
 else{showToast("📍 GPS indisponível — digite as coordenadas manualmente");}
 console.warn("CQ GPS error:",code,err&&err.message);},
 {enableHighAccuracy:true,timeout:8000,maximumAge:0}
@@ -1882,12 +1884,14 @@ const saveCroquiDocx=async(returnBlobOnly=false)=>{
 /* v201: esc2 reforçado — strip de control chars que quebram XML (zero-width, BOMs etc.) */
 const esc2=(s)=>String(s??"").replace(/[ --￾￿]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
 const Pp=(text,opts={})=>{const sz=opts.sz||20;const bold=opts.bold?'<w:b/>':"";const italic=opts.italic?'<w:i/>':"";const color=opts.color?`<w:color w:val="${opts.color}"/>`:"";const caps=opts.caps?'<w:caps/>':"";const center=opts.center?'<w:jc w:val="center"/>':(opts.right?'<w:jc w:val="right"/>':(opts.justify?'<w:jc w:val="both"/>':""));const shd=opts.shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:"";const ind=opts.indFirst?`<w:ind w:firstLine="${opts.indFirst}"/>`:"";const spAft=opts.spAft!==undefined?opts.spAft:120;const spBef=opts.spBef!==undefined?opts.spBef:0;const spacing=`<w:spacing w:before="${spBef}" w:after="${spAft}" w:line="320" w:lineRule="auto"/>`;const brd=opts.border?`<w:pBdr>${opts.border}</w:pBdr>`:"";const keepNext=opts.keepNext?'<w:keepNext/>':"";const keepLines=opts.keepLines?'<w:keepLines/>':"";const pPr=`<w:pPr>${keepNext}${keepLines}${center}${brd}${spacing}${ind}${shd?`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shd}"/>`:""}<w:rPr>${bold}${italic}<w:sz w:val="${sz}"/>${color}</w:rPr></w:pPr>`;return`<w:p>${pPr}<w:r><w:rPr>${bold}${italic}${caps}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>${color}</w:rPr><w:t xml:space="preserve">${esc2(text)}</w:t></w:r></w:p>`;};
-// H1_NUM: numbered top-level section "1 HISTÓRICO"
-const H1_NUM=(num,title)=>Pp(`${num} ${title}`,{bold:true,sz:28,caps:true,spBef:280,spAft:140,color:"1A1A2E"});
-// H2_NUM: numbered subsection "4.1 Do Local"
-const H2_NUM=(num,title)=>Pp(`${num} ${title}`,{bold:true,sz:26,spBef:200,spAft:140,color:"1A1A2E"});
-// H3_NUM: numbered sub-subsection "4.3.1 Descrição"
-const H3_NUM=(num,title)=>Pp(`${num} ${title}`,{bold:true,italic:true,sz:24,spBef:140,spAft:100,color:"1A1A2E"});
+// v293: numeração DINÂMICA — cada seção é numerada na ordem em que é
+// emitida. Não há regra fixa "Cadáver = 4.3"; se uma seção é pulada
+// (vazia), a próxima recebe o número que sobra. Os contadores resetam
+// ao incrementar o nível pai (h1++ zera h2 e h3, h2++ zera h3).
+const _secN={h1:0,h2:0,h3:0};
+const H1=(title)=>{_secN.h1++;_secN.h2=0;_secN.h3=0;return Pp(`${_secN.h1} ${title}`,{bold:true,sz:28,caps:true,spBef:280,spAft:140,color:"1A1A2E"});};
+const H2=(title)=>{_secN.h2++;_secN.h3=0;return Pp(`${_secN.h1}.${_secN.h2} ${title}`,{bold:true,sz:26,spBef:200,spAft:140,color:"1A1A2E"});};
+const H3=(title)=>{_secN.h3++;return Pp(`${_secN.h1}.${_secN.h2}.${_secN.h3} ${title}`,{bold:true,italic:true,sz:24,spBef:140,spAft:100,color:"1A1A2E"});};
 // H_CENTER: centered heading like "PREÂMBULO"
 const H_CENTER=(text)=>Pp(text,{bold:true,sz:28,caps:true,center:true,spBef:280,spAft:140,color:"1A1A2E"});
 // PARA: normal paragraph with justify and first-line indent
@@ -2119,17 +2123,17 @@ const vtParte=d.vt==="Outra"?d.vt_outro:d.vt;
 if(vtParte)apoioPartes.push(`com a viatura ${vtParte}`);
 if(apoioPartes.length){body+=PARA(`A equipe pericial contou com o apoio ${apoioPartes.join(", ")}.`);}
 // ──── 1 HISTÓRICO ────
-body+=H1_NUM("1","HISTÓRICO");
+body+=H1("HISTÓRICO");
 const horaSol=d.dt_sol||"horário registrado no sistema";
 const enderecoHist=d.end||"endereço a ser informado";
 const gpsHist=d.gps?` relacionado às coordenadas geográficas ${d.gps} (datum WGS 84)`:"";
 body+=PARA(`A fim de atender à solicitação supracitada, feita via rede interna de computadores da Polícia Civil do Distrito Federal (intranet), os Peritos Criminais compareceram, às ${horaSol}, ao endereço ${enderecoHist}${gpsHist}, onde realizaram os exames descritos a seguir.`);
 if(d.obs_sol){body+=PARA(`Observações da solicitação: ${d.obs_sol}`);}
 // ──── 2 OBJETIVO PERICIAL ────
-body+=H1_NUM("2","OBJETIVO PERICIAL");
+body+=H1("OBJETIVO PERICIAL");
 body+=PARA(`O exame teve por objetivo a busca e a constatação, no local de solicitação ou nas suas proximidades, de elementos materiais possivelmente relacionados à Ocorrência Policial ${oc}/${ano} – ${dp}ª DP, registrada, no momento do exame, com a natureza de "${natLbl}".`);
 // ──── 3 ISOLAMENTO DO LOCAL ────
-body+=H1_NUM("3","ISOLAMENTO DO LOCAL E PRESENÇA DE AGENTE ESTATAL");
+body+=H1("ISOLAMENTO DO LOCAL E PRESENÇA DE AGENTE ESTATAL");
 const isoTxt=d.iso||"a ser descrito";
 const respTxt=d.rp?`sob a responsabilidade de ${d.rp}${d.mt?`, matrícula ${d.mt}`:""}${d.org?`, ${d.org}`:""}`:"";
 body+=PARA(`Quando da chegada da equipe pericial, o local a ser examinado encontrava-se ${isoTxt.toLowerCase()}${respTxt?" e "+respTxt:""}.`);
@@ -2138,9 +2142,9 @@ if(d.pres||d.vr||d.obs_i){body+=TBL_Z([["Preservação",d.pres],["Viatura isol."
 const recHasAny=d.drone||d.scanner||d.luminol||d.luz_forense;
 if(recHasAny){body+=Pp("Recursos empregados",{bold:true,sz:22,spBef:180,spAft:80,color:"1A1A2E"});body+=TBL_Z([["Drone",d.drone||"Não"],["Scanner 3D",d.scanner||"Não"],["Luminol",d.luminol||"Não"],["Luz forense",d.luz_forense||"Não"]]);}
 // ──── 4 EXAMES ────
-body+=H1_NUM("4","EXAMES");
+body+=H1("EXAMES");
 // 4.1 Do Local
-body+=H2_NUM("4.1","Do Local");
+body+=H2("Do Local");
 const localResumo=[];
 if(d.area)localResumo.push(`em área ${d.area.toLowerCase()}`);
 if(d.dest)localResumo.push(`destinação ${d.dest.toLowerCase()}`);
@@ -2156,7 +2160,7 @@ edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){body+=SPACER();body+=Pp(`Edifica
 // daquele veículo + imagens daquele veículo. Antes era todas as tabelas →
 // todos os vestígios → todas as imagens (separados, ficava confuso).
 const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
-if(veicsComData.length>0){body+=H2_NUM("4.2","Do Veículo");
+if(veicsComData.length>0){body+=H2("Do Veículo");
 veiculos.forEach((vei,vi)=>{
   const vx=`v${vi}_`;
   if(!hasVehicleData(d,vi,veiVest))return;
@@ -2190,12 +2194,10 @@ veiculos.forEach((vei,vi)=>{
 const pngsOrphans=veiPngs.filter(p=>!veiculos.some((_,vi)=>p.vi===vi&&hasVehicleData(d,vi,veiVest)));
 if(pngsOrphans.length){pngsOrphans.forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,4500000);});}
 }
-// 4.3 Do Cadáver
-const veicSuffix=veicsComData.length>0?"4.3":"4.2";
-const subCadBase=veicSuffix;
-cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1){body+=H2_NUM(subCadBase,`Do Cadáver ${ci+1}`);}else if(ci===0){body+=H2_NUM(subCadBase,"Do Cadáver");}
-// 4.3.1 Descrição
-body+=H3_NUM(`${subCadBase}.1`,"Descrição");
+// Do Cadáver (numeração dinâmica via H2/H3)
+cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1){body+=H2(`Do Cadáver ${ci+1}`);}else if(ci===0){body+=H2("Do Cadáver");}
+// Descrição
+body+=H3("Descrição");
 const descParts=[];
 if(d[cx+"fx"])descParts.push(`faixa etária ${d[cx+"fx"].toLowerCase()}`);
 if(d[cx+"et"])descParts.push(`etnia ${d[cx+"et"].toLowerCase()}`);
@@ -2208,7 +2210,7 @@ body+=TBL_Z([["Faixa etária",d[cx+"fx"]],["Etnia",d[cx+"et"]],["Sexo",d[cx+"sx"
 if(d[cx+"sui_tipo"]){body+=Pp(`Meio de suicídio: ${d[cx+"sui_tipo"]}`,{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});if(d[cx+"sui_tipo"]==="Forca"){body+=TBL_Z([["Cadáver na forca",d[cx+"forca_cad"]],["Suspensão",d[cx+"forca_susp"]],["Instrumento",d[cx+"forca_inst"]],["Ancoragem",d[cx+"forca_anc"]],["Alt. ancoragem",d[cx+"forca_alt_anc"]],["Alt. nó",d[cx+"forca_alt_no"]],["Alt. pescoço",d[cx+"forca_alt_pesc"]],["Caract. sulco",d[cx+"forca_sulco"]],["Demais achados",d[cx+"forca_achados"]],["Obs",d[cx+"forca_obs"]]]);}if(d[cx+"sui_tipo"]==="Arma de fogo"){body+=TBL_Z([["Arma no local",d[cx+"af_local"]],["Modelo",d[cx+"af_modelo"]],["Nº série",d[cx+"af_serie"]],["Calibre",d[cx+"af_calibre"]],["Sangue na arma",d[cx+"af_sangue"]],["Obs",d[cx+"af_obs"]]]);}if(d[cx+"sui_tipo"]==="Arma branca"){body+=TBL_Z([["Arma no local",d[cx+"ab_local"]],["Cabo",d[cx+"ab_cabo"]],["Lâmina",d[cx+"ab_lamina"]],["Sangue lâmina",d[cx+"ab_sangue"]],["Obs",d[cx+"ab_obs"]]]);}if(d[cx+"sui_tipo"]==="Projeção"){body+=TBL_Z([["Altura ao piso",d[cx+"proj_alt"]],["Local projeção",d[cx+"proj_local"]],["Alt. parapeito",d[cx+"proj_alt_parapeito"]],["Alt. obj. apoio",d[cx+"proj_alt_apoio"]],["Obs",d[cx+"proj_obs"]]]);}if(d[cx+"sui_tipo"]==="Medicamento"){const meds2=(d[cx+"meds"]||[]).filter(m=>m.nome);if(meds2.length){let mR="";meds2.forEach((m,mi)=>{mR+=ROW_Z(`Med. ${mi+1}`,`${m.nome}${m.vazios?" | Espaços vazios: "+m.vazios:""}${m.comprimidos?" | Comprimidos: "+m.comprimidos:""}${m.obs?" | "+m.obs:""}`,mi);});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/></w:tblPr>${mR}</w:tbl>`;}}if(d[cx+"sui_tipo"]==="Outro"&&d[cx+"sui_outro_obs"])body+=TBL_Z([["Obs",d[cx+"sui_outro_obs"]]]);}
 // 4.3.2 Vestes e Pertences — só se houver vestes ou pertences cadastrados
 const vestesC=vestes.filter(v=>v.tipo&&(v.cadaver===undefined||v.cadaver===ci));
-if(vestesC.length||d[cx+"pert"]){body+=H3_NUM(`${subCadBase}.2`,"Vestes e Pertences");if(vestesC.length){let vRx=`<w:tr><w:tc><w:tcPr><w:tcW w:w="700" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Nº",{bold:true,sz:18,center:true,spAft:0,color:"FFFFFF"})}
+if(vestesC.length||d[cx+"pert"]){body+=H3("Vestes e Pertences");if(vestesC.length){let vRx=`<w:tr><w:tc><w:tcPr><w:tcW w:w="700" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Nº",{bold:true,sz:18,center:true,spAft:0,color:"FFFFFF"})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Tipo",{bold:true,sz:18,spAft:0,color:"FFFFFF"})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="1300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Cor",{bold:true,sz:18,spAft:0,color:"FFFFFF"})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="1800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Sujidades",{bold:true,sz:18,spAft:0,color:"FFFFFF"})}
@@ -2221,8 +2223,8 @@ if(vestesC.length||d[cx+"pert"]){body+=H3_NUM(`${subCadBase}.2`,"Vestes e Perten
 </w:tc><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(v.sangue||"",{sz:20,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2700" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(bn,{sz:20,spAft:0})}
 </w:tc></w:tr>`;});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${vRx}</w:tbl>`;}if(d[cx+"pert"])body+=TBL_Z([["Pertences",d[cx+"pert"]]]);}
-// 4.3.3 Perinecroscopia
-body+=H3_NUM(`${subCadBase}.3`,"Perinecroscopia");
+// Perinecroscopia
+body+=H3("Perinecroscopia");
 if(woundsC.length){body+=Pp(`Foram observadas ${woundsC.length} lesão(ões):`,{sz:20,spAft:80});let lR=`<w:tr><w:tc><w:tcPr><w:tcW w:w="800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Nº",{bold:true,sz:18,center:true,spAft:0,color:"FFFFFF"})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Região",{bold:true,sz:18,spAft:0,color:"FFFFFF"})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1A1A2E"/></w:tcPr>${Pp("Tipo",{bold:true,sz:18,spAft:0,color:"FFFFFF"})}
@@ -2241,8 +2243,8 @@ if(cadaverPngsByCi[ci]&&cadaverPngsByCi[ci].length){
 body+=Pp("Fenômenos cadavéricos:",{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});
 body+=TBL_Z([["Cianose ungueais",d[cx+"cu"]],["Cianose labial",d[cx+"cl"]],["Rigidez mandíbula",d[cx+"rm"]],["Rigidez sup.",d[cx+"rs"]],["Rigidez inf.",d[cx+"ri"]],["Livores",d[cx+"lv"]],["Pos. livores",d[cx+"lp"]],["Compatível",d[cx+"lc"]],["Secr. nasal",d[cx+"sn"]],["Secr. oral",d[cx+"so"]],["Peniana/vaginal",d[cx+"sg"]],["Anal",d[cx+"sa"]],["Mancha verde abd.",d[cx+"mva"]],["Obs fenômenos",d[cx+"obs_peri"]]]);
 if(d[cx+"avancado_decomp"]){body+=Pp("Achados de decomposição avançada",{bold:true,sz:22,spBef:140,spAft:80,color:"A02020"});body+=TBL_Z([(d[cx+"dec_abio"]||[]).length?["Abióticos / transformação",(d[cx+"dec_abio"]||[]).join(", ")]:null,(d[cx+"dec_fauna"]||[]).length?["Fauna cadavérica",(d[cx+"dec_fauna"]||[]).join(", ")]:null,(d[cx+"dec_cons"]||[]).length?["Conservação alternativa",(d[cx+"dec_cons"]||[]).join(", ")]:null,(d[cx+"dec_amb"]||[]).length?["Achados ambientais",(d[cx+"dec_amb"]||[]).join(", ")]:null,d[cx+"dec_obs"]?["Observações",d[cx+"dec_obs"]]:null]);}
-// v234: 4.3.4 Observações gerais (livres)
-if(d[cx+"obs_geral"]){body+=H3_NUM(`${subCadBase}.4`,"Observações gerais");body+=PARA(d[cx+"obs_geral"]);}
+// Observações gerais (v234, livres)
+if(d[cx+"obs_geral"]){body+=H3("Observações gerais");body+=PARA(d[cx+"obs_geral"]);}
 // 4.3.4 Exames de Medicina Legal — removido (informação complementada em laudo cadavérico específico)
 }});
 // ──── 5 CADEIA DE CUSTÓDIA DE VESTÍGIOS ────
@@ -2254,7 +2256,7 @@ const mkVeiSupD=(vv)=>{const vi2=vv.veiculo??0;const vx2="v"+vi2+"_";const tm=d[
 const veiVestICD=veiVest.filter(vv=>vv.recolhido==="Sim"&&(vv.destino||"").includes("IC")).map(vv=>({desc:vv.tipo||vv.regionLabel,suporte:mkVeiSupD(vv),obs:vv.obs}));
 const veiVestIID=veiVest.filter(vv=>vv.recolhido==="Sim"&&(vv.destino||"").includes("II")).map(vv=>({desc:vv.tipo||vv.regionLabel,local:mkVeiSupD(vv)}));
 const allVestRecICD=[...vestRecIC,...veiVestICD];
-if(vestNaoRec.length||allVestRecICD.length||vestRecII.length||veiVestIID.length||d.obs_v||d.obs_p){body+=H1_NUM("5","CADEIA DE CUSTÓDIA DE VESTÍGIOS");
+if(vestNaoRec.length||allVestRecICD.length||vestRecII.length||veiVestIID.length||d.obs_v||d.obs_p){body+=H1("CADEIA DE CUSTÓDIA DE VESTÍGIOS");
 body+=PARA("De modo a preservar o registro de todos os vestígios recolhidos por ocasião do exame de local, listam-se, a seguir, os elementos materiais coletados, acompanhados dos respectivos suportes e locais de coleta.");
 if(vestNaoRec.length){body+=Pp("Vestígios não recolhidos (documentados no local)",{bold:true,sz:22,spBef:200,spAft:80,color:"1A1A2E"});let vR="";vestNaoRec.forEach((v,i)=>{const fill=(i%2===0)?"F5F5F7":"FFFFFF";vR+=`<w:tr><w:tc><w:tcPr><w:tcW w:w="600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8E8EC"/></w:tcPr>${Pp(String(i+1),{sz:20,center:true,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="5800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(v.desc+(v.obs?" — "+v.obs:""),{sz:20,spAft:0})}
@@ -3130,9 +3132,12 @@ const bPDF=()=>{const d=data;
 // Cores institucionais
 const PRIMARY="#1A1A2E";const GOLD="#C9A961";const ZEBRA="#F5F5F7";const BORDER="#C8D6E5";const LIGHT="#E8E8EC";
 // Helpers HTML
-const sec1=(num,t2)=>`<h2 style="font-size:13px;font-weight:700;color:${PRIMARY};margin:18px 0 8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1.5px solid ${GOLD};padding-bottom:4px">${num} ${t2}</h2>`;
-const sec2=(num,t2)=>`<h3 style="font-size:14px;font-weight:700;color:${PRIMARY};margin:16px 0 7px">${num} ${t2}</h3>`;
-const sec3=(num,t2)=>`<h4 style="font-size:13px;font-weight:700;font-style:italic;color:${PRIMARY};margin:12px 0 5px">${num} ${t2}</h4>`;
+// v293: numeração dinâmica no PDF — contadores espelham o DOCX. Cada chamada
+// a sec1/sec2/sec3 incrementa o nível e reseta os filhos.
+const _pdfSec={h1:0,h2:0,h3:0};
+const sec1=(t2)=>{_pdfSec.h1++;_pdfSec.h2=0;_pdfSec.h3=0;return `<h2 style="font-size:13px;font-weight:700;color:${PRIMARY};margin:18px 0 8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1.5px solid ${GOLD};padding-bottom:4px">${_pdfSec.h1} ${t2}</h2>`;};
+const sec2=(t2)=>{_pdfSec.h2++;_pdfSec.h3=0;return `<h3 style="font-size:14px;font-weight:700;color:${PRIMARY};margin:16px 0 7px">${_pdfSec.h1}.${_pdfSec.h2} ${t2}</h3>`;};
+const sec3=(t2)=>{_pdfSec.h3++;return `<h4 style="font-size:13px;font-weight:700;font-style:italic;color:${PRIMARY};margin:12px 0 5px">${_pdfSec.h1}.${_pdfSec.h2}.${_pdfSec.h3} ${t2}</h4>`;};
 const secCenter=(t2)=>`<h2 style="font-size:14px;font-weight:700;color:${PRIMARY};margin:20px 0 12px;text-transform:uppercase;letter-spacing:0.8px;text-align:center">${t2}</h2>`;
 const para=(t2)=>`<p style="font-size:11px;text-align:justify;text-indent:18px;margin:4px 0 8px;line-height:1.5">${t2}</p>`;
 // tbl builder with zebra
@@ -3266,26 +3271,26 @@ if(vtNome)h+=para(`O deslocamento foi realizado com a viatura ${esc(vtNome)}.`);
 if(d.oic)h+=para(`Esta perícia foi realizada em conjunto com o exame externo cadavérico, sob a responsabilidade do Perito Criminal ${esc(d.oic)}.`);
 if(d.obs_sol)h+=para(`<b>Informações prévias da solicitação:</b> ${esc(d.obs_sol)}`);
 // --- 1 HISTÓRICO ---
-h+=sec1("1","Histórico");
+h+=sec1("Histórico");
 const horaSol=d.dt_sol||"horário registrado no sistema";
 const enderecoHist=d.end||"endereço a ser informado";
 const gpsHist=d.gps?` relacionado às coordenadas geográficas ${esc(d.gps)} (datum WGS 84)`:"";
 h+=para(`A fim de atender à solicitação supracitada, feita via rede interna de computadores da Polícia Civil do Distrito Federal (<i>intranet</i>), os Peritos Criminais compareceram, às ${esc(horaSol)}, ao endereço ${esc(enderecoHist)}${gpsHist}, onde realizaram os exames descritos a seguir.`);
 // --- 2 OBJETIVO PERICIAL ---
-h+=sec1("2","Objetivo Pericial");
+h+=sec1("Objetivo Pericial");
 h+=para(`O exame teve por objetivo a busca e a constatação, no local de solicitação ou nas suas proximidades, de elementos materiais possivelmente relacionados à Ocorrência Policial ${esc(d.oc||"___")}/${esc(d.oc_ano||"____")} – ${esc(dpResolved||"___")}${d.dp==="Outro"?"":"ª DP"}, registrada, no momento do exame, com a natureza de "${esc(natLbl)}".`);
 // --- 2.1 RECURSOS EMPREGADOS (NOVO v161) ---
-if(d.drone||d.scanner||d.luminol||d.luz_forense){const recs=[];if(d.drone==="Sim")recs.push("drone");if(d.scanner==="Sim")recs.push("scanner 3D");if(d.luminol==="Sim")recs.push("luminol");if(d.luz_forense==="Sim")recs.push("luz forense");if(recs.length){h+=sec2("2.1","Recursos Especiais Empregados");h+=para(`Durante o exame foi(ram) empregado(s) o(s) seguinte(s) recurso(s) técnico(s): ${recs.join(", ")}.`);}}
+if(d.drone||d.scanner||d.luminol||d.luz_forense){const recs=[];if(d.drone==="Sim")recs.push("drone");if(d.scanner==="Sim")recs.push("scanner 3D");if(d.luminol==="Sim")recs.push("luminol");if(d.luz_forense==="Sim")recs.push("luz forense");if(recs.length){h+=sec2("Recursos Especiais Empregados");h+=para(`Durante o exame foi(ram) empregado(s) o(s) seguinte(s) recurso(s) técnico(s): ${recs.join(", ")}.`);}}
 // --- 3 ISOLAMENTO DO LOCAL ---
-h+=sec1("3","Isolamento do Local e Presença de Agente Estatal");
+h+=sec1("Isolamento do Local e Presença de Agente Estatal");
 const isoTxt=d.iso||"a ser descrito";
 const respTxt=d.rp?`sob a responsabilidade de ${esc(d.rp)}${d.mt?`, matrícula ${esc(d.mt)}`:""}${d.org?`, ${esc(d.org)}`:""}`:"";
 h+=para(`Quando da chegada da equipe pericial, o local a ser examinado encontrava-se ${esc(isoTxt.toLowerCase())}${respTxt?" e "+respTxt:""}.`);
 if(d.pres||d.vr||d.obs_i){h+=tblZ([d.pres?["Preservação",d.pres]:null,d.vr?["Viatura isol.",d.vr]:null,d.obs_i?["Observações",d.obs_i]:null]);}
 // --- 4 EXAMES ---
-h+=sec1("4","Exames");
+h+=sec1("Exames");
 // 4.1 Do Local
-h+=sec2("4.1","Do Local");
+h+=sec2("Do Local");
 const localResumo=[];
 if(d.area)localResumo.push(`em área ${d.area.toLowerCase()}`);
 if(d.dest)localResumo.push(`destinação ${d.dest.toLowerCase()}`);
@@ -3302,7 +3307,7 @@ edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){h+=`<h5 style="font-size:12px;co
 // global vestígios → todas as imagens (separados, ficava confuso).
 const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
 if(veicsComData.length>0){
-  h+=sec2("4.2","Do Veículo");
+  h+=sec2("Do Veículo");
   veiculos.forEach((vei,vi)=>{
     const vx=`v${vi}_`;
     if(!hasVehicleData(d,vi,veiVest))return;
@@ -3327,11 +3332,10 @@ if(veicsComData.length>0){
     }
   });
 }
-// 4.3 Do Cadáver
-const subCadBase=veicsComData.length>0?"4.3":"4.2";
-cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1)h+=sec2(subCadBase,`Do Cadáver ${ci+1}`);else if(ci===0)h+=sec2(subCadBase,"Do Cadáver");
-// 4.3.1 Descrição
-h+=sec3(`${subCadBase}.1`,"Descrição");
+// Do Cadáver (numeração dinâmica)
+cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1)h+=sec2(`Do Cadáver ${ci+1}`);else if(ci===0)h+=sec2("Do Cadáver");
+// Descrição
+h+=sec3("Descrição");
 const descParts=[];if(d[cx+"fx"])descParts.push(`faixa etária ${d[cx+"fx"].toLowerCase()}`);if(d[cx+"et"])descParts.push(`etnia ${d[cx+"et"].toLowerCase()}`);if(d[cx+"sx"])descParts.push(`sexo ${d[cx+"sx"].toLowerCase()}`);if(d[cx+"cp"])descParts.push(`compleição ${d[cx+"cp"].toLowerCase()}`);
 if(descParts.length)h+=para(`Tratava-se de cadáver de indivíduo com ${descParts.join(", ")}.`);
 if(d[cx+"pos"])h+=para(`Encontrava-se em ${esc(d[cx+"pos"].toLowerCase())}.`);
@@ -3340,15 +3344,15 @@ if(d[cx+"sui_tipo"]){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 
 // 4.3.2 Vestes e Pertences
 // 4.3.2 Vestes e Pertences — só se houver vestes ou pertences cadastrados
 const vestesC=vestes.filter(v=>v.tipo&&(v.cadaver===undefined||v.cadaver===ci));
-if(vestesC.length||d[cx+"pert"]){h+=sec3(`${subCadBase}.2`,"Vestes e Pertences");if(vestesC.length)h+=tblList(vestesC,["Nº","Tipo/Marca","Cor","Sujidades","Sangue","Bolsos","Notas"],(v,idx2)=>{const fill=(idx2%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center">${idx2+1}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.tipo)}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.cor||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.sujidades||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.sangue||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.bolsos||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.notas||"")}</td></tr>`;});if(d[cx+"pert"])h+=tblZ([["Pertences",d[cx+"pert"]]]);}
-// 4.3.3 Perinecroscopia
-h+=sec3(`${subCadBase}.3`,"Perinecroscopia");
+if(vestesC.length||d[cx+"pert"]){h+=sec3("Vestes e Pertences");if(vestesC.length)h+=tblList(vestesC,["Nº","Tipo/Marca","Cor","Sujidades","Sangue","Bolsos","Notas"],(v,idx2)=>{const fill=(idx2%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center">${idx2+1}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.tipo)}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.cor||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.sujidades||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.sangue||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.bolsos||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.notas||"")}</td></tr>`;});if(d[cx+"pert"])h+=tblZ([["Pertences",d[cx+"pert"]]]);}
+// Perinecroscopia
+h+=sec3("Perinecroscopia");
 if(woundsC.length){h+=para(`Foram observadas ${woundsC.length} lesão(ões):`);h+=tblList(woundsC,["Nº","Região","Tipo","Características","Obs"],(w,idx)=>{const fill=(idx%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center">${idx+1}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(w.regionLabel)}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(w.tipo||"")}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${w.caract&&w.caract.length?esc(w.caract.join(", ")):""}</td><td style="padding:4px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(w.obs||"")}</td></tr>`;});h+=bodyPdfSvg(woundsC,d[cx+"sx"]);}
 h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Fenômenos cadavéricos</h5>`;
 h+=tblZ([d[cx+"cu"]?["Cianose ungueais",d[cx+"cu"]]:null,d[cx+"cl"]?["Cianose labial",d[cx+"cl"]]:null,d[cx+"rm"]?["Rigidez mandíbula",d[cx+"rm"]]:null,d[cx+"rs"]?["Rigidez sup.",d[cx+"rs"]]:null,d[cx+"ri"]?["Rigidez inf.",d[cx+"ri"]]:null,d[cx+"lv"]?["Livores",d[cx+"lv"]]:null,d[cx+"lp"]?["Pos. livores",d[cx+"lp"]]:null,d[cx+"lc"]?["Compatível",d[cx+"lc"]]:null,d[cx+"sn"]?["Secr. nasal",d[cx+"sn"]]:null,d[cx+"so"]?["Secr. oral",d[cx+"so"]]:null,d[cx+"sg"]?["Peniana/vaginal",d[cx+"sg"]]:null,d[cx+"sa"]?["Anal",d[cx+"sa"]]:null,d[cx+"mva"]?["Mancha verde abd.",d[cx+"mva"]]:null,d[cx+"obs_peri"]?["Obs fenômenos",d[cx+"obs_peri"]]:null]);
 if(d[cx+"avancado_decomp"]){h+=`<h4 style="font-size:12px;font-weight:700;color:#a02020;margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.5px"><AppIcon name="☠️" size={14} mr={4}/>Decomposição Avançada — Achados</h4>`;h+=tblZ([(d[cx+"dec_abio"]||[]).length?["Abióticos / transformação",(d[cx+"dec_abio"]||[]).join(", ")]:null,(d[cx+"dec_fauna"]||[]).length?["Fauna cadavérica",(d[cx+"dec_fauna"]||[]).join(", ")]:null,(d[cx+"dec_cons"]||[]).length?["Conservação alternativa",(d[cx+"dec_cons"]||[]).join(", ")]:null,(d[cx+"dec_amb"]||[]).length?["Achados ambientais",(d[cx+"dec_amb"]||[]).join(", ")]:null,d[cx+"dec_obs"]?["Observações",d[cx+"dec_obs"]]:null]);}
-// v234: 4.3.4 Observações gerais (livres)
-if(d[cx+"obs_geral"]){h+=sec3(`${subCadBase}.4`,"Observações gerais");h+=para(esc(d[cx+"obs_geral"]));}
+// Observações gerais (v234, livres)
+if(d[cx+"obs_geral"]){h+=sec3("Observações gerais");h+=para(esc(d[cx+"obs_geral"]));}
 // 4.3.4 Exames de Medicina Legal — removido (informação complementada em laudo cadavérico específico)
 }});
 // --- 5 CADEIA DE CUSTÓDIA ---
@@ -3361,7 +3365,7 @@ const vvIC2=veiVest.filter(vv=>vv.recolhido==="Sim"&&(vv.destino||"").includes("
 const vvII2=veiVest.filter(vv=>vv.recolhido==="Sim"&&(vv.destino||"").includes("II")).map(vv=>({desc:vv.tipo||vv.regionLabel,local:mkVeiSup(vv)}));
 const allVestRecIC=[...vsRC,...vvIC2];
 const papiloAll=[...vsII.map(v=>({desc:v.desc,local:supLoc(v),placa:""})),...vvII2,...papilos.filter(p=>p.desc)];
-if(vsNR.length||allVestRecIC.length||papiloAll.length||d.obs_v||d.obs_p){h+=sec1("5","Cadeia de Custódia de Vestígios");h+=para("De modo a preservar o registro de todos os vestígios recolhidos por ocasião do exame de local, listam-se, a seguir, os elementos materiais coletados, acompanhados dos respectivos suportes e locais de coleta.");
+if(vsNR.length||allVestRecIC.length||papiloAll.length||d.obs_v||d.obs_p){h+=sec1("Cadeia de Custódia de Vestígios");h+=para("De modo a preservar o registro de todos os vestígios recolhidos por ocasião do exame de local, listam-se, a seguir, os elementos materiais coletados, acompanhados dos respectivos suportes e locais de coleta.");
 if(vsNR.length){h+=`<h5 style="font-size:11px;color:${PRIMARY};margin:10px 0 4px;font-weight:700">Vestígios não recolhidos (documentados no local)</h5>`;h+=tblList(vsNR,["Nº","Descrição","Suporte / Localização"],(v,i)=>{const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill};width:55%">${esc(v.desc+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(supLoc(v))}</td></tr>`;});}
 if(allVestRecIC.length){h+=`<h5 style="font-size:11px;color:${PRIMARY};margin:10px 0 4px;font-weight:700">Vestígios recolhidos — encaminhados ao Instituto de Criminalística</h5>`;h+=tblList(allVestRecIC,["Nº","Descrição","Suporte / Localização"],(v,i)=>{const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill};width:55%">${esc(v.desc+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(supLoc(v))}</td></tr>`;});}
 if(papiloAll.length){h+=`<h5 style="font-size:11px;color:${PRIMARY};margin:10px 0 4px;font-weight:700">Vestígios recolhidos — encaminhados ao Instituto de Identificação (Papiloscopia)</h5>`;h+=tblList(papiloAll,["Nº","Descrição","Suporte / Localização"],(p,i)=>{const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill};width:55%">${esc(p.desc)}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(supPlaca(p.local,p.placa))}</td></tr>`;});}
