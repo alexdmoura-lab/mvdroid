@@ -7,6 +7,13 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v281 — Croqui visual do cadáver E do veículo no DOCX (espelho do PDF)
+
+- **DOCX agora é o espelho do PDF**: as ilustrações do cadáver com lesões marcadas e do veículo com vestígios marcados — que antes só apareciam no Croqui PDF — agora também são embedadas no Croqui DOCX. O documento Word vira a réplica fiel do PDF.
+- **Como funciona internamente**: ao gerar o DOCX, o app rasteriza cada SVG (cadáver: anterior, posterior, cabeça, mãos, pés; veículo: lateral E/D, frente, traseira) em PNG via canvas, e embeda o PNG no documento Word junto com a legenda. Funciona offline (não precisa de rede pra rasterizar).
+- **Robustez**: se a rasterização de uma view falhar (CORS, falta de memória em iPhone antigo), só aquela view é pulada. O DOCX continua sendo gerado com tudo o que deu certo. Toast "⏳ Renderizando X ilustrações..." durante a rasterização.
+- Refatoração interna: `bodyPdfSvg` e `veiPdfSvg` agora chamam `mkCadaverViews` e `mkVeiViews` respectivamente. Uma única fonte de verdade pra views — usada tanto no PDF (HTML inline) quanto no DOCX (rasterização).
+
 ## v280 — Croqui do veículo no PDF (com vestígios marcados)
 
 - **Croqui visual do veículo no Croqui PDF**: nova função `veiPdfSvg` similar ao `bodyPdfSvg` do cadáver. Pra cada veículo com vestígios veiculares marcados, o PDF agora mostra a imagem do carro nas vistas que têm vestígios (lateral E, lateral D, frente, traseira) com bolinhas vermelhas numeradas indicando exatamente onde cada vestígio foi marcado. Numeração bate com a tabela "Vestígios veiculares" acima.

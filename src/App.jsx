@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v280-Xandroid";
+const APP_VERSION="v281-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -735,6 +735,62 @@ const DOCX_LOGO_EMU={pcdfCx:550000,pcdfCy:700000,dfCx:600000,dfCy:700000};
 // XML do header com logo PCDF + brasão DF + 4 linhas de identificação institucional.
 // Idêntico para Croqui e RRV.
 const docxHeader1Xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:bottom w:val="single" w:sz="8" w:space="0" w:color="C9A961"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="7000"/><w:gridCol w:w="1500"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${DOCX_LOGO_EMU.pcdfCx}" cy="${DOCX_LOGO_EMU.pcdfCy}"/><wp:docPr id="1001" name="Logo PCDF"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1001" name="logo_pcdf.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogoPcdf"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${DOCX_LOGO_EMU.pcdfCx}" cy="${DOCX_LOGO_EMU.pcdfCy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="7000" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>POLÍCIA CIVIL DO DISTRITO FEDERAL</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>DEPARTAMENTO DE POLÍCIA TÉCNICA</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>INSTITUTO DE CRIMINALÍSTICA</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="14"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t>SEÇÃO DE CRIMES CONTRA A PESSOA</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w="1500" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${DOCX_LOGO_EMU.dfCx}" cy="${DOCX_LOGO_EMU.dfCy}"/><wp:docPr id="1002" name="Logo DF"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1002" name="logo_df.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogoDf"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${DOCX_LOGO_EMU.dfCx}" cy="${DOCX_LOGO_EMU.dfCy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:hdr>`;
+
+// ──────────────────────────────────────────────────────────────────
+// svgToPngU8: rasteriza um SVG (string com <svg>...</svg> completo)
+// em PNG, retornando os bytes Uint8Array prontos pra embed no DOCX.
+// Usa Image element + canvas (zero deps). Same-origin nas <image>
+// internas garante que o canvas não fica tainted.
+// Se algo der errado (CORS, browser velho, OOM), lança e o caller
+// pula essa view — o DOCX continua sendo gerado sem essa imagem.
+// ──────────────────────────────────────────────────────────────────
+const svgToPngU8=(svgStr,width,height)=>new Promise((resolve,reject)=>{
+  let url=null;
+  try{
+    // Quando o SVG é carregado via blob URL, paths relativos (/img/...) NÃO
+    // resolvem (a base é o blob URL, não a página). Tornamos absolutos antes.
+    const origin=(typeof window!=="undefined"&&window.location)?window.location.origin:"";
+    const absSvg=origin?svgStr.replace(/(href|xlink:href)="\/((?:img|icon)[^"]*)"/g,`$1="${origin}/$2"`):svgStr;
+    const blob=new Blob([absSvg],{type:"image/svg+xml;charset=utf-8"});
+    url=URL.createObjectURL(blob);
+    const img=new Image();
+    // Sem crossOrigin: imagens internas (/img/anatomy/, /img/vehicles/) são
+    // same-origin do Vercel, e crossOrigin="anonymous" exige headers CORS
+    // que o servidor não manda por padrão (causaria falha desnecessária).
+    const cleanup=()=>{if(url){try{URL.revokeObjectURL(url);}catch(_){}url=null;}};
+    img.onload=()=>{
+      try{
+        // Renderiza em 2x pra ficar nítido (PNG fica leve por ser foto+vetor mistura)
+        const scale=2;
+        const cv=document.createElement("canvas");
+        cv.width=width*scale;
+        cv.height=height*scale;
+        const ctx=cv.getContext("2d");
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,cv.width,cv.height);
+        ctx.scale(scale,scale);
+        ctx.drawImage(img,0,0,width,height);
+        const dataUrl=cv.toDataURL("image/png");
+        cleanup();
+        cv.width=0;cv.height=0; // libera memória do canvas (importante em iOS)
+        const b64=dataUrl.split(",")[1];
+        if(!b64){reject(new Error("toDataURL retornou vazio"));return;}
+        const bin=atob(b64);
+        const u8=new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+        resolve({u8,width:cv.width||width*scale,height:cv.height||height*scale});
+      }catch(e){cleanup();reject(e);}
+    };
+    img.onerror=(e)=>{cleanup();reject(new Error("SVG falhou ao carregar como Image"));};
+    img.src=url;
+    // Timeout de segurança: se o load nunca disparar (raro mas acontece em iOS),
+    // rejeita após 8s pra não pendurar a geração do DOCX.
+    setTimeout(()=>{cleanup();reject(new Error("svgToPngU8 timeout 8s"));},8000);
+  }catch(e){
+    if(url){try{URL.revokeObjectURL(url);}catch(_){}}
+    reject(e);
+  }
+});
 
 // ════════════════════════════════════════════════════════════════
 // APP PRINCIPAL
@@ -1750,8 +1806,68 @@ const TBL_Z=(rowsArr)=>{let r="";rowsArr.filter(x=>x).forEach((item,i)=>{if(type
 const TBL_GOLD=(rowsArr)=>{let r="";let visIdx=0;rowsArr.filter(x=>x).forEach((item)=>{if(item&&typeof item==="object"&&item.group){r+=ROW_GOLD_GROUP(item.group);visIdx=0;}else if(Array.isArray(item)){const out=ROW_GOLD(item[0],item[1],visIdx);if(out){r+=out;visIdx++;}}});if(!r)return"";return`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:left w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:right w:val="single" w:sz="6" w:space="0" w:color="C9A961"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E8D9A8"/></w:tblBorders></w:tblPr>${r}</w:tbl>`;};
 const PAGE_BREAK=()=>`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
 const SPACER=(sz=120)=>`<w:p><w:pPr><w:spacing w:after="${sz}"/></w:pPr></w:p>`;
+// ═════════════ RASTERIZAÇÃO DOS CROQUIS VISUAIS (cadáver + veículo) ═════════════
+// v281: rasteriza os SVGs do cadáver e do veículo em PNG pra embedar no DOCX,
+// fazendo o documento ficar visualmente equivalente ao PDF. Se a rasterização
+// de uma view falhar (CORS, OOM em iOS antigo, etc.), pula só essa view e
+// continua — o DOCX é gerado com o que conseguir.
+const cadaverPngsByCi={};
+const veiPngs=[];
+try{
+  const allRasterTasks=[];
+  cadaveres.forEach((cad,ci)=>{
+    const woundsCC=wounds.filter(w=>w.cadaver===ci);
+    if(!woundsCC.length)return;
+    const sx=d[`c${ci}_sx`];
+    const views=mkCadaverViews(woundsCC,sx);
+    cadaverPngsByCi[ci]=[];
+    views.forEach(v=>allRasterTasks.push({type:"cad",ci,view:v}));
+  });
+  if(veiVest&&veiVest.length){
+    const views=mkVeiViews(veiVest,d,veiculos);
+    views.forEach(v=>allRasterTasks.push({type:"vei",view:v}));
+  }
+  if(allRasterTasks.length&&!returnBlobOnly){
+    showToast(`⏳ Renderizando ${allRasterTasks.length} ilustração${allRasterTasks.length>1?"ões":""}...`);
+  }
+  for(const task of allRasterTasks){
+    try{
+      const fullSvg=`<svg viewBox="${task.view.vb}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${task.view.svgInner}</svg>`;
+      const r=await svgToPngU8(fullSvg,task.view.vbW,task.view.vbH);
+      const entry={label:task.view.label,u8:r.u8,w:r.width,h:r.height};
+      if(task.type==="cad")cadaverPngsByCi[task.ci].push(entry);
+      else veiPngs.push(entry);
+    }catch(e){
+      console.warn("[DOCX] rasterização falhou para",task.view.label,e);
+    }
+  }
+}catch(e){
+  console.warn("[DOCX] erro geral na rasterização (ignorado):",e);
+}
 // ═════════════ BODY ═════════════
 let body="";
+// v281: nextRid/imgRels declarados aqui pra permitir embed de imagens
+// (cadáver, veículo, fotos, croquis do canvas) ao longo do body em qualquer
+// seção. Ainda usado pelas Fotografias/Croquis no fim.
+let nextRid=10;const imgRels=[];
+// embedPngAt: registra PNG no zip, adiciona ao imgRels, retorna XML <w:p>
+// com <w:drawing> centralizado + legenda (Pp). pxW/pxH são as dimensões do PNG
+// (em pixels) — o cy é calculado proporcionalmente pra manter aspect ratio.
+// maxCx é o EMU máximo de largura (default 4500000 ≈ 12 cm, cabendo em A4).
+let imgCounter=0;
+const embedPngAt=(u8,pxW,pxH,label,maxCx)=>{
+  if(!u8||!pxW||!pxH)return"";
+  imgCounter++;
+  const rid="rId"+(nextRid++);
+  const imgName=`croqui_img_${imgCounter}.png`;
+  zip.file("word/media/"+imgName,u8);
+  imgRels.push({rid,imgName});
+  const cwCx=maxCx||4500000;
+  const cwCy=Math.round(cwCx*pxH/pxW);
+  const drawXml=`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="40" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${cwCx}" cy="${cwCy}"/><wp:docPr id="${500+imgCounter}" name="${imgName}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${500+imgCounter}" name="${imgName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cwCx}" cy="${cwCy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+  const captionXml=label?Pp(label,{sz:18,italic:true,center:true,color:"555555",spAft:160}):"";
+  return drawXml+captionXml;
+};
 // ──── CAPA COM RESUMO EXECUTIVO ────
 body+=Pp("POLÍCIA CIVIL DO DISTRITO FEDERAL",{bold:true,sz:24,center:true,spAft:60});
 body+=Pp("DEPARTAMENTO DE POLÍCIA TÉCNICA",{bold:true,sz:24,center:true,spAft:60});
@@ -1898,7 +2014,10 @@ const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
 if(veicsComData.length>0){body+=H2_NUM("4.2","Do Veículo");veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(hasVehicleData(d,vi,veiVest)){if(veicsComData.length>1)body+=Pp(`Veículo ${vi+1}`,{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});body+=TBL_Z([["Categoria",d[vx+"cat"]],["Tipo",d[vx+"tipo"]],["Cor",d[vx+"cor"]],["Placa",d[vx+"placa"]],["Ano",d[vx+"ano"]],["Chassi",d[vx+"chassi"]],["Hodômetro",d[vx+"km"]],["Estado",d[vx+"estado"]],["Motor",d[vx+"motor"]],["Portas travadas",d[vx+"portas"]],["Vidros íntegros",d[vx+"vidros"]],["Chave",d[vx+"chave"]],["Observações",d[vx+"obs"]]]);}});if(veiVest.length){body+=SPACER();body+=Pp("Vestígios veiculares",{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});let vvR="";veiVest.forEach((v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";const sup3=`${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}`;const fill=(i%2===0)?"F5F5F7":"FFFFFF";vvR+=`<w:tr><w:tc><w:tcPr><w:tcW w:w="800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8E8EC"/></w:tcPr>${Pp(String(i+1),{sz:20,center:true,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="5600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""),{sz:20,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(sup3,{sz:20,spAft:0})}
-</w:tc></w:tr>`;});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${vvR}</w:tbl>`;}}
+</w:tc></w:tr>`;});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${vvR}</w:tbl>`;}
+// v281: embed dos PNGs do veículo com vestígios marcados (espelho do PDF)
+if(veiPngs.length){veiPngs.forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,4500000);});}
+}
 // 4.3 Do Cadáver
 const veicSuffix=veicsComData.length>0?"4.3":"4.2";
 const subCadBase=veicSuffix;
@@ -1943,6 +2062,10 @@ if(woundsC.length){body+=Pp(`Foram observadas ${woundsC.length} lesão(ões):`,{
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(w.caract?.length?w.caract.join(", "):"",{sz:20,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(w.obs||"",{sz:20,spAft:0})}
 </w:tc></w:tr>`;});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${lR}</w:tbl>`;}
+// v281: embed dos PNGs do cadáver com lesões marcadas (espelho do PDF)
+if(cadaverPngsByCi[ci]&&cadaverPngsByCi[ci].length){
+  cadaverPngsByCi[ci].forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,3500000);});
+}
 body+=Pp("Fenômenos cadavéricos:",{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});
 body+=TBL_Z([["Cianose ungueais",d[cx+"cu"]],["Cianose labial",d[cx+"cl"]],["Rigidez mandíbula",d[cx+"rm"]],["Rigidez sup.",d[cx+"rs"]],["Rigidez inf.",d[cx+"ri"]],["Livores",d[cx+"lv"]],["Pos. livores",d[cx+"lp"]],["Compatível",d[cx+"lc"]],["Secr. nasal",d[cx+"sn"]],["Secr. oral",d[cx+"so"]],["Peniana/vaginal",d[cx+"sg"]],["Anal",d[cx+"sa"]],["Mancha verde abd.",d[cx+"mva"]],["Obs fenômenos",d[cx+"obs_peri"]]]);
 if(d[cx+"avancado_decomp"]){body+=Pp("Achados de decomposição avançada",{bold:true,sz:22,spBef:140,spAft:80,color:"A02020"});body+=TBL_Z([(d[cx+"dec_abio"]||[]).length?["Abióticos / transformação",(d[cx+"dec_abio"]||[]).join(", ")]:null,(d[cx+"dec_fauna"]||[]).length?["Fauna cadavérica",(d[cx+"dec_fauna"]||[]).join(", ")]:null,(d[cx+"dec_cons"]||[]).length?["Conservação alternativa",(d[cx+"dec_cons"]||[]).join(", ")]:null,(d[cx+"dec_amb"]||[]).length?["Achados ambientais",(d[cx+"dec_amb"]||[]).join(", ")]:null,d[cx+"dec_obs"]?["Observações",d[cx+"dec_obs"]]:null]);}
@@ -1989,7 +2112,6 @@ body+=SPACER(240);
 const encPerito=perito2?`relatado pelo(a) Perito(a) Criminal ${perito1}${matP1?" (mat. "+matP1+")":""} e revisado pelo(a) Perito(a) Criminal ${perito2}${matP2?" (mat. "+matP2+")":""}`:`relatado pelo(a) Perito(a) Criminal ${perito1}${matP1?" (mat. "+matP1+")":""}`;
 body+=PARA(`Nada mais havendo a lavrar, encerra-se o presente Croqui de Levantamento, ${encPerito}, que segue assinado digitalmente.`);
 // ──── FOTOGRAFIAS ────
-let nextRid=10;const imgRels=[];
 let ctXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>';
 if(fotos&&fotos.length){body+=PAGE_BREAK();body+=H_CENTER("FOTOGRAFIAS");
 fotos.forEach((f,i)=>{const rid="rId"+(nextRid++);const ext=f.dataUrl?.includes("png")?"png":"jpeg";const imgName=`foto_${i+1}.${ext}`;const b64=f.dataUrl?.split(",")?.[1];if(b64){const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let j=0;j<bin.length;j++)bytes[j]=bin.charCodeAt(j);zip.file("word/media/"+imgName,bytes);imgRels.push({rid,imgName});
@@ -2529,19 +2651,19 @@ const POS_VEI_TRAS={"ve_vidro_tras":[400,110],"ve_portamalas":[400,215],"ve_lant
 // (moto/bici/onibus têm imagens diferentes — ficam de fora dessa primeira versão).
 const VEI_TIPOS_COM_SVG=["sedan","hatch","suv","caminhonete"];
 
-const veiPdfSvg=(veiVestList,d,veiculos)=>{
-  if(!veiVestList||!veiVestList.length)return"";
-  // Agrupa vestígios por veículo
+// mkVeiViews: retorna ARRAY de views {label, svgInner, vb, vbW, vbH, displayW}
+// — cada view é uma vista do veículo (lat-E, lat-D, frente, traseira) com vestígios.
+// Usado tanto pelo PDF (HTML inline) quanto pelo DOCX (rasterização → PNG embed).
+const mkVeiViews=(veiVestList,d,veiculos)=>{
+  if(!veiVestList||!veiVestList.length)return[];
   const vvByVei={};
   veiVestList.forEach((v,i)=>{
     const vi=v.veiculo==null?0:v.veiculo;
     if(!vvByVei[vi])vvByVei[vi]=[];
     vvByVei[vi].push({n:i+1,...v});
   });
-  // Helper: gera marcadores (bolinhas vermelhas numeradas) pra um dict de posições
   const markers=(positions,vestsForView,markerR=10)=>{
     let m="";
-    // Agrupa por região pra empilhar quando há mais de 1 vestígio na mesma região
     const byRegion={};
     vestsForView.forEach(v=>{if(positions[v.region]){if(!byRegion[v.region])byRegion[v.region]=[];byRegion[v.region].push(v);}});
     Object.entries(byRegion).forEach(([rid,vs])=>{
@@ -2553,39 +2675,46 @@ const veiPdfSvg=(veiVestList,d,veiculos)=>{
     });
     return m;
   };
-  // Pra cada veículo, pra cada vista que tem vestígios, gera 1 SVG
   const allViews=[];
   Object.entries(vvByVei).forEach(([viStr,vests])=>{
     const vi=+viStr;
     const tipo=(d["v"+vi+"_tipo"]||"sedan").toLowerCase();
-    if(!VEI_TIPOS_COM_SVG.includes(tipo))return; // moto/bici/onibus: pula (sem coordenadas mapeadas)
+    if(!VEI_TIPOS_COM_SVG.includes(tipo))return;
     const veiLabel=veiculos[vi]?.label||`Veículo ${vi+1}`;
     const placa=d["v"+vi+"_placa"]?` (${d["v"+vi+"_placa"]})`:"";
     const src=IMG_VEI[tipo]||IMG_VEI.sedan;
-    const mkView=(label,imgSrc,positions,vb,h)=>{
+    const mkView=(viewLabel,imgSrc,positions,vbW,vbH,imgH)=>{
       const vestsHere=vests.filter(v=>positions[v.region]);
       if(!vestsHere.length)return null;
-      const svg=`<image href="${imgSrc}" x="0" y="0" width="800" height="${h}" preserveAspectRatio="xMidYMid meet"/><text x="400" y="${h+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#888">${label}</text>`+markers(positions,vestsHere,11);
-      return{vb,w:300,svg,label:`${veiLabel}${placa} — ${label}`};
+      const svgInner=`<image href="${imgSrc}" x="0" y="0" width="${vbW}" height="${imgH}" preserveAspectRatio="xMidYMid meet"/><text x="${vbW/2}" y="${imgH+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#888">${viewLabel}</text>`+markers(positions,vestsHere,11);
+      return{label:`${veiLabel}${placa} — ${viewLabel}`,svgInner,vb:`0 0 ${vbW} ${vbH}`,vbW,vbH,displayW:300};
     };
-    const v1=mkView("LATERAL ESQUERDA",src.latE,POS_VEI_LAT_E,"0 0 800 400",380);
-    const v2=mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,"0 0 800 400",380);
-    const v3=mkView("FRENTE",src.ant,POS_VEI_FRENTE,"0 0 800 440",420);
-    const v4=mkView("TRASEIRA",src.pos,POS_VEI_TRAS,"0 0 800 440",420);
+    const v1=mkView("LATERAL ESQUERDA",src.latE,POS_VEI_LAT_E,800,400,380);
+    const v2=mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,800,400,380);
+    const v3=mkView("FRENTE",src.ant,POS_VEI_FRENTE,800,440,420);
+    const v4=mkView("TRASEIRA",src.pos,POS_VEI_TRAS,800,440,420);
     [v1,v2,v3,v4].forEach(v=>{if(v)allViews.push(v);});
   });
-  if(!allViews.length)return"";
+  return allViews;
+};
+
+// veiPdfSvg: HTML inline pra inserir no PDF (envolve cada view em <svg> com width fixo)
+const veiPdfSvg=(veiVestList,d,veiculos)=>{
+  const views=mkVeiViews(veiVestList,d,veiculos);
+  if(!views.length)return"";
   let html=`<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:14px 0;page-break-inside:avoid">`;
-  allViews.forEach(v=>{
-    html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.w}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svg}</svg></div>`;
+  views.forEach(v=>{
+    html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg></div>`;
   });
   html+=`</div>`;
   return html;
 };
 
-const bodyPdfSvg=(woundsList,sx)=>{
-if(!woundsList||!woundsList.length)return"";
-// Numera todas as feridas globalmente
+// mkCadaverViews: retorna ARRAY de views {label, svgInner, vb, vbW, vbH, displayW}
+// — cada view é uma vista do corpo (anterior, posterior, cabeça, mãos, pés)
+// com lesões marcadas. Usado pelo PDF (HTML inline) e pelo DOCX (rasterização).
+const mkCadaverViews=(woundsList,sx)=>{
+if(!woundsList||!woundsList.length)return[];
 const wByRegion={};woundsList.forEach((w,i)=>{if(!wByRegion[w.region])wByRegion[w.region]=[];wByRegion[w.region].push({n:i+1,tipo:w.tipo,obs:w.obs});});
 // v256: Posições atualizadas para os novos viewBox 400x850 (corpo) e 800x560 (cabeça) das imagens H/M
 const POS_FRENTE={"f_cerv_ant":[200,124],"f_supraclav_d":[130,156],"f_supraclav_e":[270,156],"f_torac_d":[143,197],"f_esternal":[202,216],"f_torac_e":[261,197],"f_hipoc_d":[143,243],"f_hipoc_e":[261,243],"f_epigast":[200,282],"f_flanco_d":[126,298],"f_flanco_e":[274,298],"f_mesogast":[200,318],"f_hipogast":[200,354],"f_pubiana":[200,386],"f_genital":[200,416],"f_braco_d":[75,237],"f_braco_e":[325,237],"f_cubital_d":[71,318],"f_cubital_e":[329,318],"f_antebr_d":[55,394],"f_antebr_e":[345,394],"f_coxa_d":[165,492],"f_coxa_e":[235,492],"f_joelho_d":[165,576],"f_joelho_e":[235,576],"f_perna_d":[165,670],"f_perna_e":[235,670]};
@@ -2614,7 +2743,7 @@ const hasMaoD=has(["md_"]);
 const hasMaoE=has(["me_"]);
 const hasPeD=has(["pd_"]);
 const hasPeE=has(["pe_"]);
-if(!hasFrente&&!hasCostas&&!hasCabeca&&!hasMaoD&&!hasMaoE&&!hasPeD&&!hasPeE)return"";
+if(!hasFrente&&!hasCostas&&!hasCabeca&&!hasMaoD&&!hasMaoE&&!hasPeD&&!hasPeE)return[];
 // Helper para gerar marcadores numerados (círculos vermelhos com número)
 const markers=(positions,markerR=10)=>{let m="";Object.entries(wByRegion).forEach(([rid,ws])=>{const pos=positions[rid];if(pos)ws.forEach((w,j)=>{const ox=j*(markerR*2+2);m+=`<circle cx="${pos[0]+ox}" cy="${pos[1]}" r="${markerR}" fill="#ff3b30" stroke="#fff" stroke-width="1.5" opacity="0.92"/><text x="${pos[0]+ox}" y="${pos[1]+4}" text-anchor="middle" font-size="${markerR+1}" font-weight="700" fill="#fff">${w.n}</text>`;});});return m;};
 // v258: SVGs de mãos/pés agora usam imagens reais (não mais SVG vetorial)
@@ -2623,25 +2752,30 @@ const peImgSvg=(src,label)=>`<image href="${src}" x="0" y="0" width="800" height
 // v256: Monta as vistas usando imagens H/M (sx="Feminino" → M, senão H)
 const I=sx==="Feminino"?IMG_M:IMG_H;
 const views=[];
-if(hasFrente){views.push({vb:"0 0 400 850",w:240,svg:`<image href="${I.anterior}" x="0" y="0" width="400" height="830"/><text x="200" y="846" text-anchor="middle" font-size="11" font-weight="600" fill="#888">ANTERIOR</text>`+markers(POS_FRENTE,12)});}
-if(hasCostas){views.push({vb:"0 0 400 850",w:240,svg:`<image href="${I.posterior}" x="0" y="0" width="400" height="830"/><text x="200" y="846" text-anchor="middle" font-size="11" font-weight="600" fill="#888">POSTERIOR</text>`+markers(POS_COSTAS,12)});}
+if(hasFrente){views.push({label:"Cadáver — ANTERIOR",svgInner:`<image href="${I.anterior}" x="0" y="0" width="400" height="830"/><text x="200" y="846" text-anchor="middle" font-size="11" font-weight="600" fill="#888">ANTERIOR</text>`+markers(POS_FRENTE,12),vb:"0 0 400 850",vbW:400,vbH:850,displayW:240});}
+if(hasCostas){views.push({label:"Cadáver — POSTERIOR",svgInner:`<image href="${I.posterior}" x="0" y="0" width="400" height="830"/><text x="200" y="846" text-anchor="middle" font-size="11" font-weight="600" fill="#888">POSTERIOR</text>`+markers(POS_COSTAS,12),vb:"0 0 400 850",vbW:400,vbH:850,displayW:240});}
 if(hasCabeca){
-  // v256: 1 imagem de cabeça com 5 vistas — todos os marcadores no mesmo SVG
   const hasFr=woundsList.some(w=>w.region&&POS_CABECA_F[w.region]);
   const hasBk=woundsList.some(w=>w.region&&POS_CABECA_B[w.region]);
   const hasLE=woundsList.some(w=>w.region&&POS_CABECA_E[w.region]);
   const hasLD=woundsList.some(w=>w.region&&POS_CABECA_D[w.region]);
   if(hasFr||hasBk||hasLE||hasLD){
     let m="";if(hasFr)m+=markers(POS_CABECA_F,11);if(hasBk)m+=markers(POS_CABECA_B,11);if(hasLE)m+=markers(POS_CABECA_E,11);if(hasLD)m+=markers(POS_CABECA_D,11);
-    views.push({vb:"0 0 800 560",w:380,svg:`<image href="${I.cabeca}" x="0" y="0" width="800" height="540"/><text x="400" y="556" text-anchor="middle" font-size="12" font-weight="600" fill="#888">CABEÇA — 5 vistas</text>`+m});
+    views.push({label:"Cadáver — CABEÇA (5 vistas)",svgInner:`<image href="${I.cabeca}" x="0" y="0" width="800" height="540"/><text x="400" y="556" text-anchor="middle" font-size="12" font-weight="600" fill="#888">CABEÇA — 5 vistas</text>`+m,vb:"0 0 800 560",vbW:800,vbH:560,displayW:380});
   }
 }
-if(hasMaoD){views.push({vb:"0 0 800 600",w:300,svg:maoImgSvg(IMG_MAO_D,"MÃO D — palma + dorso")+markers(POS_MAO_D,12)});}
-if(hasMaoE){views.push({vb:"0 0 800 600",w:300,svg:maoImgSvg(IMG_MAO_E,"MÃO E — dorso + palma")+markers(POS_MAO_E,12)});}
-if(hasPeD){views.push({vb:"0 0 800 550",w:300,svg:peImgSvg(IMG_PE_D,"PÉ D — planta + peito")+markers(POS_PE_D,12)});}
-if(hasPeE){views.push({vb:"0 0 800 550",w:300,svg:peImgSvg(IMG_PE_E,"PÉ E — peito + planta")+markers(POS_PE_E,12)});}
+if(hasMaoD){views.push({label:"Cadáver — MÃO D",svgInner:maoImgSvg(IMG_MAO_D,"MÃO D — palma + dorso")+markers(POS_MAO_D,12),vb:"0 0 800 600",vbW:800,vbH:600,displayW:300});}
+if(hasMaoE){views.push({label:"Cadáver — MÃO E",svgInner:maoImgSvg(IMG_MAO_E,"MÃO E — dorso + palma")+markers(POS_MAO_E,12),vb:"0 0 800 600",vbW:800,vbH:600,displayW:300});}
+if(hasPeD){views.push({label:"Cadáver — PÉ D",svgInner:peImgSvg(IMG_PE_D,"PÉ D — planta + peito")+markers(POS_PE_D,12),vb:"0 0 800 550",vbW:800,vbH:550,displayW:300});}
+if(hasPeE){views.push({label:"Cadáver — PÉ E",svgInner:peImgSvg(IMG_PE_E,"PÉ E — peito + planta")+markers(POS_PE_E,12),vb:"0 0 800 550",vbW:800,vbH:550,displayW:300});}
+return views;};
+
+// bodyPdfSvg: HTML inline pra inserir no PDF (preserva API antiga — retorna string)
+const bodyPdfSvg=(woundsList,sx)=>{
+const views=mkCadaverViews(woundsList,sx);
+if(!views.length)return"";
 let html=`<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:14px 0;page-break-inside:avoid">`;
-views.forEach(v=>{html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.w}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svg}</svg></div>`;});
+views.forEach(v=>{html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg></div>`;});
 html+=`</div>`;
 return html;};
 // FULL PDF builder - ALL sections
