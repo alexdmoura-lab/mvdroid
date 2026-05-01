@@ -7,6 +7,39 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v291 — Canva uniformizado, faces internas/externas de vidros e portas
+
+**1. Canva — toolbar lateral unificada**
+
+Os ícones Grade, Casa, Rua, zoom −/+, importar foto e salvar agora vivem
+num único conjunto padronizado de ícones (40×40, sem texto, com tooltip
+ao toque). Antes eram 4 grupos visuais diferentes com tamanhos e cores
+distintos.
+
+- Botão **Régua** removido (pouco usado).
+- Palavra **"Salvar"** removida — agora é só o ícone 📥 (consistente com
+  os demais).
+
+**2. Aba Exportar**
+
+- Botão "Cópias" renomeado para **Copiar** (era erro de digitação).
+
+**3. Veículos — faces internas vs externas dos vidros e portas**
+
+Agora dá pra distinguir vestígios em:
+- Face **externa** da porta / vidro (vista lateral E ou D do veículo)
+- Face **interna** da porta / vidro (vistas Interior do veículo)
+
+Mudanças:
+- Labels dos vidros externos clarificados: "Vidro da porta anterior
+  esquerda" → **"Face externa do vidro anterior esquerdo"**.
+- Novos IDs no interior: `vi_vidro_int_ant_e/d`, `vi_vidro_int_pos_e/d`,
+  `vi_vidro_int_parabrisa`, `vi_vidro_int_tras`.
+- Áreas clicáveis adicionadas nas vistas Interior — Lateral D / E
+  (strip de vidros no topo, strip de portas no rodapé).
+- Posições adicionadas em `POS_VEI_INT_D/E` para o croqui visual
+  mostrar bolinha vermelha numerada também nessas faces.
+
 ## v290 — Layout do veículo, page-break, Canva enxuto, fim do swipe
 
 **1. Croqui — seção 4.2 Do Veículo reestruturada (PDF + DOCX)**
