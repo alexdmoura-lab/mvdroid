@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v282-Xandroid";
+const APP_VERSION="v283-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -747,31 +747,42 @@ const docxHeader1Xml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:
 // Cache de imagens já convertidas em data URL — evita refetch nas múltiplas
 // vistas do mesmo veículo/cadáver. Vive enquanto a aba está aberta.
 const _IMG_DATAURL_CACHE={};
-// Pré-carrega todas as <image href="/img/..."> do SVG e substitui por data URL.
-// Necessário porque iOS Safari não baixa <image> internas quando o SVG vem
-// de um blob URL — fica em branco, só os marcadores aparecem.
+// Pré-carrega TODOS os href="/img/..." (em <image> de SVG OU <img> tags HTML)
+// e substitui por data URL. Necessário porque:
+// (a) iOS Safari não baixa <image> internas quando o SVG vem de blob URL
+// (b) html2canvas (usado pelo PDF) também tem problemas com same-origin imgs
+// Cada fetch tem timeout de 5s — se uma falhar, pula só ela e continua.
+const _fetchWithTimeout=(url,ms)=>Promise.race([
+  fetch(url),
+  new Promise((_,rej)=>setTimeout(()=>rej(new Error("fetch timeout "+ms+"ms")),ms))
+]);
 const inlineImagesInSvg=async(svgStr)=>{
-  const re=/(?:href|xlink:href)="\/((?:img|icon)[^"]+)"/g;
+  if(!svgStr)return svgStr;
+  // Pega tanto href= quanto xlink:href= e tanto src= (de <img>) quanto href= (de <image>)
+  const re=/(?:href|xlink:href|src)="\/((?:img|icon)[^"]+)"/g;
   const paths=new Set();
   let m;while((m=re.exec(svgStr))!==null)paths.add(m[1]);
   for(const p of paths){
     if(_IMG_DATAURL_CACHE[p])continue;
     try{
-      const resp=await fetch("/"+p);
+      const resp=await _fetchWithTimeout("/"+p,5000);
       if(!resp.ok)continue;
       const blob=await resp.blob();
-      const dataUrl=await new Promise((res,rej)=>{
-        const fr=new FileReader();
-        fr.onload=()=>res(fr.result);
-        fr.onerror=()=>rej(new Error("FileReader falhou"));
-        fr.readAsDataURL(blob);
-      });
+      const dataUrl=await Promise.race([
+        new Promise((res,rej)=>{
+          const fr=new FileReader();
+          fr.onload=()=>res(fr.result);
+          fr.onerror=()=>rej(new Error("FileReader falhou"));
+          fr.readAsDataURL(blob);
+        }),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("FileReader timeout 5s")),5000))
+      ]);
       _IMG_DATAURL_CACHE[p]=dataUrl;
     }catch(e){
       console.warn("[inlineImg] falha ao carregar",p,e);
     }
   }
-  return svgStr.replace(/(href|xlink:href)="\/((?:img|icon)[^"]+)"/g,(full,attr,path)=>
+  return svgStr.replace(/(href|xlink:href|src)="\/((?:img|icon)[^"]+)"/g,(full,attr,path)=>
     _IMG_DATAURL_CACHE[path]?`${attr}="${_IMG_DATAURL_CACHE[path]}"`:full
   );
 };
@@ -2576,8 +2587,13 @@ const smartSavePdf=async(blobOrUrl,title)=>{
 // forçamos xLight (scale 1.0, qualidade 0.7) e pré-carregamos as imagens.
 const isIOS=()=>{try{return/iPad|iPhone|iPod/.test(navigator.userAgent||"")||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}catch(_){return false;}};
 const genPdfBlobFromHtml=async(html,title,timeoutMs,opts)=>{const fast=opts&&opts.fast;const xLight=(opts&&opts.xLight)||isIOS();/* v250: iOS sempre xLight */const tMs=timeoutMs||(fast?45000:60000);const scale=xLight?1.0:(fast?1.4:2);const html2pdf=await loadH2P();
+// v283: inline as imagens internas (SVG <image href> e <img src>) como data URLs
+// ANTES do html2canvas processar. html2canvas em iOS tem problemas com imagens
+// referenciadas, e o html2pdf passa pra ele direto. Sem inline, a silhueta do
+// cadáver e a imagem do veículo ficam em branco no PDF.
+const inlinedHtml=await inlineImagesInSvg(html);
 const uniqueId="pdf-export-tmp-"+Date.now()+"-"+Math.floor(Math.random()*100000);
-const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssText="position:fixed;top:-99999px;left:-99999px;width:800px;padding:24px 20px;color:#222;font-size:12px;line-height:1.5;background:#fff;font-family:-apple-system,Arial,sans-serif;";tempEl.innerHTML=html;document.body.appendChild(tempEl);try{
+const tempEl=document.createElement("div");tempEl.id=uniqueId;tempEl.style.cssText="position:fixed;top:-99999px;left:-99999px;width:800px;padding:24px 20px;color:#222;font-size:12px;line-height:1.5;background:#fff;font-family:-apple-system,Arial,sans-serif;";tempEl.innerHTML=inlinedHtml;document.body.appendChild(tempEl);try{
 // v250: pré-carrega TODAS as imagens do tempEl ANTES de chamar html2canvas.
 // Sem isso, html2canvas em iOS Safari trava esperando imagens base64
 // gigantes (logos PCDF/DF). Timeout de 8s por imagem.

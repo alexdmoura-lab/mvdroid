@@ -7,6 +7,40 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v283 — Fix DOCX que travava + Imagem do veículo no PDF
+
+Dois bugs reportados em teste no iPhone:
+
+**1) DOCX não gerava (mensagem "Renderizando 5 ilustrações" e nada acontecia)**
+
+Causa: o `inlineImagesInSvg` da v282 fazia `await fetch("/img/...")` sem
+timeout. Se o iOS Safari travasse uma das requisições (qualquer motivo —
+SW intermediando, rede instável, GC), o `await` ficava pendurado pra
+sempre e o DOCX nunca era gerado.
+
+Correção:
+- `_fetchWithTimeout(url, ms)` envolve `fetch` com `Promise.race` contra
+  setTimeout (5s padrão). Se vencer o timer, rejeita e o catch interno
+  pula só essa imagem.
+- `FileReader.readAsDataURL` também envolto em timeout 5s (mesma proteção).
+- Pior caso: imagem demora 5s pra falhar, mas o DOCX é gerado com as
+  outras imagens. Sem mais hangs eternos.
+
+**2) Imagem do veículo (e silhueta do cadáver) não aparecia no PDF**
+
+Mesmo bug do DOCX da v281, mas afetando o PDF: o `html2canvas` (que
+o `html2pdf` usa por baixo) pré-carrega só `<img>` HTML, não pega
+`<image>` dentro de SVG. Então os SVGs de cadáver/veículo iam pra
+o canvas com imagens vazias.
+
+Correção: `genPdfBlobFromHtml` agora chama `await inlineImagesInSvg(html)`
+antes de inserir o HTML no DOM temporário. Mesmo helper compartilhado com
+o DOCX, mesmo cache (`_IMG_DATAURL_CACHE`) — se você gerou o DOCX antes,
+o PDF é mais rápido por reusar as data URLs já bufferizadas.
+
+A regex foi expandida pra pegar também `src="/img/..."` (de tags `<img>`
+HTML), além do `href` / `xlink:href` (de `<image>` SVG).
+
 ## v282 — Fix: silhuetas do corpo e veículo no DOCX + bug do modo claro
 
 **Bug crítico do DOCX (v281):** as silhuetas do corpo e do veículo não
