@@ -7,6 +7,284 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v290 — Layout do veículo, page-break, Canva enxuto, fim do swipe
+
+**1. Croqui — seção 4.2 Do Veículo reestruturada (PDF + DOCX)**
+
+Antes: todas as tabelas dos veículos → todos os vestígios numa tabela
+única → todas as imagens. Confuso quando havia muitos veículos.
+
+Agora intercalado: tabela do Veículo 1 + vestígios do Veículo 1 +
+imagens do Veículo 1 → tabela do Veículo 2 + vestígios + imagens →
+e assim por diante. Cada bloco fica autocontido.
+
+**2. Nomenclatura completa nas figuras**
+
+As legendas das figuras de veículo agora trazem `Veículo N — Tipo —
+Placa — Cor — VISTA` (campos vazios são omitidos automaticamente).
+Antes era só `Veículo N (placa) — VISTA`.
+
+**3. Bug crítico — figuras quebrando entre páginas**
+
+`embedPngAt` agora envolve cada figura+legenda numa tabela invisível
+com `<w:cantSplit/>` (DOCX) e `page-break-inside: avoid` (PDF). Antes,
+o cadáver às vezes ficava cortado entre páginas, com as pernas numa e
+o resto na seguinte.
+
+**4. Canva — toolbar reorganizado**
+
+- Selecionar / Borracha / Desfazer / Refazer movidos para **logo acima
+  da área de desenho**, em uma única linha de tamanho uniforme.
+  Desfazer/Refazer agora são só ícone (`↩` / `↪`).
+- "Abrir Maps" removido. "Mapa → Canvas" virou só ícone 📸 (sem texto).
+- Botões Norte e 1:1 (zoom 100%) removidos da seção Visualização.
+- "PNG" e "PNG 4×" unificados num único botão **Salvar**, que sempre
+  exporta em alta resolução (4×).
+
+**5. Aba Exportar**
+
+- Card "Outros" (com botão "Texto resumo") removido.
+- Botão **Cópias** adicionado no canto direito do header do card
+  Resumo — copia o texto pra área de transferência.
+
+**6. Swipe entre abas removido**
+
+Gesto disparava sem querer ao rolar; navegação agora só pela barra de
+abas e botões Anterior/Próxima.
+
+## v289 — Moto + Bicicleta + Ônibus no Croqui visual + ajuste de pontos
+
+Usuário notou que rodas e pneus apareciam **fora** do carro (no chão) na
+vista lateral. Coordenadas das rodas e pneus subidas ~20px pra ficar em
+cima dos elementos visuais (era 320/365, agora 300/345).
+
+Adicionado também suporte ao Croqui visual para os tipos que faltavam:
+- **MOTO**: 3 vistas — Laterais (D+E numa imagem), Frente+Traseira, Vista
+  Superior. Regiões: guidão, tanque, assento, motor, rodas dianteira/
+  traseira, faróis, retrovisores, lanterna, placa.
+- **BICICLETA**: 3 vistas — Laterais, Frente+Traseira, Vista Superior.
+  Regiões: guidão, quadro, selim, rodas, pedais.
+- **ÔNIBUS**: 4 vistas — Lateral E, Lateral D, Frente+Traseira, Interior
+  (vista superior em formato vertical 400x800). Regiões: motorista,
+  painel, portas, assentos (E/D/corredor × frente/meio/traseira), rodas.
+
+`mkVeiViews` agora seleciona o conjunto certo de vistas baseado na
+categoria. Cada vista só é gerada se tiver pelo menos 1 vestígio
+(comportamento existente preservado).
+
+`VEI_TIPOS_COM_SVG` ampliado para incluir moto/bicicleta/ônibus.
+
+## v288 — Veículo com 8 vistas no Croqui (interior + teto)
+
+DOCX da v287 funcionou (gerou rápido, com imagens) — ✅. Mas o usuário
+notou que vestígios marcados em **interior esquerdo, interior direito e
+teto** não viravam imagens. Eu só tinha mapeado 4 vistas externas
+(lateral E, lateral D, frente, traseira).
+
+Adicionado mapeamento de coordenadas (POS_VEI_*) para as 4 vistas que
+faltavam, totalizando 8 vistas:
+
+- **VISTA SUPERIOR** (teto): 8 áreas (capô D/E, teto ant D/E, teto pos
+  D/E, p-malas D/E)
+- **INTERIOR — VISTA SUPERIOR**: volante, painel, bancos motorista/
+  passageiro/traseiros, console, assoalho
+- **INTERIOR — LATERAL DIREITA**: vista de dentro com painel à direita
+  (porta-luvas, retrovisor, para-brisa, apoio de cabeça, cinto, forro)
+- **INTERIOR — LATERAL ESQUERDA**: espelhado (painel à esquerda)
+
+Coordenadas extraídas dos componentes JSX `VTetoSvg` e `VIntSvg` que já
+renderizam essas vistas na aba Veículo do app — agora 100% das regiões
+clicáveis viram bolinhas no PDF/DOCX.
+
+Tipos cobertos: Sedan, Hatch, SUV, Caminhonete (interior compartilhado).
+Moto/Bicicleta/Ônibus continuam só com tabela texto (estruturas
+diferentes — mapeamento dedicado em rodada futura).
+
+## v287 — Fix DOCX trava no zip: PNG vai como STORE (sem recompressão)
+
+Diagnóstico v286 confirmou: rasterização ✅, mas `generateAsync timeout 30s`.
+fflate travava ao tentar comprimir 6 PNGs (~150-225KB cada). Causa real
+agora identificada: PNGs já são internamente compactados (Deflate). Ao
+forçar `level:6` (DEFLATE) em cima, o algoritmo gasta CPU sem reduzir
+muito o tamanho — em iOS Safari isso trava (provavelmente pela falta
+de WebWorkers no contexto async).
+
+Fix:
+- `mkDocxZip.file()` agora aceita `opts.level`. Sem opts, detecta pela
+  extensão: `.png/.jpg/.jpeg` → STORE (level 0, sem compressão), o resto
+  → DEFLATE level 6 (mesma compressão antiga pra XMLs).
+- DOCX final fica ~30% maior (porque imagens não são re-compactadas)
+  mas a geração é ~50× mais rápida e SEM TRAVAR.
+- Timeout do generateAsync subiu pra 60s só por margem (na prática termina
+  em <1s agora).
+
+Por que zipar? DOCX é tecnicamente um ZIP — formato oficial do Word.
+Word abre um .docx fazendo unzip e lendo os XMLs dentro. Não dá pra fazer
+DOCX sem zipar.
+
+## v286 — Fix dois bugs do DOCX (Sedan rasterizado + zip travando)
+
+Diagnóstico da v285 revelou dois bugs reais com causa identificada:
+
+**1) Veículo `vei=0` mesmo com Sedan + 3 vestígios marcados**
+A função `mkVeiViews` filtrava por `d["v0_tipo"]` (campo "Tipo/Modelo" texto
+livre tipo "Civic 2010"). O correto era `d["v0_cat"]` (botão Categoria:
+Sedan/Hatch/SUV/Caminhonete/Ônibus/Moto/Bicicleta). Como "Civic 2010" não
+está em `VEI_TIPOS_COM_SVG`, todos os veículos eram filtrados fora.
+
+Fix: ler `_cat` em vez de `_tipo` (com fallback "sedan" se não setado).
+Agora o croqui visual do veículo aparece pra qualquer Sedan/Hatch/SUV/
+Caminhonete cadastrado, mesmo se Tipo/Modelo for texto livre.
+
+**2) DOCX travado em `generateAsync` (silêncio após "zip files added")**
+PNGs estavam sendo gerados em scale=2x (alta nitidez) → cada PNG ~600KB,
+total ~3MB. fflate travava ao zipar isso em iOS Safari. Sem timeout, o
+`await` ficava infinito.
+
+Fix:
+- scale=1 (era 2): cada PNG ~150KB, total <1MB. Visualmente continua
+  nítido em A4 (impresso em ~7-8cm de largura).
+- Timeout de 30s no `generateAsync` via `Promise.race`. Se travar, o catch
+  global pega e mostra erro em vez de hang silencioso.
+
+## v285 — Logs após rasterização + fallback de download iOS
+
+Diagnóstico da v284 mostrou que a rasterização TERMINA com sucesso (5 PNGs
+do cadáver gerados, ok=1, ok=1...) mas o DOCX nunca chega ao usuário no
+iPhone. Algo entre "raster batch done" e o download está falhando
+silenciosamente.
+
+Adicionado:
+- Logs em pontos críticos depois da rasterização: zip files added (com
+  body.length), blob ready (com size), download path (standalone/iOS/
+  canShare flags), share start, share OK, click <a download>, catch fatal.
+- Log no `mkVeiViews` pra entender por que `vei=0` mesmo com vestígios
+  veiculares marcados (provavelmente tipo de veículo fora da lista
+  sedan/hatch/suv/caminhonete).
+- **Fallback duplo de download em iOS**: depois do `<a download>`
+  tradicional disparar, em iOS o app também aciona o share sheet 400ms
+  depois. Em iOS Safari não-standalone o `<a download>` falha silencioso
+  com frequência; o share sheet é o backup.
+- Se generateAsync falhar ou catch global pegar erro, agora é registrado
+  no Diagnóstico com a stack trace (até 200 chars).
+
+Próxima falha: o Diagnóstico vai mostrar EXATAMENTE em qual passo do
+download travou (zip files, blob ready, share start, click sent, etc.).
+
+## v284 — Telemetria + timeout global pra DOCX/PDF (debug iOS)
+
+DOCX da v283 ainda travava em "Renderizando 5 ilustrações" no iPhone, sem
+gerar nada e sem registrar erro no Diagnóstico (porque os `console.warn`
+ficam silenciados em produção desde v279).
+
+Adições pra desbloquear e instrumentar:
+
+- **`_diagLog(type, msg, extra)`**: novo helper que registra eventos
+  diretamente em `window.__xandroidErrors` (mesmo logger global que captura
+  erros). Diferente do `console.warn`, esses logs APARECEM no painel
+  Diagnóstico mesmo em produção. Categoria `diag-info` pra eventos OK,
+  `diag-warn` pra avisos. Logs viram trilha do que aconteceu.
+- **Logging detalhado em `svgToPngU8` e `inlineImagesInSvg`**: cada etapa
+  (start, fetch, image.onload, toDataURL, etc.) registra no diag.
+- **Timeout global de 60s no batch de rasterização**: se a soma das
+  rasterizações exceder 1 minuto, a Promise.race aborta o batch e o DOCX
+  é gerado **sem as ilustrações** (graceful fallback). Toast avisa o
+  usuário: "⚠ Ilustrações puladas — gerando DOCX só com texto".
+- **Sem mais hangs eternos**: mesmo no pior caso onde toda rasterização
+  falha, o DOCX é gerado com tabelas + texto (comportamento da v279).
+
+Próxima vez que o DOCX falhar, abrir o Diagnóstico vai mostrar EXATAMENTE
+onde travou (qual fetch, qual imagem, qual etapa).
+
+## v283 — Fix DOCX que travava + Imagem do veículo no PDF
+
+Dois bugs reportados em teste no iPhone:
+
+**1) DOCX não gerava (mensagem "Renderizando 5 ilustrações" e nada acontecia)**
+
+Causa: o `inlineImagesInSvg` da v282 fazia `await fetch("/img/...")` sem
+timeout. Se o iOS Safari travasse uma das requisições (qualquer motivo —
+SW intermediando, rede instável, GC), o `await` ficava pendurado pra
+sempre e o DOCX nunca era gerado.
+
+Correção:
+- `_fetchWithTimeout(url, ms)` envolve `fetch` com `Promise.race` contra
+  setTimeout (5s padrão). Se vencer o timer, rejeita e o catch interno
+  pula só essa imagem.
+- `FileReader.readAsDataURL` também envolto em timeout 5s (mesma proteção).
+- Pior caso: imagem demora 5s pra falhar, mas o DOCX é gerado com as
+  outras imagens. Sem mais hangs eternos.
+
+**2) Imagem do veículo (e silhueta do cadáver) não aparecia no PDF**
+
+Mesmo bug do DOCX da v281, mas afetando o PDF: o `html2canvas` (que
+o `html2pdf` usa por baixo) pré-carrega só `<img>` HTML, não pega
+`<image>` dentro de SVG. Então os SVGs de cadáver/veículo iam pra
+o canvas com imagens vazias.
+
+Correção: `genPdfBlobFromHtml` agora chama `await inlineImagesInSvg(html)`
+antes de inserir o HTML no DOM temporário. Mesmo helper compartilhado com
+o DOCX, mesmo cache (`_IMG_DATAURL_CACHE`) — se você gerou o DOCX antes,
+o PDF é mais rápido por reusar as data URLs já bufferizadas.
+
+A regex foi expandida pra pegar também `src="/img/..."` (de tags `<img>`
+HTML), além do `href` / `xlink:href` (de `<image>` SVG).
+
+## v282 — Fix: silhuetas do corpo e veículo no DOCX + bug do modo claro
+
+**Bug crítico do DOCX (v281):** as silhuetas do corpo e do veículo não
+apareciam no Word — só as bolinhas numeradas em fundo branco. Causa: iOS
+Safari não baixa as `<image href="/img/...">` internas de um SVG quando ele
+é carregado via `blob:` URL. Correção:
+
+- Nova função `inlineImagesInSvg(svgStr)` que pré-carrega cada `<image>` do
+  SVG via `fetch` + `FileReader.readAsDataURL` e substitui no SVG por
+  `data:image/...;base64,...` antes de criar o blob. Cache `_IMG_DATAURL_CACHE`
+  evita refetch entre vistas.
+- `svgToPngU8` agora é `async` e chama `inlineImagesInSvg` antes de rasterizar.
+
+**Bug do modo claro:** os campos `<select>` (DP, Ano, Natureza, etc.)
+mostravam um padrão de chevrons (▼▼▼▼▼) preenchendo o input em vez de só
+1 chevron à direita. Causa: o `inp` usava `background: t.bg3` (shorthand
+CSS) que resetava `background-repeat` para `repeat` (default do shorthand),
+fazendo o ícone do chevron repetir. O `backgroundRepeat: "no-repeat"` do
+`sel` deveria sobrescrever, mas em ordem React a ordem ficou inconsistente.
+Correção: trocado `background` por `backgroundColor` (longhand) que afeta
+só a cor de fundo, sem mexer nas outras props de background.
+
+
+
+Bug detectado em teste no iPhone: o DOCX da v281 mostrava só as bolinhas
+numeradas (em pé no fundo branco) sem a silhueta do corpo nem do veículo
+por trás. Causa: iOS Safari não baixa as `<image href="/img/...">` internas
+de um SVG quando ele é carregado via `blob:` URL — o canvas é desenhado
+sem essas imagens (ficam transparentes).
+
+Correção: nova função `inlineImagesInSvg(svgStr)` que pré-carrega cada
+`<image href>` do SVG via `fetch` + `FileReader.readAsDataURL` e substitui
+no SVG por `data:image/...;base64,...` antes de criar o blob. Assim quando
+o canvas desenha o SVG, todas as imagens já estão embedded e renderizam
+corretamente. Cache `_IMG_DATAURL_CACHE` evita refetch entre vistas (cada
+veículo tem 4 vistas, mas só 1 fetch por imagem única).
+
+`svgToPngU8` agora é `async` e chama `await inlineImagesInSvg(svg)` antes
+de rasterizar.
+
+## v281 — Croqui visual do cadáver E do veículo no DOCX (espelho do PDF)
+
+- **DOCX agora é o espelho do PDF**: as ilustrações do cadáver com lesões marcadas e do veículo com vestígios marcados — que antes só apareciam no Croqui PDF — agora também são embedadas no Croqui DOCX. O documento Word vira a réplica fiel do PDF.
+- **Como funciona internamente**: ao gerar o DOCX, o app rasteriza cada SVG (cadáver: anterior, posterior, cabeça, mãos, pés; veículo: lateral E/D, frente, traseira) em PNG via canvas, e embeda o PNG no documento Word junto com a legenda. Funciona offline (não precisa de rede pra rasterizar).
+- **Robustez**: se a rasterização de uma view falhar (CORS, falta de memória em iPhone antigo), só aquela view é pulada. O DOCX continua sendo gerado com tudo o que deu certo. Toast "⏳ Renderizando X ilustrações..." durante a rasterização.
+- Refatoração interna: `bodyPdfSvg` e `veiPdfSvg` agora chamam `mkCadaverViews` e `mkVeiViews` respectivamente. Uma única fonte de verdade pra views — usada tanto no PDF (HTML inline) quanto no DOCX (rasterização).
+
+## v280 — Croqui do veículo no PDF (com vestígios marcados)
+
+- **Croqui visual do veículo no Croqui PDF**: nova função `veiPdfSvg` similar ao `bodyPdfSvg` do cadáver. Pra cada veículo com vestígios veiculares marcados, o PDF agora mostra a imagem do carro nas vistas que têm vestígios (lateral E, lateral D, frente, traseira) com bolinhas vermelhas numeradas indicando exatamente onde cada vestígio foi marcado. Numeração bate com a tabela "Vestígios veiculares" acima.
+  - Coordenadas das regiões vêm sincronizadas dos componentes JSX do app (`VLatSvg`, `VFrenteSvg`, `VTrasSvg`).
+  - Funciona pra Sedan, Hatch, SUV e Caminhonete (que compartilham a mesma estrutura de regiões). Moto, bicicleta e ônibus ainda não têm coordenadas mapeadas — o vestígio aparece na tabela mas não no croqui visual.
+  - Suporta múltiplos vestígios na mesma região (bolinhas empilham horizontalmente).
+- **DOCX ainda não inclui o croqui visual** — fica para a v281. Embedar SVG no DOCX requer rasterização SVG→PNG via canvas (não trivial em iOS Safari), e quero fazer com testes específicos. Por enquanto, abrir o PDF é o caminho.
+
 ## v279 — Auditoria de saneamento (rodadas 4 e 5)
 
 **Rodada 4 — qualidade de código:**
