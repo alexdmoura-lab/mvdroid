@@ -7,6 +7,28 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v289 — Moto + Bicicleta + Ônibus no Croqui visual + ajuste de pontos
+
+Usuário notou que rodas e pneus apareciam **fora** do carro (no chão) na
+vista lateral. Coordenadas das rodas e pneus subidas ~20px pra ficar em
+cima dos elementos visuais (era 320/365, agora 300/345).
+
+Adicionado também suporte ao Croqui visual para os tipos que faltavam:
+- **MOTO**: 3 vistas — Laterais (D+E numa imagem), Frente+Traseira, Vista
+  Superior. Regiões: guidão, tanque, assento, motor, rodas dianteira/
+  traseira, faróis, retrovisores, lanterna, placa.
+- **BICICLETA**: 3 vistas — Laterais, Frente+Traseira, Vista Superior.
+  Regiões: guidão, quadro, selim, rodas, pedais.
+- **ÔNIBUS**: 4 vistas — Lateral E, Lateral D, Frente+Traseira, Interior
+  (vista superior em formato vertical 400x800). Regiões: motorista,
+  painel, portas, assentos (E/D/corredor × frente/meio/traseira), rodas.
+
+`mkVeiViews` agora seleciona o conjunto certo de vistas baseado na
+categoria. Cada vista só é gerada se tiver pelo menos 1 vestígio
+(comportamento existente preservado).
+
+`VEI_TIPOS_COM_SVG` ampliado para incluir moto/bicicleta/ônibus.
+
 ## v288 — Veículo com 8 vistas no Croqui (interior + teto)
 
 DOCX da v287 funcionou (gerou rápido, com imagens) — ✅. Mas o usuário

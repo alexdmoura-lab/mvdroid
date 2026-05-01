@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v288-Xandroid";
+const APP_VERSION="v289-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -2776,9 +2776,10 @@ r+=ln("Pertences",d[cx2+"pert"])+ln("Observações gerais",d[cx2+"obs_geral"]);}
 // porta_pos, vidro_ant, vidro_pos, retrovisor, paralama_ant, paralama_pos,
 // parachoque_ant, parachoque_pos, roda_ant, roda_pos, pneu_ant, pneu_pos,
 // soleira, coluna_a, coluna_b, coluna_c).
-const POS_VEI_LAT_E={"ve_vidro_ant_e":[270,115],"ve_vidro_pos_e":[450,115],"ve_porta_ant_e":[275,195],"ve_porta_pos_e":[455,195],"ve_coluna_a_e":[198,115],"ve_coluna_b_e":[355,115],"ve_coluna_c_e":[590,115],"ve_retrovisor_e":[65,165],"ve_paralama_ant_e":[150,225],"ve_paralama_pos_e":[650,225],"ve_parachoque_ant_e":[45,265],"ve_parachoque_pos_e":[755,265],"ve_soleira_e":[400,268],"ve_roda_ant_e":[150,320],"ve_roda_pos_e":[650,320],"ve_pneu_ant_e":[150,365],"ve_pneu_pos_e":[650,365]};
-// Lat D — mesma estrutura mas espelhada (frente do carro à esquerda)
-const POS_VEI_LAT_D={"ve_vidro_ant_d":[510,115],"ve_vidro_pos_d":[330,115],"ve_porta_ant_d":[515,195],"ve_porta_pos_d":[335,195],"ve_coluna_a_d":[600,115],"ve_coluna_b_d":[455,115],"ve_coluna_c_d":[210,115],"ve_retrovisor_d":[735,165],"ve_paralama_ant_d":[650,225],"ve_paralama_pos_d":[150,225],"ve_parachoque_ant_d":[755,265],"ve_parachoque_pos_d":[45,265],"ve_soleira_d":[400,268],"ve_roda_ant_d":[650,320],"ve_roda_pos_d":[150,320],"ve_pneu_ant_d":[650,365],"ve_pneu_pos_d":[150,365]};
+// v289: rodas e pneus subidos pra ficar EM CIMA dos elementos visuais (era 320/365 e
+// caía no chão). Outros pontos mantidos.
+const POS_VEI_LAT_E={"ve_vidro_ant_e":[270,115],"ve_vidro_pos_e":[450,115],"ve_porta_ant_e":[275,195],"ve_porta_pos_e":[455,195],"ve_coluna_a_e":[198,115],"ve_coluna_b_e":[355,115],"ve_coluna_c_e":[590,115],"ve_retrovisor_e":[65,165],"ve_paralama_ant_e":[150,225],"ve_paralama_pos_e":[650,225],"ve_parachoque_ant_e":[45,265],"ve_parachoque_pos_e":[755,265],"ve_soleira_e":[400,268],"ve_roda_ant_e":[150,300],"ve_roda_pos_e":[650,300],"ve_pneu_ant_e":[150,345],"ve_pneu_pos_e":[650,345]};
+const POS_VEI_LAT_D={"ve_vidro_ant_d":[510,115],"ve_vidro_pos_d":[330,115],"ve_porta_ant_d":[515,195],"ve_porta_pos_d":[335,195],"ve_coluna_a_d":[600,115],"ve_coluna_b_d":[455,115],"ve_coluna_c_d":[210,115],"ve_retrovisor_d":[735,165],"ve_paralama_ant_d":[650,225],"ve_paralama_pos_d":[150,225],"ve_parachoque_ant_d":[755,265],"ve_parachoque_pos_d":[45,265],"ve_soleira_d":[400,268],"ve_roda_ant_d":[650,300],"ve_roda_pos_d":[150,300],"ve_pneu_ant_d":[650,345],"ve_pneu_pos_d":[150,345]};
 // Frente: para-brisa, capô, faróis E/D, grade, para-choques, placa
 const POS_VEI_FRENTE={"ve_parabrisa":[400,105],"ve_capo":[400,205],"ve_farol_e":[205,275],"ve_farol_d":[595,275],"ve_grade":[400,275],"ve_parachoque_d_e":[215,330],"ve_parachoque_d_d":[585,330],"ve_placa_d":[400,324],"ve_parachoque_d_c":[400,356]};
 // Traseira: vidro traseiro, tampa porta-malas, lanternas E/D, placa, para-choques
@@ -2793,9 +2794,25 @@ const POS_VEI_INT_D={"vi_banco_tras_e":[85,200],"vi_banco_tras_d":[215,200],"vi_
 // Interior — lateral esquerda (espelhado: painel à esquerda)
 const POS_VEI_INT_E={"vi_volante":[115,195],"vi_painel":[140,115],"vi_porta_luvas":[65,285],"vi_console":[200,295],"vi_parabrisa_int":[350,55],"vi_retrovisor_int":[265,75],"vi_banco_pass":[320,245],"vi_banco_mot":[445,240],"vi_apoio_cab_mot":[465,120],"vi_banco_tras_d":[585,200],"vi_banco_tras_e":[715,200],"vi_cinto_seg":[390,205],"vi_assoalho_ant":[300,385],"vi_assoalho_pos":[655,385],"vi_forro_teto":[555,45]};
 
-// Tipos com 4 vistas image-based no app: sedan/hatch/suv/caminhonete
-// (moto/bici/onibus têm imagens diferentes — ficam de fora dessa primeira versão).
-const VEI_TIPOS_COM_SVG=["sedan","hatch","suv","caminhonete"];
+// Tipos com vistas mapeadas no Croqui visual.
+const VEI_TIPOS_COM_SVG=["sedan","hatch","suv","caminhonete","moto","bicicleta","onibus","ônibus"];
+
+// MOTO — laterais (D+E numa imagem só), frente+tras, vista superior
+const POS_MOTO_LAT={"mle_guidao":[80,155],"mle_tanque":[170,200],"mle_assento":[260,185],"mle_motor":[210,260],"mle_roda_d":[85,305],"mle_roda_t":[325,305],"mld_guidao":[720,155],"mld_tanque":[630,200],"mld_assento":[540,185],"mld_motor":[590,260],"mld_roda_d":[715,305],"mld_roda_t":[475,305]};
+const POS_MOTO_FT={"mf_farol":[195,105],"mf_retrov_e":[85,75],"mf_retrov_d":[305,75],"mf_roda":[200,310],"mt_lanterna":[565,105],"mt_placa":[565,165],"mt_roda":[570,310]};
+const POS_MOTO_SUP={"ms_guidao":[550,105],"ms_tanque":[325,200],"ms_assento":[475,200],"ms_motor":[450,300]};
+
+// BICICLETA — laterais (D+E numa imagem), frente+tras, superior
+const POS_BICI_LAT={"ble_guidao":[300,45],"ble_quadro":[220,110],"ble_assento":[190,45],"ble_roda_d":[90,180],"ble_roda_t":[320,180],"bld_guidao":[500,45],"bld_quadro":[580,110],"bld_assento":[610,45],"bld_roda_d":[710,180],"bld_roda_t":[480,180]};
+const POS_BICI_FT={"bf_guidao":[200,55],"bf_roda":[225,260],"bt_assento":[575,60],"bt_roda":[575,260]};
+const POS_BICI_SUP={"bs_guidao":[675,195],"bs_quadro":[400,200],"bs_assento":[210,195],"bs_pedal_d":[300,75],"bs_pedal_e":[300,325]};
+
+// ÔNIBUS — laterais E/D, frente+tras, interior (vista superior)
+const POS_BUS_LAT_E={"bse_frente":[105,150],"bse_meio":[400,150],"bse_tras":[705,150],"bse_roda_d":[180,295],"bse_roda_t":[640,295]};
+const POS_BUS_LAT_D={"bsd_frente":[705,150],"bsd_meio":[400,150],"bsd_tras":[105,150],"bsd_roda_d":[640,295],"bsd_roda_t":[180,295]};
+// IDs bf_*/bt_* da bici e ônibus colidem; o ônibus tem prefixos próprios pra frente+tras
+const POS_BUS_FT={"bf_parabrisa":[200,125],"bf_farol_e":[110,300],"bf_farol_d":[290,300],"bf_parachoque":[200,365],"bt_visor":[600,125],"bt_lanterna_e":[510,300],"bt_lanterna_d":[690,300],"bt_motor":[600,225]};
+const POS_BUS_INT={"bi_motorista":[110,70],"bi_painel":[260,70],"bi_porta_frente":[260,145],"bi_ass_e_frente":[110,240],"bi_ass_d_frente":[290,240],"bi_corr_frente":[200,240],"bi_porta_meio":[260,335],"bi_ass_e_meio":[110,430],"bi_ass_d_meio":[290,430],"bi_corr_meio":[200,430],"bi_ass_e_tras":[110,590],"bi_ass_d_tras":[290,590],"bi_corr_tras":[200,590]};
 
 // mkVeiViews: retorna ARRAY de views {label, svgInner, vb, vbW, vbH, displayW}
 // — cada view é uma vista do veículo (lat-E, lat-D, frente, traseira) com vestígios.
@@ -2831,25 +2848,63 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
     if(!VEI_TIPOS_COM_SVG.includes(cat))return;
     const veiLabel=veiculos[vi]?.label||`Veículo ${vi+1}`;
     const placa=d["v"+vi+"_placa"]?` (${d["v"+vi+"_placa"]})`:"";
-    const src=IMG_VEI[cat]||IMG_VEI.sedan;
+    // src só é usado em carroViews — pra moto/bici/ônibus, as funções acessam
+    // IMG_VEI.moto / IMG_VEI.bici / IMG_VEI.onibus diretamente.
+    const src=IMG_VEI[cat]||IMG_VEI.sedan||{};
     const mkView=(viewLabel,imgSrc,positions,vbW,vbH,imgH)=>{
       const vestsHere=vests.filter(v=>positions[v.region]);
       if(!vestsHere.length)return null;
       const svgInner=`<image href="${imgSrc}" x="0" y="0" width="${vbW}" height="${imgH}" preserveAspectRatio="xMidYMid meet"/><text x="${vbW/2}" y="${imgH+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#888">${viewLabel}</text>`+markers(positions,vestsHere,11);
       return{label:`${veiLabel}${placa} — ${viewLabel}`,svgInner,vb:`0 0 ${vbW} ${vbH}`,vbW,vbH,displayW:300};
     };
-    const v1=mkView("LATERAL ESQUERDA",src.latE,POS_VEI_LAT_E,800,400,380);
-    const v2=mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,800,400,380);
-    const v3=mkView("FRENTE",src.ant,POS_VEI_FRENTE,800,440,420);
-    const v4=mkView("TRASEIRA",src.pos,POS_VEI_TRAS,800,440,420);
-    // v288: vistas adicionais — teto (superior do veículo) e 3 vistas do interior
-    const v5=mkView("VISTA SUPERIOR",src.sup,POS_VEI_SUP,800,440,420);
-    // Interior compartilha imagens entre Sedan/Hatch/SUV (IMG_VEI.interior)
-    const intSrc=IMG_VEI.interior||{};
-    const v6=mkView("INTERIOR — VISTA SUPERIOR",intSrc.sup,POS_VEI_INT_SUP,800,440,420);
-    const v7=mkView("INTERIOR — LATERAL DIREITA",intSrc.d,POS_VEI_INT_D,800,440,420);
-    const v8=mkView("INTERIOR — LATERAL ESQUERDA",intSrc.e,POS_VEI_INT_E,800,440,420);
-    [v1,v2,v3,v4,v5,v6,v7,v8].forEach(v=>{if(v)allViews.push(v);});
+    // v289: vistas variam por categoria (carro/moto/bici/ônibus têm imagens
+    // e regiões diferentes). Cada bloco gera só as vistas que existem para
+    // aquele tipo. mkView descarta vistas sem vestígios (retorna null).
+    const carroViews=()=>{
+      const intSrc=IMG_VEI.interior||{};
+      return[
+        mkView("LATERAL ESQUERDA",src.latE,POS_VEI_LAT_E,800,400,380),
+        mkView("LATERAL DIREITA",src.latD,POS_VEI_LAT_D,800,400,380),
+        mkView("FRENTE",src.ant,POS_VEI_FRENTE,800,440,420),
+        mkView("TRASEIRA",src.pos,POS_VEI_TRAS,800,440,420),
+        mkView("VISTA SUPERIOR",src.sup,POS_VEI_SUP,800,440,420),
+        mkView("INTERIOR — VISTA SUPERIOR",intSrc.sup,POS_VEI_INT_SUP,800,440,420),
+        mkView("INTERIOR — LATERAL DIREITA",intSrc.d,POS_VEI_INT_D,800,440,420),
+        mkView("INTERIOR — LATERAL ESQUERDA",intSrc.e,POS_VEI_INT_E,800,440,420)
+      ];
+    };
+    const motoViews=()=>{
+      const m=IMG_VEI.moto||{};
+      return[
+        mkView("MOTO — LATERAIS (D + E)",m.laterais,POS_MOTO_LAT,800,400,380),
+        mkView("MOTO — FRENTE + TRASEIRA",m.frenteTras,POS_MOTO_FT,800,400,380),
+        mkView("MOTO — VISTA SUPERIOR",m.sup,POS_MOTO_SUP,800,400,380)
+      ];
+    };
+    const biciViews=()=>{
+      const b=IMG_VEI.bici||{};
+      return[
+        mkView("BICICLETA — LATERAIS (D + E)",b.lateral,POS_BICI_LAT,800,250,230),
+        mkView("BICICLETA — FRENTE + TRASEIRA",b.frenteTras,POS_BICI_FT,800,400,380),
+        mkView("BICICLETA — VISTA SUPERIOR",b.sup,POS_BICI_SUP,800,400,380)
+      ];
+    };
+    const busViews=()=>{
+      const o=IMG_VEI.onibus||{};
+      return[
+        mkView("ÔNIBUS — LATERAL ESQUERDA",o.latE,POS_BUS_LAT_E,800,360,340),
+        mkView("ÔNIBUS — LATERAL DIREITA",o.latD,POS_BUS_LAT_D,800,360,340),
+        mkView("ÔNIBUS — FRENTE + TRASEIRA",o.frenteTras,POS_BUS_FT,800,400,380),
+        // Interior do ônibus tem viewBox diferente (vertical 400x800)
+        mkView("ÔNIBUS — INTERIOR (vista superior)",o.interior,POS_BUS_INT,400,800,780)
+      ];
+    };
+    let viewsForCat;
+    if(cat==="moto")viewsForCat=motoViews();
+    else if(cat==="bicicleta")viewsForCat=biciViews();
+    else if(cat==="onibus"||cat==="ônibus")viewsForCat=busViews();
+    else viewsForCat=carroViews(); // sedan/hatch/suv/caminhonete e default
+    viewsForCat.forEach(v=>{if(v)allViews.push(v);});
   });
   return allViews;
 };

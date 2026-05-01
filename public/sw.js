@@ -18,7 +18,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v288';
+const CACHE_VERSION = 'xandroid-v289';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
