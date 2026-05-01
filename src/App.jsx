@@ -10,7 +10,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import html2pdf from "html2pdf.js";
 import { zip as fflateZip, strToU8, unzipSync, strFromU8 } from "fflate";
 import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangerouslySetInnerHTML do pdf-preview
-const APP_VERSION="v289-Xandroid";
+const APP_VERSION="v290-Xandroid";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -295,7 +295,7 @@ const BurstModal=React.memo(function BurstModal({rk,onClose,onConfirm,utils}){
     </div>
   </div>);
 });
-const Cd_=({title,icon,children,styles:st,variant})=>{const isPink=st.accentMode==="pink";const vColors=isPink?{danger:"#ff3b6e",warning:"#ff7a30",info:"#b54d8e",success:"#3fb56b",primary:"#d6336c",teal:"#c73086",slate:"#8a5a72"}:{danger:"#ff3b30",warning:"#ff9500",info:"#5856d6",success:"#34c759",primary:"#007aff",teal:"#30b0c7",slate:"#636e72"};const accent=variant&&vColors[variant]?vColors[variant]:null;const iconKey=(icon||"").trim();const hasSvg=iconKey&&APP_ICONS&&APP_ICONS[iconKey];
+const Cd_=({title,icon,children,styles:st,variant,headerRight})=>{const isPink=st.accentMode==="pink";const vColors=isPink?{danger:"#ff3b6e",warning:"#ff7a30",info:"#b54d8e",success:"#3fb56b",primary:"#d6336c",teal:"#c73086",slate:"#8a5a72"}:{danger:"#ff3b30",warning:"#ff9500",info:"#5856d6",success:"#34c759",primary:"#007aff",teal:"#30b0c7",slate:"#636e72"};const accent=variant&&vColors[variant]?vColors[variant]:null;const iconKey=(icon||"").trim();const hasSvg=iconKey&&APP_ICONS&&APP_ICONS[iconKey];
 // v269: detecta quando o card está perto do topo da viewport para aplicar glow azul iOS
 const cardRef=React.useRef(null);const[topGlow,setTopGlow]=React.useState(false);
 React.useEffect(()=>{const el=cardRef.current;if(!el||typeof IntersectionObserver==="undefined")return;
@@ -308,7 +308,7 @@ const baseShadow=st.dark?"0 2px 8px rgba(0,0,0,0.5),0 0 0 0.5px rgba(255,255,255
 const glowShadow=accent?`${baseShadow},0 0 16px ${accent}22,-2px 0 10px ${accent}18`:baseShadow;
 // Glow azul iOS sobreposto quando card cruza a faixa superior da viewport
 const topGlowShadow=topGlow?`${glowShadow},0 0 0 2px rgba(10,132,255,0.45),0 0 30px rgba(10,132,255,0.55),0 6px 24px rgba(10,132,255,0.35)`:glowShadow;
-return(<div ref={cardRef} className={"ios-card"+(topGlow?" ios-card-near-top":"")} style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:topGlowShadow,position:"relative",transition:"box-shadow 0.4s ease,transform 0.3s ease",transform:topGlow?"scale(1.005)":"scale(1)"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<span key={topGlow?"glow":"idle"} style={{display:"inline-flex",transition:"filter 0.3s ease",filter:topGlow?"drop-shadow(0 0 10px rgba(10,132,255,0.7))":"none",animation:topGlow?"cardIconPop 0.55s cubic-bezier(0.34,1.56,0.64,1)":"none"}}><AppIcon name={iconKey} size={30} mr={0}/></span>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15}}>{title}</span></div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
+return(<div ref={cardRef} className={"ios-card"+(topGlow?" ios-card-near-top":"")} style={{background:bgGradient,borderRadius:18,marginBottom:14,overflow:"hidden",boxShadow:topGlowShadow,position:"relative",transition:"box-shadow 0.4s ease,transform 0.3s ease",transform:topGlow?"scale(1.005)":"scale(1)"}}>{accent&&<div style={{position:"absolute",top:0,left:0,bottom:0,width:5,background:`linear-gradient(180deg,${accent} 0%,${accent}aa 50%,${accent}66 100%)`,borderTopLeftRadius:18,borderBottomLeftRadius:18,boxShadow:`0 0 8px ${accent}55`}}/>}<div style={{padding:"16px 20px 10px 22px",display:"flex",alignItems:"center",gap:10}}>{icon&&(hasSvg?<span key={topGlow?"glow":"idle"} style={{display:"inline-flex",transition:"filter 0.3s ease",filter:topGlow?"drop-shadow(0 0 10px rgba(10,132,255,0.7))":"none",animation:topGlow?"cardIconPop 0.55s cubic-bezier(0.34,1.56,0.64,1)":"none"}}><AppIcon name={iconKey} size={30} mr={0}/></span>:<span style={{fontSize:22,lineHeight:1}}>{icon}</span>)}<span style={{fontSize:19,fontWeight:800,color:st.tx,letterSpacing:-0.4,lineHeight:1.15,flex:1}}>{title}</span>{headerRight&&<div style={{display:"inline-flex",alignItems:"center",gap:6}}>{headerRight}</div>}</div><div style={{padding:"0 20px 18px 22px"}}>{children}</div></div>);};
 // EmptyState ilustrativo (estilo iOS / Apple Health)
 const EmptyState=({icon,title,hint,accent="#007aff",dark:isDark})=>{const grad=`url(#emptyGrad-${accent.replace("#","")})`;return(<div style={{padding:"28px 20px",textAlign:"center",background:isDark?"linear-gradient(180deg,rgba(255,255,255,0.02) 0%,transparent 100%)":"linear-gradient(180deg,rgba(0,0,0,0.015) 0%,transparent 100%)",borderRadius:14,marginBottom:10,border:`1.5px dashed ${accent}33`}}><svg width="64" height="64" viewBox="0 0 64 64" style={{marginBottom:10,filter:`drop-shadow(0 2px 6px ${accent}30)`}}><defs><linearGradient id={`emptyGrad-${accent.replace("#","")}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={accent} stopOpacity="0.18"/><stop offset="100%" stopColor={accent} stopOpacity="0.04"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill={grad} stroke={accent+"55"} strokeWidth="1.2"/><text x="32" y="42" textAnchor="middle" fontSize="28">{icon}</text></svg><div style={{fontSize:15,fontWeight:700,color:isDark?"#fff":"#000",letterSpacing:-0.3,marginBottom:4}}>{title}</div>{hint&&<div style={{fontSize:12,color:isDark?"#999":"#666",lineHeight:1.5}}>{hint}</div>}</div>);};
 // v267: estilo "pílula" — agora aceita props opcionais lx,ly para posicionar a label
@@ -1280,7 +1280,9 @@ const segContainer={display:"inline-flex",background:t.bg3,borderRadius:9,paddin
 const ST={inp,sel,ta,lb,ch,tY,tN,bt,ac:t.ac,cd:t.cd,bd:t.bd,tx:t.tx,t2:t.t2,t3:t.t3,bg3:t.bg3,hdbg:dark?"#1c1c1e":"#f8f8fa",dark,segTab,segContainer,accentMode:accent};
 return{inp,sel,ta,lb,ch,tY,tN,bt,abtn,tb,segTab,segContainer,ST};},[t,dark]);
 const scrollTop=useCallback(()=>setTimeout(()=>{window.scrollTo({top:0,behavior:"instant"});document.documentElement.scrollTop=0;document.body.scrollTop=0;},50),[]);
-const swipeRef=useRef(null);const onSwipeStart=(e)=>{if(tab===TAB_DESENHO)return;swipeRef.current={x:e.touches[0].clientX,y:e.touches[0].clientY};};const onSwipeEnd=(e)=>{if(!swipeRef.current||tab===TAB_DESENHO)return;const dx=e.changedTouches[0].clientX-swipeRef.current.x;const dy=e.changedTouches[0].clientY-swipeRef.current.y;swipeRef.current=null;if(Math.abs(dy)>Math.abs(dx))return;if(dx<-80&&tab<tabs.length-1){requestAnimationFrame(()=>{setTabDir("r");setTab(tab+1);scrollTop();});}else if(dx>80&&tab>0){requestAnimationFrame(()=>{setTabDir("l");setTab(tab-1);scrollTop();});}};
+// v290: swipe entre abas removido — gesto era confuso e disparava sem querer
+// quando o usuário rolava ou interagia com elementos. Navegação só via barra
+// de abas e botões "Anterior / Próxima".
 // v224: refs e efeito que garantem que a aba ATIVA sempre fique visível na barra de abas.
 // Corrige bug do iOS Safari onde justify-content:center com overflow recorta a primeira aba.
 const tabsBarRef=useRef(null);const activeTabRef=useRef(null);const topBarRef=useRef(null);
@@ -1928,7 +1930,7 @@ try{
         _diagLog("info","raster task: "+task.type+" "+task.view.label);
         const fullSvg=`<svg viewBox="${task.view.vb}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${task.view.svgInner}</svg>`;
         const r=await svgToPngU8(fullSvg,task.view.vbW,task.view.vbH);
-        const entry={label:task.view.label,u8:r.u8,w:r.width,h:r.height};
+        const entry={label:task.view.label,u8:r.u8,w:r.width,h:r.height,vi:task.view.vi};
         if(task.type==="cad")cadaverPngsByCi[task.ci].push(entry);
         else veiPngs.push(entry);
         _diagLog("info","raster task ok: "+task.view.label);
@@ -1953,9 +1955,10 @@ let body="";
 // (cadáver, veículo, fotos, croquis do canvas) ao longo do body em qualquer
 // seção. Ainda usado pelas Fotografias/Croquis no fim.
 let nextRid=10;const imgRels=[];
-// embedPngAt: registra PNG no zip, adiciona ao imgRels, retorna XML <w:p>
-// com <w:drawing> centralizado + legenda (Pp). pxW/pxH são as dimensões do PNG
-// (em pixels) — o cy é calculado proporcionalmente pra manter aspect ratio.
+// embedPngAt: registra PNG no zip, adiciona ao imgRels, retorna XML envolvendo
+// <w:drawing> + legenda numa única tabela com <w:cantSplit/> — assim a figura
+// e a legenda nunca são separadas entre páginas (v290). pxW/pxH são as
+// dimensões do PNG em pixels — cy é calculado pra manter aspect ratio.
 // maxCx é o EMU máximo de largura (default 4500000 ≈ 12 cm, cabendo em A4).
 let imgCounter=0;
 const embedPngAt=(u8,pxW,pxH,label,maxCx)=>{
@@ -1968,8 +1971,11 @@ const embedPngAt=(u8,pxW,pxH,label,maxCx)=>{
   const cwCx=maxCx||4500000;
   const cwCy=Math.round(cwCx*pxH/pxW);
   const drawXml=`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="40" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${cwCx}" cy="${cwCy}"/><wp:docPr id="${500+imgCounter}" name="${imgName}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${500+imgCounter}" name="${imgName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cwCx}" cy="${cwCy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
-  const captionXml=label?Pp(label,{sz:18,italic:true,center:true,color:"555555",spAft:160}):"";
-  return drawXml+captionXml;
+  const captionXml=label?Pp(label,{sz:18,italic:true,center:true,color:"555555",spAft:160,keepLines:true}):"";
+  // v290: wrap em tabela invisível de 1 linha + 1 célula com <w:cantSplit/>.
+  // Isso impede o Word/LibreOffice de quebrar a figura entre páginas.
+  // tblBorders todos como "nil" → não imprime bordas.
+  return `<w:tbl><w:tblPr><w:tblW w:w="10000" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="10000" w:type="dxa"/><w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders></w:tcPr>${drawXml}${captionXml}</w:tc></w:tr></w:tbl>`;
 };
 // ──── CAPA COM RESUMO EXECUTIVO ────
 body+=Pp("POLÍCIA CIVIL DO DISTRITO FEDERAL",{bold:true,sz:24,center:true,spAft:60});
@@ -2113,13 +2119,43 @@ if(d.dest==="Área verde"&&(d.av_veg||d.av_obs)){body+=SPACER();body+=Pp("Área 
 if(trilhas.length>0){body+=SPACER();body+=Pp("Trilhas de sangue",{bold:true,sz:20,spBef:120,spAft:60,color:"1A1A2E"});trilhas.forEach((tr,ti)=>{body+=Pp(`Trilha ${ti+1}`,{bold:true,sz:19,spAft:60});const ind2=[];if(tr.pegadas==="Sim")ind2.push("Pegadas");if(tr.arrasto==="Sim")ind2.push("Arrasto");if(tr.maos==="Sim")ind2.push("Mãos");if(tr.satelite==="Sim")ind2.push("Gotas satélite");if(tr.diminuicao==="Sim")ind2.push("Diminuição progressiva");body+=TBL_Z([["Origem",tr.origem],tr.gps_origem?["GPS Início",tr.gps_origem]:null,["Destino",tr.destino],tr.gps_destino?["GPS Fim",tr.gps_destino]:null,["Comprimento",tr.comprimento?tr.comprimento+"m":""],["Padrão",tr.padrao],["Continuidade",tr.continuidade],["Direcionamento",tr.direcionamento],["Acúmulo qtd.",tr.acumulo_qtd],["Acúmulo vol.",tr.acumulo_vol],["Acúmulo local",tr.acumulo_local],ind2.length?["Indicadores",ind2.join(", ")]:null,["Diluição",tr.diluicao],["Interferência",tr.interferencia],tr.interferencia==="Sim"?["Obs interferência",tr.interferencia_obs]:null,["Observações",tr.obs]]);});}
 edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){body+=SPACER();body+=Pp(`Edificação ${ei+1}${e.tipo?" — "+e.tipo:""}${e.nome?" ("+e.nome+")":""}`,{bold:true,sz:20,spBef:120,spAft:60,color:"1A1A2E"});body+=TBL_Z([["Tipo",e.tipo],["Descrição complementar",e.nome],["Material",e.material],["Andares",e.andares],["Cobertura",e.cobertura],["Estado",e.estado],["Perímetro/muro",e.muro],["Portão",e.portao],["Acesso",e.acesso],["Entradas",e.n_entradas],["Iluminação interna",e.ilum_int],["Câmeras",e.cameras],["Vizinhança",e.vizinhanca],e.comodos_list?.length?["Cômodos",e.comodos_list.join(", ")]:null,e.comodos_fato?.length?["Cômodos do fato",e.comodos_fato.join(", ")]:null,["Observações",e.obs]]);if(e.comodos_fato_det&&e.comodos_fato?.length){e.comodos_fato.forEach(cf=>{const det=(e.comodos_fato_det||{})[cf];if(det){const allM2=[...(det.mr||[]),...(det.mi||[]),...(det.ma||[]),...(det.mac||[]),...(det.me||[]),...(det.mo||[])];if(det.estado||allM2.length||det.obs_manchas||det.obs_comodo){body+=Pp(`📍 ${cf}`,{bold:true,sz:19,spBef:80,spAft:40,color:"1A1A2E"});body+=TBL_Z([["Estado",det.estado],allM2.length?["Manchas",allM2.join(", ")]:null,["Obs manchas",det.obs_manchas],["Obs cômodo",det.obs_comodo]]);}}});}}});
 // 4.2 Do Veículo (se houver)
+// v290: layout intercalado — para cada veículo: cabeçalho + tabela + vestígios
+// daquele veículo + imagens daquele veículo. Antes era todas as tabelas →
+// todos os vestígios → todas as imagens (separados, ficava confuso).
 const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
-if(veicsComData.length>0){body+=H2_NUM("4.2","Do Veículo");veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(hasVehicleData(d,vi,veiVest)){if(veicsComData.length>1)body+=Pp(`Veículo ${vi+1}`,{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});body+=TBL_Z([["Categoria",d[vx+"cat"]],["Tipo",d[vx+"tipo"]],["Cor",d[vx+"cor"]],["Placa",d[vx+"placa"]],["Ano",d[vx+"ano"]],["Chassi",d[vx+"chassi"]],["Hodômetro",d[vx+"km"]],["Estado",d[vx+"estado"]],["Motor",d[vx+"motor"]],["Portas travadas",d[vx+"portas"]],["Vidros íntegros",d[vx+"vidros"]],["Chave",d[vx+"chave"]],["Observações",d[vx+"obs"]]]);}});if(veiVest.length){body+=SPACER();body+=Pp("Vestígios veiculares",{bold:true,sz:22,spBef:140,spAft:80,color:"1A1A2E"});let vvR="";veiVest.forEach((v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";const sup3=`${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}`;const fill=(i%2===0)?"F5F5F7":"FFFFFF";vvR+=`<w:tr><w:tc><w:tcPr><w:tcW w:w="800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8E8EC"/></w:tcPr>${Pp(String(i+1),{sz:20,center:true,spAft:0})}
+if(veicsComData.length>0){body+=H2_NUM("4.2","Do Veículo");
+veiculos.forEach((vei,vi)=>{
+  const vx=`v${vi}_`;
+  if(!hasVehicleData(d,vi,veiVest))return;
+  // Header do veículo: "Veículo N — Tipo — Placa — Cor"
+  const catH=String(d[vx+"cat"]||"").trim();
+  const placaH=String(d[vx+"placa"]||"").trim();
+  const corH=String(d[vx+"cor"]||"").trim();
+  const metaH=[catH,placaH,corH].filter(Boolean).join(" — ");
+  const tituloVei=metaH?`Veículo ${vi+1} — ${metaH}`:`Veículo ${vi+1}`;
+  body+=Pp(tituloVei,{bold:true,sz:22,spBef:200,spAft:80,color:"1A1A2E",keepNext:true,keepLines:true});
+  body+=TBL_Z([["Categoria",d[vx+"cat"]],["Tipo",d[vx+"tipo"]],["Cor",d[vx+"cor"]],["Placa",d[vx+"placa"]],["Ano",d[vx+"ano"]],["Chassi",d[vx+"chassi"]],["Hodômetro",d[vx+"km"]],["Estado",d[vx+"estado"]],["Motor",d[vx+"motor"]],["Portas travadas",d[vx+"portas"]],["Vidros íntegros",d[vx+"vidros"]],["Chave",d[vx+"chave"]],["Observações",d[vx+"obs"]]]);
+  // Vestígios deste veículo
+  const vvThis=veiVest.filter(v=>(v.veiculo??0)===vi);
+  if(vvThis.length){
+    body+=Pp("Vestígios deste veículo",{bold:true,sz:20,spBef:120,spAft:60,color:"1A1A2E",keepNext:true,keepLines:true});
+    let vvR="";
+    vvThis.forEach((v,i)=>{
+      const fill=(i%2===0)?"F5F5F7":"FFFFFF";
+      vvR+=`<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E8E8EC"/></w:tcPr>${Pp(String(i+1),{sz:20,center:true,spAft:0})}
 </w:tc><w:tc><w:tcPr><w:tcW w:w="5600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""),{sz:20,spAft:0})}
-</w:tc><w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(sup3,{sz:20,spAft:0})}
-</w:tc></w:tr>`;});body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${vvR}</w:tbl>`;}
-// v281: embed dos PNGs do veículo com vestígios marcados (espelho do PDF)
-if(veiPngs.length){veiPngs.forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,4500000);});}
+</w:tc><w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${fill}"/></w:tcPr>${Pp(v.regionLabel||"",{sz:20,spAft:0})}
+</w:tc></w:tr>`;
+    });
+    body+=`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="10000" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:left w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:right w:val="single" w:sz="4" w:space="0" w:color="C8D6E5"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E6"/></w:tblBorders></w:tblPr>${vvR}</w:tbl>`;
+  }
+  // Imagens deste veículo (filtradas por vi via mkVeiViews)
+  const pngsThis=veiPngs.filter(p=>p.vi===vi);
+  if(pngsThis.length){pngsThis.forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,4500000);});}
+});
+// PNGs de veículos sem hasVehicleData (raro — fallback): adiciona no fim
+const pngsOrphans=veiPngs.filter(p=>!veiculos.some((_,vi)=>p.vi===vi&&hasVehicleData(d,vi,veiVest)));
+if(pngsOrphans.length){pngsOrphans.forEach(p=>{body+=embedPngAt(p.u8,p.w,p.h,p.label,4500000);});}
 }
 // 4.3 Do Cadáver
 const veicSuffix=veicsComData.length>0?"4.3":"4.2";
@@ -2847,7 +2883,13 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
     const cat=(d["v"+vi+"_cat"]||"sedan").toLowerCase();
     if(!VEI_TIPOS_COM_SVG.includes(cat))return;
     const veiLabel=veiculos[vi]?.label||`Veículo ${vi+1}`;
-    const placa=d["v"+vi+"_placa"]?` (${d["v"+vi+"_placa"]})`:"";
+    // v290: nomenclatura completa — "Veículo N — Tipo — Placa — Cor — VISTA"
+    // (campos vazios são omitidos, separador apenas entre os preenchidos)
+    const catStr=String(d["v"+vi+"_cat"]||"").trim();
+    const placaStr=String(d["v"+vi+"_placa"]||"").trim();
+    const corStr=String(d["v"+vi+"_cor"]||"").trim();
+    const meta=[catStr,placaStr,corStr].filter(Boolean).join(" — ");
+    const prefix=meta?`${veiLabel} — ${meta}`:veiLabel;
     // src só é usado em carroViews — pra moto/bici/ônibus, as funções acessam
     // IMG_VEI.moto / IMG_VEI.bici / IMG_VEI.onibus diretamente.
     const src=IMG_VEI[cat]||IMG_VEI.sedan||{};
@@ -2855,7 +2897,8 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
       const vestsHere=vests.filter(v=>positions[v.region]);
       if(!vestsHere.length)return null;
       const svgInner=`<image href="${imgSrc}" x="0" y="0" width="${vbW}" height="${imgH}" preserveAspectRatio="xMidYMid meet"/><text x="${vbW/2}" y="${imgH+12}" text-anchor="middle" font-size="11" font-weight="600" fill="#888">${viewLabel}</text>`+markers(positions,vestsHere,11);
-      return{label:`${veiLabel}${placa} — ${viewLabel}`,svgInner,vb:`0 0 ${vbW} ${vbH}`,vbW,vbH,displayW:300};
+      // v290: vi anexado pra permitir agrupar imagens por veículo no DOCX
+      return{label:`${prefix} — ${viewLabel}`,svgInner,vb:`0 0 ${vbW} ${vbH}`,vbW,vbH,displayW:300,vi};
     };
     // v289: vistas variam por categoria (carro/moto/bici/ônibus têm imagens
     // e regiões diferentes). Cada bloco gera só as vistas que existem para
@@ -2909,15 +2952,19 @@ const mkVeiViews=(veiVestList,d,veiculos)=>{
   return allViews;
 };
 
-// veiPdfSvg: HTML inline pra inserir no PDF (envolve cada view em <svg> com width fixo)
+// veiPdfSvg: HTML inline pra inserir no PDF.
+// v290: cada figura é um bloco individual com page-break-inside:avoid (antes
+// era um único flex container — figura grande ficava quebrando entre páginas).
+// A legenda completa "Veículo N — Tipo — Placa — Cor — VISTA" é renderizada
+// em itálico abaixo do SVG.
 const veiPdfSvg=(veiVestList,d,veiculos)=>{
   const views=mkVeiViews(veiVestList,d,veiculos);
   if(!views.length)return"";
-  let html=`<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:14px 0;page-break-inside:avoid">`;
+  let html="";
   views.forEach(v=>{
-    html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg></div>`;
+    const lbl=(v.label||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    html+=`<div style="page-break-inside:avoid;break-inside:avoid;margin:14px auto;text-align:center;display:block"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg><div style="font-size:10.5px;font-style:italic;color:#555;margin-top:4px">${lbl}</div></div>`;
   });
-  html+=`</div>`;
   return html;
 };
 
@@ -2981,13 +3028,18 @@ if(hasPeD){views.push({label:"Cadáver — PÉ D",svgInner:peImgSvg(IMG_PE_D,"P�
 if(hasPeE){views.push({label:"Cadáver — PÉ E",svgInner:peImgSvg(IMG_PE_E,"PÉ E — peito + planta")+markers(POS_PE_E,12),vb:"0 0 800 550",vbW:800,vbH:550,displayW:300});}
 return views;};
 
-// bodyPdfSvg: HTML inline pra inserir no PDF (preserva API antiga — retorna string)
+// bodyPdfSvg: HTML inline pra inserir no PDF.
+// v290: cada figura é um bloco individual com page-break-inside:avoid pra
+// impedir corte da figura entre páginas (era o bug das pernas do cadáver
+// que ficavam separadas do resto). Legenda completa em itálico abaixo.
 const bodyPdfSvg=(woundsList,sx)=>{
 const views=mkCadaverViews(woundsList,sx);
 if(!views.length)return"";
-let html=`<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:14px 0;page-break-inside:avoid">`;
-views.forEach(v=>{html+=`<div style="text-align:center"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg></div>`;});
-html+=`</div>`;
+let html="";
+views.forEach(v=>{
+  const lbl=(v.label||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  html+=`<div style="page-break-inside:avoid;break-inside:avoid;margin:14px auto;text-align:center;display:block"><svg viewBox="${v.vb}" width="${v.displayW}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">${v.svgInner}</svg><div style="font-size:10.5px;font-style:italic;color:#555;margin-top:4px">${lbl}</div></div>`;
+});
 return html;};
 // FULL PDF builder - ALL sections
   // ──────────────────────────────────────────
@@ -3179,8 +3231,36 @@ if(d.dest==="Área verde"&&(d.av_veg||d.av_obs)){h+=`<h5 style="font-size:12px;c
 if(trilhas.length>0){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Trilhas de sangue</h5>`;trilhas.forEach((tr,ti)=>{const ind3=[];if(tr.pegadas==="Sim")ind3.push("Pegadas");if(tr.arrasto==="Sim")ind3.push("Arrasto");if(tr.maos==="Sim")ind3.push("Mãos");if(tr.satelite==="Sim")ind3.push("Gotas satélite");if(tr.diminuicao==="Sim")ind3.push("Diminuição progressiva");h+=`<div style="background:#ffe0e0;padding:4px 8px;margin-top:6px;font-size:10px;font-weight:700;color:${PRIMARY}">🩸 Trilha ${ti+1}</div>`;h+=tblZ([tr.origem?["Origem",tr.origem]:null,tr.gps_origem?["GPS Início",tr.gps_origem]:null,tr.destino?["Destino",tr.destino]:null,tr.gps_destino?["GPS Fim",tr.gps_destino]:null,tr.comprimento?["Comprimento",tr.comprimento+"m"]:null,tr.padrao?["Padrão",tr.padrao]:null,tr.continuidade?["Continuidade",tr.continuidade]:null,tr.direcionamento?["Direcionamento",tr.direcionamento]:null,tr.acumulo_qtd?["Acúmulo qtd.",tr.acumulo_qtd]:null,tr.acumulo_vol?["Acúmulo vol.",tr.acumulo_vol]:null,tr.acumulo_local?["Acúmulo local",tr.acumulo_local]:null,ind3.length?["Indicadores",ind3.join(", ")]:null,tr.diluicao?["Diluição",tr.diluicao]:null,tr.interferencia?["Interferência",tr.interferencia]:null,tr.interferencia==="Sim"&&tr.interferencia_obs?["Obs interferência",tr.interferencia_obs]:null,tr.obs?["Observações",tr.obs]:null]);});}
 edificacoes.forEach((e,ei)=>{if(e.tipo||e.nome){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Edificação ${ei+1}${e.tipo?" — "+esc(e.tipo):""}${e.nome?" ("+esc(e.nome)+")":""}</h5>`;h+=tblZ([e.tipo?["Tipo",e.tipo]:null,e.nome?["Descrição complementar",e.nome]:null,e.material?["Material",e.material]:null,e.andares?["Andares",e.andares]:null,e.cobertura?["Cobertura",e.cobertura]:null,e.estado?["Estado",e.estado]:null,e.muro?["Perímetro/muro",e.muro]:null,e.portao?["Portão",e.portao]:null,e.acesso?["Acesso",e.acesso]:null,e.n_entradas?["Entradas",e.n_entradas]:null,e.ilum_int?["Iluminação interna",e.ilum_int]:null,e.cameras?["Câmeras",e.cameras]:null,e.vizinhanca?["Vizinhança",e.vizinhanca]:null,e.comodos_list?.length?["Cômodos",e.comodos_list.join(", ")]:null,e.comodos_fato?.length?["Cômodos do fato",e.comodos_fato.join(", ")]:null,e.obs?["Observações",e.obs]:null]);if(e.comodos_fato_det&&e.comodos_fato?.length){e.comodos_fato.forEach(cf=>{const det=(e.comodos_fato_det||{})[cf];if(det){const allM2=[...(det.mr||[]),...(det.mi||[]),...(det.ma||[]),...(det.mac||[]),...(det.me||[]),...(det.mo||[])];if(det.estado||allM2.length||det.obs_manchas||det.obs_comodo){h+=`<h6 style="font-size:10px;color:${PRIMARY};margin:6px 0 3px;font-weight:700">📍 ${esc(cf)}</h6>`;h+=tblZ([det.estado?["Estado",det.estado]:null,allM2.length?["Manchas",allM2.join(", ")]:null,det.obs_manchas?["Obs manchas",det.obs_manchas]:null,det.obs_comodo?["Obs cômodo",det.obs_comodo]:null]);}}});}}});
 // 4.2 Do Veículo (se houver)
+// v290: layout intercalado — para cada veículo: header + tabela + vestígios
+// daquele veículo + imagens daquele veículo. Antes era todas as tabelas →
+// global vestígios → todas as imagens (separados, ficava confuso).
 const veicsComData=veiculos.filter((_,vi)=>hasVehicleData(d,vi,veiVest));
-if(veicsComData.length>0){h+=sec2("4.2","Do Veículo");veiculos.forEach((vei,vi)=>{const vx=`v${vi}_`;if(hasVehicleData(d,vi,veiVest)){if(veicsComData.length>1)h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Veículo ${vi+1}</h5>`;h+=tblZ([d[vx+"cat"]?["Categoria",d[vx+"cat"]]:null,d[vx+"tipo"]?["Tipo",d[vx+"tipo"]]:null,d[vx+"cor"]?["Cor",d[vx+"cor"]]:null,d[vx+"placa"]?["Placa",d[vx+"placa"]]:null,d[vx+"ano"]?["Ano",d[vx+"ano"]]:null,d[vx+"chassi"]?["Chassi",d[vx+"chassi"]]:null,d[vx+"km"]?["Hodômetro",d[vx+"km"]]:null,d[vx+"estado"]?["Estado",d[vx+"estado"]]:null,d[vx+"motor"]?["Motor",d[vx+"motor"]]:null,d[vx+"portas"]?["Portas travadas",d[vx+"portas"]]:null,d[vx+"vidros"]?["Vidros íntegros",d[vx+"vidros"]]:null,d[vx+"chave"]?["Chave",d[vx+"chave"]]:null,d[vx+"obs"]?["Observações",d[vx+"obs"]]:null]);}});if(veiVest.length){h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:10px 0 5px;font-weight:700">Vestígios veiculares</h5>`;h+=tblList(veiVest,["Nº","Vestígio","Suporte"],(v,i)=>{const vi3=v.veiculo??0;const vx3="v"+vi3+"_";const tm3=d[vx3+"tipo"]||"";const vl3=veiculos[vi3]?.label||"Veículo";const sup3=`${vl3}${tm3?" ("+tm3+")":""} — ${v.regionLabel}`;const fill=(i%2===0)?ZEBRA:"#FFFFFF";return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(sup3)}</td></tr>`;});h+=veiPdfSvg(veiVest,d,veiculos);}}
+if(veicsComData.length>0){
+  h+=sec2("4.2","Do Veículo");
+  veiculos.forEach((vei,vi)=>{
+    const vx=`v${vi}_`;
+    if(!hasVehicleData(d,vi,veiVest))return;
+    const catH=String(d[vx+"cat"]||"").trim();
+    const placaH=String(d[vx+"placa"]||"").trim();
+    const corH=String(d[vx+"cor"]||"").trim();
+    const metaH=[catH,placaH,corH].filter(Boolean).join(" — ");
+    const tituloVei=metaH?`Veículo ${vi+1} — ${esc(metaH)}`:`Veículo ${vi+1}`;
+    h+=`<h5 style="font-size:12px;color:${PRIMARY};margin:14px 0 5px;font-weight:700;page-break-after:avoid">${tituloVei}</h5>`;
+    h+=tblZ([d[vx+"cat"]?["Categoria",d[vx+"cat"]]:null,d[vx+"tipo"]?["Tipo",d[vx+"tipo"]]:null,d[vx+"cor"]?["Cor",d[vx+"cor"]]:null,d[vx+"placa"]?["Placa",d[vx+"placa"]]:null,d[vx+"ano"]?["Ano",d[vx+"ano"]]:null,d[vx+"chassi"]?["Chassi",d[vx+"chassi"]]:null,d[vx+"km"]?["Hodômetro",d[vx+"km"]]:null,d[vx+"estado"]?["Estado",d[vx+"estado"]]:null,d[vx+"motor"]?["Motor",d[vx+"motor"]]:null,d[vx+"portas"]?["Portas travadas",d[vx+"portas"]]:null,d[vx+"vidros"]?["Vidros íntegros",d[vx+"vidros"]]:null,d[vx+"chave"]?["Chave",d[vx+"chave"]]:null,d[vx+"obs"]?["Observações",d[vx+"obs"]]:null]);
+    // Vestígios deste veículo
+    const vvThis=veiVest.filter(v=>(v.veiculo??0)===vi);
+    if(vvThis.length){
+      h+=`<h6 style="font-size:11px;color:${PRIMARY};margin:8px 0 4px;font-weight:700;page-break-after:avoid">Vestígios deste veículo</h6>`;
+      h+=tblList(vvThis,["Nº","Vestígio","Local"],(v,i)=>{
+        const fill=(i%2===0)?ZEBRA:"#FFFFFF";
+        return `<tr><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${LIGHT};text-align:center;width:8%">${i+1}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc((v.tipo||v.regionLabel)+(v.obs?" — "+v.obs:""))}</td><td style="padding:5px 8px;font-size:11px;border:1px solid ${BORDER};background:${fill}">${esc(v.regionLabel||"")}</td></tr>`;
+      });
+      // Imagens só deste veículo (mkVeiViews filtrado por vvThis só gera
+      // views dos vestígios passados — ou seja, deste veículo somente)
+      h+=veiPdfSvg(vvThis,d,veiculos);
+    }
+  });
+}
 // 4.3 Do Cadáver
 const subCadBase=veicsComData.length>0?"4.3":"4.2";
 cadaveres.forEach((cad,ci)=>{const cx=`c${ci}_`;const woundsC=wounds.filter(w=>w.cadaver===ci);const hasCad=d[cx+"fx"]||d[cx+"et"]||d[cx+"sx"]||woundsC.length>0||d[cx+"dg"];if(hasCad){if(cadaveres.length>1)h+=sec2(subCadBase,`Do Cadáver ${ci+1}`);else if(ci===0)h+=sec2(subCadBase,"Do Cadáver");
@@ -4211,14 +4291,8 @@ if(tab===TAB_DESENHO){const switchCanvas=(ni)=>{if(ni===desenhoIdx)return;sv();s
 </Cd_>
 <Cd_ styles={ST} title="Desenho" aria-label="Desenho" icon="✏️" variant="info">
 {/* v272: seção Desenho reorganizada em grupos lógicos */}
-{/* GRUPO 1: Modo (selecionar / borracha / undo / redo) */}
-<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
-<button type="button" style={{padding:"10px 16px",fontSize:13,fontWeight:700,background:tool==="select"?t.ac:"transparent",border:`2px solid ${tool==="select"?t.ac:t.bd}`,color:tool==="select"?"#fff":t.tx,cursor:"pointer",borderRadius:10,fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}} onClick={()=>{if(tool==="select"){setTool("pen");setSelStamp(null);}else{setTool("select");setStmp(null);}}}><AppIcon name="👆" size={16} mr={0}/>{tool==="select"?"Selecionando":"Selecionar"}</button>
-<button type="button" style={{padding:"10px 16px",fontSize:13,fontWeight:700,background:tool==="eraser"&&!stmp?t.no:"transparent",border:`2px solid ${tool==="eraser"&&!stmp?t.no:t.bd}`,color:tool==="eraser"&&!stmp?"#fff":t.tx,cursor:"pointer",borderRadius:10,fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}} onClick={()=>{setTool("eraser");setStmp(null);}}><AppIcon name="🧽" size={16} mr={0}/>Borracha</button>
-<button type="button" style={tb(false)} onClick={undo}><span style={{marginRight:4,fontWeight:700,fontSize:15}}>↩</span>Desfazer</button>
-<button type="button" style={tb(false)} onClick={redo}><span style={{marginRight:4,fontWeight:700,fontSize:15}}>↪</span>Refazer</button>
-{tool==="eraser"&&!stmp&&<button type="button" style={{...tb(false),color:t.no,borderColor:t.no,marginLeft:"auto"}} onClick={clr}><AppIcon name="🗑️" size={14} mr={4}/>Apagar tudo</button>}
-</div>
+{/* v290: GRUPO 1 (Selecionar/Borracha/Desfazer/Refazer) movido pra logo
+   acima da área de desenho (ver canvasArea abaixo) */}
 {/* GRUPO 2: Ferramentas de desenho */}
 <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
 {[["pen","✏️ Caneta"],["line","📏 Linha"],["rect","⬜ Retâng."],["circle","⭕ Círculo"],["text","🔤 Texto"]].map(([v,l])=><button type="button" key={v} style={tb(tool===v&&!stmp)} onClick={()=>{setTool(v);setStmp(null);}}><IconText text={l} size={14} gap={4}/></button>)}
@@ -4233,15 +4307,13 @@ if(tab===TAB_DESENHO){const switchCanvas=(ni)=>{if(ni===desenhoIdx)return;sv();s
 <input autoComplete="off" autoCorrect="off" spellCheck={false} type="range" min="1" max="20" value={sz} onChange={e=>setSz(+e.target.value)} style={{flex:1,maxWidth:140}}/>
 <span style={{fontSize:12,color:t.t2,fontVariantNumeric:"tabular-nums",minWidth:24,textAlign:"right"}}>{sz}px</span>
 </div>
-{/* GRUPO 5: Visualização (Grade · Norte · Zoom) */}
+{/* GRUPO 5: Visualização (Grade · Zoom) — v290: Norte e 1:1 removidos */}
 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8,alignItems:"center"}}>
 <button type="button" style={tb(showGrid)} onClick={toggleGrid}><AppIcon name="📐" size={14} mr={4}/>Grade{showGrid?" ✓":""}</button>
-<button type="button" style={tb(false)} onClick={north}><AppIcon name="🧭" size={14} mr={4}/>Norte</button>
 <span style={{width:1,height:24,background:t.bd,margin:"0 4px"}}/>
 <button type="button" style={{...tb(false),fontSize:11,padding:"6px 10px"}} onClick={()=>setZoomLvl(z=>Math.max(z-0.25,0.5))} title="Diminuir zoom"><AppIcon name="🔍" size={12} mr={2}/>−</button>
 <span style={{fontSize:12,color:t.t2,fontWeight:600,minWidth:42,textAlign:"center",fontVariantNumeric:"tabular-nums"}}>{Math.round(zoomLvl*100)}%</span>
 <button type="button" style={{...tb(false),fontSize:11,padding:"6px 10px"}} onClick={()=>setZoomLvl(z=>Math.min(z+0.25,3))} title="Aumentar zoom"><AppIcon name="🔍" size={12} mr={2}/>+</button>
-<button type="button" style={{...tb(false),fontSize:11,padding:"6px 10px"}} onClick={()=>setZoomLvl(1)}>1:1</button>
 </div>
 {/* GRUPO 6: Templates (Casa · Rua · Régua) */}
 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
@@ -4252,15 +4324,13 @@ ctx.beginPath();ctx.moveTo(30,800);ctx.lineTo(30+10*ppm,800);ctx.stroke();ctx.li
 for(let i=0;i<=10;i++){const xx=30+i*ppm;const h2=i%5===0?18:i%2===0?12:6;ctx.beginPath();ctx.moveTo(xx,800);ctx.lineTo(xx,800-h2);ctx.stroke();ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.fillText(i+"m",xx,818);}
 ctx.font="10px sans-serif";ctx.fillText("(escala de referência — "+Math.round(ppm)+"px/m)",230,832);ctx.restore();sv();}}><AppIcon name="📏" size={14} mr={4}/>Régua</button>
 </div>
-{/* GRUPO 7: Importar Mapa (Maps + Mapa→Canvas) */}
+{/* GRUPO 7: Importar Mapa — v290: só ícone foto (Abrir Maps removido) */}
 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-<button type="button" style={{...bt,background:"#4285f4",color:"#fff",fontSize:12}} onClick={openMaps}><AppIcon name="🗺️" size={14} mr={4}/>Abrir Maps</button>
-<button type="button" style={{...bt,background:"#34c759",color:"#fff",fontSize:12}} onClick={()=>pickFile({accept:"image/*",onPick:(fls)=>loadMapImg({target:{files:fls}})})}><AppIcon name="📸" size={14} mr={4}/>Mapa → Canvas</button>
+<button type="button" style={{...bt,background:"#34c759",color:"#fff",fontSize:14,padding:"8px 14px"}} title="Importar foto/mapa para o canvas" aria-label="Importar foto/mapa para o canvas" onClick={()=>pickFile({accept:"image/*",onPick:(fls)=>loadMapImg({target:{files:fls}})})}><AppIcon name="📸" size={18} mr={0}/></button>
 </div>
-{/* GRUPO 8: Exportar PNG */}
+{/* GRUPO 8: Salvar — v290: PNG e PNG 4× unificados em "Salvar" (alta resolução) */}
 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-<button type="button" style={tb(false)} onClick={()=>{if(!canvasRef.current)return;const url=canvasRef.current.toDataURL("image/png");const a=document.createElement("a");a.href=url;a.download=mkFileName("png","Desenho");a.click();}}><AppIcon name="📥" size={14} mr={4}/>PNG</button>
-<button type="button" style={{...tb(false),background:"#5856d6",color:"#fff",borderColor:"#5856d6"}} title="PNG 4× — alta resolução A3/A4" onClick={()=>{if(!canvasRef.current||!overlayRef.current)return;const scale=4;const big=document.createElement("canvas");big.width=1200*scale;big.height=850*scale;const bc=big.getContext("2d");bc.fillStyle="#fff";bc.fillRect(0,0,big.width,big.height);bc.imageSmoothingEnabled=true;bc.imageSmoothingQuality="high";bc.drawImage(canvasRef.current,0,0,big.width,big.height);bc.drawImage(overlayRef.current,0,0,big.width,big.height);const url=big.toDataURL("image/png");const a=document.createElement("a");a.href=url;a.download=mkFileName("png","Desenho_HD");a.click();showToast("📥 PNG 4× ("+ (big.width)+"×"+(big.height)+")");}}><AppIcon name="📥" size={14} mr={4}/>PNG 4×</button>
+<button type="button" style={{...tb(false),background:"#5856d6",color:"#fff",borderColor:"#5856d6"}} title="Salvar como PNG em alta resolução (4×)" onClick={()=>{if(!canvasRef.current||!overlayRef.current)return;const scale=4;const big=document.createElement("canvas");big.width=1200*scale;big.height=850*scale;const bc=big.getContext("2d");bc.fillStyle="#fff";bc.fillRect(0,0,big.width,big.height);bc.imageSmoothingEnabled=true;bc.imageSmoothingQuality="high";bc.drawImage(canvasRef.current,0,0,big.width,big.height);bc.drawImage(overlayRef.current,0,0,big.width,big.height);const url=big.toDataURL("image/png");const a=document.createElement("a");a.href=url;a.download=mkFileName("png","Desenho_HD");a.click();showToast("✓ Salvo em alta resolução ("+ (big.width)+"×"+(big.height)+")");}}><AppIcon name="📥" size={14} mr={4}/>Salvar</button>
 </div><div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,padding:"6px 10px",background:dark?"#1a1a2e":"#f0f0ff",borderRadius:8,border:`1px solid ${dark?"#2a2a4e":"#d0d0ff"}`}}><span style={{fontSize:11,fontWeight:600,color:t.ac,display:"inline-flex",alignItems:"center",gap:4}}><AppIcon name="⚖️" size={14} mr={0}/>Escala:</span><span style={{fontSize:11,color:t.t2}}>1m =</span><input autoComplete="off" autoCorrect="off" spellCheck={false} type="number" min="10" max="200" value={ppm} onChange={e=>setPpm(Math.max(10,Math.min(200,+e.target.value||40)))} style={{...inp,width:60,fontSize:13,padding:"4px 8px",textAlign:"center"}}/><span style={{fontSize:11,color:t.t2}}>px</span><button type="button" style={{...tb(false),fontSize:10,padding:"4px 8px"}} onClick={()=>setPpm(40)}>Padrão</button><button type="button" style={{...tb(false),fontSize:10,padding:"4px 8px"}} onClick={()=>setPpm(20)}>Grande</button><button type="button" style={{...tb(false),fontSize:10,padding:"4px 8px"}} onClick={()=>setPpm(80)}>Detalhe</button></div><details style={{marginBottom:8}} open={!!stmp}><summary style={{fontSize:12,color:t.ac,cursor:"pointer",fontWeight:600,display:"inline-flex",alignItems:"center",gap:4}}><AppIcon name="📦" size={14} mr={0}/>Figuras</summary><div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8,padding:10,background:t.bg3,borderRadius:8}}>{[["arma","🔫 Arma"],["estojo","🟡 Estojo"],["projetil","⚫ Projétil"],["faca","🔪 Faca"],["corda","〰️ Corda"],["sangue","🩸 Sangue"],["pessoaDeitada","🧎 Deitado"],["pessoaEmPe","🧍 Em pé"],["silhueta","💀 Contorno"],["veiculo","🚗 Carro"],["moto","🏍️ Moto"],["bicicleta","🚲 Bicicleta"],["porta","🚪 Porta"],["portao","🔲 Portão"],["escada","🪜 Escada"],["sofa","🛋️ Sofá"],["mesa","🪑 Mesa"],["cama","🛏️ Cama"],["pia","🚰 Pia"],["seta","➡️ Seta"],["regua","📏 Escala"],["arvore","🌲 Árvore"],["poste","💡 Poste"],["pegada","👣 Pegada"],["solado","👟 Solado"],["pneu","🔄 Pneu"],["pedra","🪨 Pedra"],["lixeira","🗑️ Lixeira"],["incendio","🔥 Incêndio"],["entradaX","❌ Marca X"]].map(([k,l])=><button type="button" key={k} style={tb(stmp===k)} onClick={()=>{if(stmp===k){setStmp(null);setTool("pen");}else{setStmp(k);setTool("stamp");}}}><IconText text={l} size={14} gap={4}/></button>)}{stmp&&<button type="button" style={{...tb(false),color:t.no}} onClick={()=>{setStmp(null);setTool("pen");setStampRot(0);}}>✕</button>}
 </div>{stmp&&<><div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,padding:"8px 10px",background:dark?"#1a2a1a":"#efe",borderRadius:8,fontSize:11,color:t.t2}}><AppIcon name="💡" size={14} mr={4}/>Coloque no canvas, depois use <b style={{color:t.ac,display:"inline-flex",alignItems:"center",gap:4}}><AppIcon name="👆" size={12} mr={0}/>Selecionar</b> para mover, girar (🔵↻) e redimensionar (🟢⤡)</div></>}
 <div style={{display:"flex",gap:8,alignItems:"center",marginTop:8,padding:10,background:dark?"#1a2a1a":"#f0fff0",borderRadius:8,border:`1px solid ${dark?"#2a4a2a":"#c0e0c0"}`}}>
@@ -4273,7 +4343,18 @@ ctx.font="10px sans-serif";ctx.fillText("(escala de referência — "+Math.round
 {stmp&&stmp.startsWith("placa_")&&<span style={{fontSize:12,fontWeight:700,color:"#FFD700",background:"#333",padding:"4px 12px",borderRadius:6}}>{stmp.replace("placa_","")}</span>}
 </div>{stmp&&<p style={{fontSize:11,color:t.wn,marginTop:6,fontWeight:500}}><AppIcon name="👆" size={14} mr={4}/>Clique no canvas — preview segue o cursor</p>}{tool==="select"&&<div style={{fontSize:11,color:t.ac,marginTop:6,padding:"8px 12px",background:t.ab,borderRadius:8,lineHeight:1.6}}><AppIcon name="👆" size={14} mr={4}/>Toque num stamp para selecionar. Arraste para mover.<br/>🔴 × = excluir &nbsp; 🔵 ↻ = girar 45° &nbsp; 🟢 ⤡ = redimensionar<br/>Stamps: {stampObjs.filter(s=>s.sheet===desenhoIdx).length} neste croqui</div>}</details>
 {showTextInput&&<div style={{marginBottom:10,background:t.cd,border:`2px solid ${t.ac}`,borderRadius:12,padding:16}}><label style={{...lb,fontSize:12,marginBottom:8}}>Digite o texto:</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:18,marginBottom:10}} autoFocus value={textVal} onChange={e=>setTextVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")applyText();}}/><div style={{display:"flex",gap:8}}><button type="button" style={{...bt,background:t.ac,color:"#fff",flex:1,textAlign:"center"}} onClick={applyText}><AppIcon name="✓" size={14} mr={4}/>Inserir</button><button type="button" style={{...bt,background:"transparent",border:`1px solid ${t.bd}`,color:t.tx,flex:1,textAlign:"center"}} onClick={()=>{setShowTextInput(false);setTextVal("");}}><AppIcon name="✕" size={14} mr={4}/>Cancelar</button></div></div>}
-<div style={{fontSize:10,color:t.t3,textAlign:"right",marginBottom:6,fontStyle:"italic"}}>💡 Shift+linha = snap 45°</div><div id="canvasArea" ref={canvasScrollRef} style={{borderRadius:10,overflow:"auto",border:`1px solid ${t.bd}`,maxHeight:zoomLvl>1?"90vh":"none",background:"#fff"}}><div style={{transform:`scale(${zoomLvl})`,transformOrigin:"top center",width:zoomLvl>1?`${100/zoomLvl}%`:"100%",maxWidth:1200,margin:"0 auto"}}><div style={{position:"relative"}}><canvas ref={canvasRef} width={1200} height={850} style={{width:"100%",display:"block",cursor:tool==="select"?"default":stmp?"copy":tool==="text"?"text":tool==="eraser"?"none":"crosshair",touchAction:"none",background:"#fff",willChange:"transform"}} onPointerDown={onD} onPointerMove={onM} onPointerUp={onU} onPointerCancel={onU}/><canvas ref={overlayRef} width={1200} height={850} style={{position:"absolute",top:0,left:0,width:"100%",pointerEvents:"none",touchAction:"none"}}/></div></div></div></Cd_>
+<div style={{fontSize:10,color:t.t3,textAlign:"right",marginBottom:6,fontStyle:"italic"}}>💡 Shift+linha = snap 45°</div>
+{/* v290: Toolbar primária acima do canvas — Selecionar/Borracha/Desfazer/Refazer
+   uniformes em tamanho, ocupando 1 linha. Desfazer/Refazer só ícone (sem label).
+   Visualmente separados do painel lateral por estarem aqui (junto ao canvas). */}
+<div style={{display:"flex",gap:6,marginBottom:8,padding:"6px 8px",background:t.bg3,borderRadius:10,border:`1px solid ${t.bd}`,alignItems:"stretch"}}>
+<button type="button" style={{flex:1,minWidth:0,height:42,padding:"6px 8px",fontSize:13,fontWeight:700,background:tool==="select"?t.ac:"transparent",border:`2px solid ${tool==="select"?t.ac:t.bd}`,color:tool==="select"?"#fff":t.tx,cursor:"pointer",borderRadius:8,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}} onClick={()=>{if(tool==="select"){setTool("pen");setSelStamp(null);}else{setTool("select");setStmp(null);}}}><AppIcon name="👆" size={16} mr={0}/><span style={{fontSize:12}}>{tool==="select"?"Selecionando":"Selecionar"}</span></button>
+<button type="button" style={{flex:1,minWidth:0,height:42,padding:"6px 8px",fontSize:13,fontWeight:700,background:tool==="eraser"&&!stmp?t.no:"transparent",border:`2px solid ${tool==="eraser"&&!stmp?t.no:t.bd}`,color:tool==="eraser"&&!stmp?"#fff":t.tx,cursor:"pointer",borderRadius:8,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:5}} onClick={()=>{setTool("eraser");setStmp(null);}}><AppIcon name="🧽" size={16} mr={0}/><span style={{fontSize:12}}>Borracha</span></button>
+<button type="button" style={{flex:1,minWidth:0,height:42,padding:"6px 8px",fontSize:18,fontWeight:700,background:"transparent",border:`2px solid ${t.bd}`,color:t.tx,cursor:"pointer",borderRadius:8,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={undo} title="Desfazer" aria-label="Desfazer">↩</button>
+<button type="button" style={{flex:1,minWidth:0,height:42,padding:"6px 8px",fontSize:18,fontWeight:700,background:"transparent",border:`2px solid ${t.bd}`,color:t.tx,cursor:"pointer",borderRadius:8,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}} onClick={redo} title="Refazer" aria-label="Refazer">↪</button>
+{tool==="eraser"&&!stmp&&<button type="button" style={{flex:1,minWidth:0,height:42,padding:"6px 8px",fontSize:12,fontWeight:700,background:"transparent",border:`2px solid ${t.no}`,color:t.no,cursor:"pointer",borderRadius:8,fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:4}} onClick={clr} title="Apagar tudo"><AppIcon name="🗑️" size={14} mr={0}/>Apagar</button>}
+</div>
+<div id="canvasArea" ref={canvasScrollRef} style={{borderRadius:10,overflow:"auto",border:`1px solid ${t.bd}`,maxHeight:zoomLvl>1?"90vh":"none",background:"#fff"}}><div style={{transform:`scale(${zoomLvl})`,transformOrigin:"top center",width:zoomLvl>1?`${100/zoomLvl}%`:"100%",maxWidth:1200,margin:"0 auto"}}><div style={{position:"relative"}}><canvas ref={canvasRef} width={1200} height={850} style={{width:"100%",display:"block",cursor:tool==="select"?"default":stmp?"copy":tool==="text"?"text":tool==="eraser"?"none":"crosshair",touchAction:"none",background:"#fff",willChange:"transform"}} onPointerDown={onD} onPointerMove={onM} onPointerUp={onU} onPointerCancel={onU}/><canvas ref={overlayRef} width={1200} height={850} style={{position:"absolute",top:0,left:0,width:"100%",pointerEvents:"none",touchAction:"none"}}/></div></div></div></Cd_>
 {canvasVest.length>0&&<Cd_ styles={ST} title={`Vestígios do Croqui (${canvasVest.length})`} icon="🏷️"><div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><button type="button" onClick={()=>{setVestCompact(v=>!v);setExpandedVest({});haptic("selection");}} title={vestCompact?"Expandir todos":"Compactar lista"} style={{padding:"6px 10px",fontSize:12,fontWeight:600,borderRadius:100,border:`1.5px solid ${vestCompact?t.ac:t.bd}`,background:vestCompact?(dark?"rgba(10,132,255,0.18)":"rgba(0,122,255,0.10)"):"transparent",color:vestCompact?t.ac:t.t2,cursor:"pointer",fontFamily:"inherit"}}>{vestCompact?<><AppIcon name="📂" size={12} mr={3}/>Expandir</>:<><AppIcon name="✨" size={12} mr={3}/>Compactar</>}</button></div>{canvasVest.map((v,i)=>{const isCollapsedCV=vestCompact&&!expandedVest["cv_"+v.id];const destC=(v.destino||"").includes("IC")?"#007aff":(v.destino||"").includes("II")?"#ff9500":"#FFD700";if(isCollapsedCV)return(<div key={v.id} onClick={()=>{setExpandedVest(p=>({...p,["cv_"+v.id]:true}));haptic("selection");}} style={{background:t.bg3,borderRadius:10,padding:"10px 12px",marginBottom:6,border:`0.5px solid ${t.bd}`,borderLeft:`4px solid ${destC}`,cursor:"pointer",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:11,fontWeight:700,color:"#FFD700",background:"#333",padding:"2px 8px",borderRadius:6,fontVariantNumeric:"tabular-nums"}}>{v.placa}</span><span style={{flex:1,fontSize:13,color:t.tx,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.desc||<i style={{color:t.t3}}>sem descrição</i>}</span>{v.destino&&<span style={{fontSize:10,fontWeight:700,color:destC,background:`${destC}18`,padding:"2px 7px",borderRadius:6}}>{v.destino}</span>}{v.recolhido==="Sim"&&<span style={{fontSize:10,color:t.ok,fontWeight:700}}>✓</span>}<span style={{fontSize:14,color:t.t3}}>›</span></div>);return(<div key={v.id} style={{background:t.bg3,borderRadius:10,padding:12,marginBottom:8,border:`1.5px solid ${t.bd}`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontSize:14,fontWeight:700,color:"#FFD700",background:"#333",padding:"2px 10px",borderRadius:6,display:"inline-flex",alignItems:"center",gap:6}}>Placa {v.placa}{vestCompact&&<button type="button" onClick={()=>setExpandedVest(p=>{const nx={...p};delete nx["cv_"+v.id];return nx;})} style={{background:"transparent",border:"none",color:"#FFD700",cursor:"pointer",fontSize:11,padding:"2px 4px",fontFamily:"inherit"}}>▲</button>}</span><FotoBtn rk={"placa_"+v.placa}/><button type="button" style={{background:"rgba(255,59,48,0.12)",border:`1.5px solid ${t.no}`,color:t.no,cursor:"pointer",fontSize:20,fontWeight:700,borderRadius:10,padding:"4px 12px",minWidth:40,minHeight:44,lineHeight:1,fontFamily:"inherit"}} title="Remover vestígio do croqui" aria-label="Remover vestígio do croqui" onClick={()=>{const hasData=!!(v.desc||v.suporte||v.obs);const doDel=()=>setCanvasVest(canvasVest.filter((_,j)=>j!==i));if(hasData){reqDel(`Remover Placa ${v.placa}?`,v.desc?`"${v.desc.slice(0,70)}"`:"(sem descrição)",doDel);}else{doDel();haptic("medium");}}}>×</button></div><div><label style={lb}>Descrição do vestígio</label><VestPk val={v.desc} onSelect={val2=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,desc:val2}:v));}} styles={ST}/><TX_ inputKey={"cvdesc-"+v.id+"-"+(v.desc||"")} value={v.desc} placeholder="Descrição do vestígio" inputStyle={inp} onCommit={(val)=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,desc:val}:v));}}/></div><div style={{marginTop:8}}><label style={lb}>Suporte / Local</label><TX_ value={v.suporte} inputStyle={inp} onCommit={(val)=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,suporte:val}:v));}}/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:8}}><div><label style={lb}>Dist. 1</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:12}} defaultValue={v.coord1} onBlur={e=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,coord1:e.target.value}:v));}}/></div><div><label style={lb}>Dist. 2</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:12}} defaultValue={v.coord2} onBlur={e=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,coord2:e.target.value}:v));}}/></div><div><label style={lb}>Altura</label><input autoComplete="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:12}} defaultValue={v.altura} onBlur={e=>{setCanvasVest(prev=>prev.map((v,j)=>j===i?{...v,altura:e.target.value}:v));}}/></div></div><div style={{marginTop:8}}><label style={lb}>Destino (recolhe ao IC/II)</label><div style={{display:"flex",gap:4}}>{["IC","II"].map(dd=>{const ds=(v.destino||"").split("+").filter(Boolean);const isOn=ds.includes(dd);return <button type="button" key={dd} style={{padding:"7px 14px",fontSize:13,borderRadius:8,border:`1.5px solid ${isOn?"#007aff":t.bd}`,background:isOn?"rgba(0,122,255,0.12)":"transparent",color:isOn?"#007aff":t.t3,cursor:"pointer",fontFamily:"inherit",fontWeight:isOn?600:400}} onClick={()=>{setCanvasVest(prev=>prev.map((v,j)=>{if(j!==i)return v;const ds2=(v.destino||"").split("+").filter(Boolean);const idx2=ds2.indexOf(dd);const newDest=idx2>-1?ds2.filter(x=>x!==dd).join("+"):[...ds2,dd].join("+");return{...v,destino:newDest,recolhido:newDest?"Sim":""};}));}}>{dd}</button>;})}
 </div></div><div style={{marginTop:8}}><F_ k={"cvobs_"+v.id} label={`Observações — Vestígio Canvas ${v.placa||(i+1)}`} type="textarea" val={v.obs||""} onChange={(_k,val)=>{setCanvasVest(prev=>prev.map((v2,j)=>j===i?{...v2,obs:val}:v2));}} styles={ST}/></div></div>);})}
 </Cd_>}
@@ -4310,10 +4391,8 @@ return(<span style={{position:"relative",display:"inline-flex"}}><button type="b
 <button type="button" style={{...bt,background:`linear-gradient(135deg,${t.ac} 0%,${t.ac}cc 100%)`,color:"#fff",fontWeight:700,padding:"12px 16px",fontSize:14,width:"100%",textAlign:"center",justifyContent:"center"}} onClick={saveFotos} disabled={!fotos||fotos.length===0} aria-label="Salvar todas as fotos"><AppIcon name="📷" size={16} mr={4}/>Salvar {fotos.length||0} foto{fotos.length===1?"":"s"}</button>
 </Cd_>
 
-<Cd_ styles={ST} title="Outros" aria-label="Outros" icon="📄" variant="slate">
-<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-<button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>{setExportData(sum());setExportView("txt");}}><AppIcon name="📋" size={14} mr={4}/>Texto resumo</button>
-</div></Cd_>
+{/* v290: card "Outros" removido — ação "Texto resumo" virou botão Cópias
+   no header do card Resumo (logo abaixo). */}
 
 {/* === BACKUP JSON === */}
 <Cd_ styles={ST} title="Backup" aria-label="Backup" icon="💾" variant="primary">
@@ -4323,7 +4402,7 @@ return(<span style={{position:"relative",display:"inline-flex"}}><button type="b
 <button type="button" style={{...bt,background:t.bg3,color:t.tx,border:`1px solid ${t.bd}`}} onClick={()=>pickFile({accept:".json,.zip",onPick:(fls)=>doImportBackupFile(fls[0])})}><AppIcon name="📂" size={14} mr={4}/>Importar JSON / ZIP</button>
 </div></Cd_>
 {exportView==="txt"&&<Cd_ styles={ST} title="Texto" aria-label="Texto" icon="📝" variant="slate"><button type="button" style={{...bt,background:t.ac,color:"#fff",marginBottom:12,fontSize:13}} onClick={()=>{const txt=sum();const copyFallback=(t2)=>{const ta=document.createElement("textarea");ta.value=t2;ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");showToast("✅ Copiado!");}catch(e2){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>showToast("✅ Copiado!")).catch(()=>copyFallback(txt));}else{copyFallback(txt);}}}><AppIcon name="📋" size={14} mr={4}/>Copiar</button><pre style={{whiteSpace:"pre-wrap",fontFamily:"monospace",fontSize:11,color:t.tx,background:t.bg3,padding:16,borderRadius:8,maxHeight:400,overflowY:"auto"}}>{exportData}</pre></Cd_>}
-<Cd_ styles={ST} title="Resumo" aria-label="Resumo" icon="📊" variant="teal"><div style={{background:t.bg3,borderRadius:10,padding:16,fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap",fontFamily:"inherit",color:t.tx,maxHeight:500,overflowY:"auto"}}>{sum()}</div></Cd_>
+<Cd_ styles={ST} title="Resumo" aria-label="Resumo" icon="📊" variant="teal" headerRight={<button type="button" style={{padding:"7px 12px",fontSize:12,fontWeight:600,borderRadius:8,border:`1px solid ${t.bd}`,background:t.bg3,color:t.tx,cursor:"pointer",fontFamily:"inherit",display:"inline-flex",alignItems:"center",gap:4}} title="Copiar resumo para área de transferência" aria-label="Copiar resumo" onClick={()=>{const txt=sum();const copyFallback=(t2)=>{const ta=document.createElement("textarea");ta.value=t2;ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");showToast("✅ Copiado!");}catch(e2){showToast("❌ Falha ao copiar");}document.body.removeChild(ta);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>showToast("✅ Copiado!")).catch(()=>copyFallback(txt));}else{copyFallback(txt);}}}><AppIcon name="📋" size={14} mr={4}/>Cópias</button>}><div style={{background:t.bg3,borderRadius:10,padding:16,fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap",fontFamily:"inherit",color:t.tx,maxHeight:500,overflowY:"auto"}}>{sum()}</div></Cd_>
 {fotos.length>0&&<Cd_ styles={ST} variant="info" title={`📷 Galeria de Fotos (${fotos.length})`} icon="🖼️"><div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>{[["","Todas",-1],["solicitacao","Solicitação",TAB_SOLICITACAO],["local","Local",TAB_LOCAL],["vestigios","Vestígios",TAB_VESTIGIOS],["cadaver","Cadáver",TAB_CADAVER],["veiculo","Veículo",TAB_VEICULO]].map(([v,l,ti])=><button type="button" key={v} style={{padding:"8px 12px",fontSize:11,borderRadius:18,minHeight:36,border:`1px solid ${fotoFilter===v?t.ac:t.bd}`,background:fotoFilter===v?t.ab:"transparent",color:fotoFilter===v?t.ac:t.t2,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFotoFilter(fotoFilter===v?"":v)}>{l} ({v===""?fotos.length:fotos.filter(f=>fotoTab(f.ref)===ti).length})</button>)}{["Antes da perícia","Durante a perícia","Após a perícia"].map(fase=><button type="button" key={fase} style={{padding:"8px 12px",fontSize:11,borderRadius:18,minHeight:36,border:`1px solid ${fotoFilter===fase?t.ac:t.bd}`,background:fotoFilter===fase?t.ab:"transparent",color:fotoFilter===fase?t.ac:t.t2,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setFotoFilter(fotoFilter===fase?"":fase)}>{fase.replace("da perícia","")} ({fotos.filter(f=>f.fase===fase).length})</button>)}</div>
 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{fotos.filter(f=>{if(!fotoFilter)return true;const tabMap={"solicitacao":TAB_SOLICITACAO,"local":TAB_LOCAL,"vestigios":TAB_VESTIGIOS,"cadaver":TAB_CADAVER,"veiculo":TAB_VEICULO};if(tabMap[fotoFilter]!==undefined)return fotoTab(f.ref)===tabMap[fotoFilter];return f.fase===fotoFilter;}).map((f,i)=><div key={f.id} style={{position:"relative",cursor:"pointer"}} onClick={()=>setEditFotoId(f.id)}><img src={f.dataUrl} loading="lazy" style={{width:80,height:80,objectFit:"cover",borderRadius:8,border:`2px solid ${f.desc?t.ok:t.bd}`}}/><div style={{fontSize:8,color:t.t2,textAlign:"center",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.desc?.slice(0,15)||"sem desc"}</div></div>)}</div></Cd_>}
 <Cd_ styles={ST} title={"Slots de Salvamento (Slot "+(slotIdx+1)+" ativo)"} icon="💾"><p style={{fontSize:12,color:t.t2,marginBottom:10,lineHeight:1.6}}>Você tem <b>5 gavetas</b> para salvar croquis. O auto-save grava no slot ativo.</p><div style={{display:"flex",flexDirection:"column",gap:6}}>{[0,1,2,3,4].map(si=>{const sd=getSlot(si);const isActive=slotIdx===si;// v205: extrai miniatura do desenho (primeiro croqui)
@@ -4572,5 +4651,5 @@ return(<button type="button" key={slot} style={{background:dark?"rgba(52,199,89,
 {/* v276: spacer com altura dinâmica = topBar + tabsBar + 16px de respiro */}
 <div style={{height:headerH.total+16}}/>
 <div ref={tabsBarRef} className={`ios-glass ${dark?"ios-glass-dark":"ios-glass-light"}`} style={{display:"flex",overflowX:"auto",borderBottom:`0.5px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,scrollbarWidth:"none",zIndex:1001,position:"fixed",top:headerH.top,left:0,right:0,justifyContent:"safe center",WebkitTransform:"translateZ(0)",transform:"translateZ(0)",WebkitBackfaceVisibility:"hidden",willChange:"transform",padding:isLarge?"3px 6px":"4px 6px"}}>{tabs.map((x,i)=>{const active=i===tab;return(<button type="button" ref={active?activeTabRef:null} key={i} style={{position:"relative",padding:isLarge?"11px 20px":"10px 14px",fontSize:isLarge?15:13,fontWeight:active?700:500,color:active?t.ac:t.t2,background:active?(dark?"rgba(10,132,255,0.18)":"rgba(0,122,255,0.10)"):"transparent",border:"none",borderRadius:12,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"inherit",minHeight:isLarge?46:42,transition:"all 0.25s cubic-bezier(0.34,1.56,0.64,1)",letterSpacing:-0.2,margin:"2px 1px"}} onClick={()=>{if(i===tab)return;haptic("selection");setTabDir(i>tab?"r":"l");setTab(i);scrollTop();}}><span style={{display:"inline-flex",alignItems:"center",filter:active?`drop-shadow(0 0 10px ${t.ac}aa) drop-shadow(0 0 18px ${t.ac}55)`:"none",transition:"filter 0.3s ease",animation:active?"tabIconBounce 0.5s cubic-bezier(0.34,1.56,0.64,1),tabIconPulse 2.4s ease-in-out 0.5s infinite":"none"}}><AppIcon name={x.i} size={isLarge?26:20} mr={isLarge?7:5}/></span>{x.l}{active&&<span style={{position:"absolute",bottom:2,left:"15%",right:"15%",height:4,borderRadius:3,background:`linear-gradient(90deg,${t.ac} 0%,${t.ac}cc 50%,${t.ac} 100%)`,boxShadow:`0 0 12px ${t.ac},0 0 4px ${t.ac}`,animation:"tabIndicatorSlide 0.4s cubic-bezier(0.34,1.56,0.64,1)"}}/>}{tabBadge(i)?<span style={{background:t.ac,color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"1px 6px",marginLeft:5,minWidth:16,textAlign:"center",display:"inline-block",fontVariantNumeric:"tabular-nums"}}>{tabBadge(i)}</span>:tabHasData(i)?<span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:t.ok,marginLeft:5,verticalAlign:"middle"}}/>:null}{tabFotoCount(i)>0&&i!==TAB_EXPORTAR&&<span style={{background:"#ff9500",color:"#fff",fontSize:10,fontWeight:700,borderRadius:8,padding:"1px 6px",marginLeft:4,display:"inline-block",fontVariantNumeric:"tabular-nums"}}>📷{tabFotoCount(i)}</span>}</button>);})}
-</div><div className={(tabDir==="r"?"tabSlideR":"tabSlideL")+(tab!==TAB_DESENHO?" tab-content-wrap":"")} onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd} style={{maxWidth:tab===TAB_DESENHO?1240:900,margin:"0 auto",padding:tab===TAB_DESENHO?"8px 8px 200px 8px":"16px 16px 120px 16px",paddingTop:24}}><TabErrorBoundary key={"eb-"+resetKey}>{renderTab()}</TabErrorBoundary></div></div></>);
+</div><div className={(tabDir==="r"?"tabSlideR":"tabSlideL")+(tab!==TAB_DESENHO?" tab-content-wrap":"")} style={{maxWidth:tab===TAB_DESENHO?1240:900,margin:"0 auto",padding:tab===TAB_DESENHO?"8px 8px 200px 8px":"16px 16px 120px 16px",paddingTop:24}}><TabErrorBoundary key={"eb-"+resetKey}>{renderTab()}</TabErrorBoundary></div></div></>);
 }

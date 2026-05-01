@@ -7,6 +7,51 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v290 — Layout do veículo, page-break, Canva enxuto, fim do swipe
+
+**1. Croqui — seção 4.2 Do Veículo reestruturada (PDF + DOCX)**
+
+Antes: todas as tabelas dos veículos → todos os vestígios numa tabela
+única → todas as imagens. Confuso quando havia muitos veículos.
+
+Agora intercalado: tabela do Veículo 1 + vestígios do Veículo 1 +
+imagens do Veículo 1 → tabela do Veículo 2 + vestígios + imagens →
+e assim por diante. Cada bloco fica autocontido.
+
+**2. Nomenclatura completa nas figuras**
+
+As legendas das figuras de veículo agora trazem `Veículo N — Tipo —
+Placa — Cor — VISTA` (campos vazios são omitidos automaticamente).
+Antes era só `Veículo N (placa) — VISTA`.
+
+**3. Bug crítico — figuras quebrando entre páginas**
+
+`embedPngAt` agora envolve cada figura+legenda numa tabela invisível
+com `<w:cantSplit/>` (DOCX) e `page-break-inside: avoid` (PDF). Antes,
+o cadáver às vezes ficava cortado entre páginas, com as pernas numa e
+o resto na seguinte.
+
+**4. Canva — toolbar reorganizado**
+
+- Selecionar / Borracha / Desfazer / Refazer movidos para **logo acima
+  da área de desenho**, em uma única linha de tamanho uniforme.
+  Desfazer/Refazer agora são só ícone (`↩` / `↪`).
+- "Abrir Maps" removido. "Mapa → Canvas" virou só ícone 📸 (sem texto).
+- Botões Norte e 1:1 (zoom 100%) removidos da seção Visualização.
+- "PNG" e "PNG 4×" unificados num único botão **Salvar**, que sempre
+  exporta em alta resolução (4×).
+
+**5. Aba Exportar**
+
+- Card "Outros" (com botão "Texto resumo") removido.
+- Botão **Cópias** adicionado no canto direito do header do card
+  Resumo — copia o texto pra área de transferência.
+
+**6. Swipe entre abas removido**
+
+Gesto disparava sem querer ao rolar; navegação agora só pela barra de
+abas e botões Anterior/Próxima.
+
 ## v289 — Moto + Bicicleta + Ônibus no Croqui visual + ajuste de pontos
 
 Usuário notou que rodas e pneus apareciam **fora** do carro (no chão) na
