@@ -15,9 +15,16 @@
     <meta name="description" content="Xandroid — App de documentação forense de cenas de crime. SCPe / Polícia Civil do Distrito Federal." />
 
     <!-- Favicon e Apple Touch Icon -->
+    <!-- v296: cobertura de tamanhos pra iOS moderno (iPhone, iPad, iPad Pro).
+         iOS 17+ aceita 180×180 e escala automaticamente pra outros tamanhos
+         (152, 167, 192). Adicionamos o precomposed pra fallback de iOS antigo. -->
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="alternate icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-180.png" />
+    <link rel="apple-touch-icon-precomposed" href="/icon-180.png" />
+    <link rel="mask-icon" href="/icon.svg" color="#0a1420" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Open Graph -->

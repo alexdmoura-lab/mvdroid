@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════
 // Xandroid — Service Worker (atualização silenciosa)
 // ════════════════════════════════════════════════════════════════
-// IMPORTANTE: o número do CACHE_VERSION acompanha 1:1 a APP_VERSION
-// definida em src/App.jsx. Sempre que o App ganhar uma versão nova,
-// bumpe aqui também — caso contrário usuários ficam presos no cache
-// antigo, sem receber a versão nova do App.
+// v296: SOURCE OF TRUTH em src/version.js. Este arquivo é sincronizado
+// automaticamente via scripts/sync-sw-version.mjs (executado no
+// `npm run build` via prebuild, ou manualmente via `npm run bump:sw`).
+// NÃO edite o CACHE_VERSION aqui à mão — bumpe em src/version.js.
 //
 // O bloco de activate limpa caches antigos com prefixo "mvdroid-" ou
 // "xandroid-" automaticamente.
@@ -18,7 +18,7 @@
 // Em modo avião: app continua funcionando 100% após primeiro uso.
 // ════════════════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'xandroid-v295';
+const CACHE_VERSION = 'xandroid-v296';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

@@ -7,6 +7,64 @@ Histórico de versões do app de documentação forense.
 
 ---
 
+## v296 — Polimento iOS: GPS spinner, setas em abas, thumbnails, atalhos PWA, versão centralizada
+
+**1. GPS com feedback visual durante busca**
+
+Antes: tocar "GPS" e ficar 8 segundos olhando tela parada — sem saber se
+travou ou só está demorando.
+Agora: spinner girando + texto "Buscando satélite…" durante toda a busca.
+
+**2. Setinhas nas bordas da barra de abas (overflow indicator)**
+
+Em iPhone com tela pequena, abas podiam ficar escondidas pelo scroll
+horizontal sem nenhum sinal. Agora aparecem chevrons `‹` (esquerda) /
+`›` (direita) quando há mais conteúdo no lado correspondente. Detecção
+automática via scroll listener.
+
+**3. Modal de recuperação de slot com thumbnail das fotos**
+
+Ao recuperar um slot ("Abrir"), o modal mostrava só "📷 12 fotos" como
+texto. Agora mostra **thumbnails das primeiras 4 fotos** + indicador
+"+N" se houver mais. Decide rápido se é o slot certo.
+
+**4. GPS Início / Fim das trilhas com cores distintas**
+
+Antes: ambos ficavam verde quando preenchidos (confuso). Agora **Início
+= AZUL**, **Fim = LARANJA** em todos os estados (vazio e preenchido).
+
+**5. Atalhos do PWA funcionando**
+
+Long-press no ícone do app (ou clique direito no desktop) abre menu com:
+- "Nova cena" → abre o seletor de templates
+- "Capturar foto" → abre câmera direto
+- "Exportar última cena" → vai pra aba Exportar
+
+Antes os atalhos no manifest existiam mas só abriam a home. Agora o app
+detecta o `?action=new|capture|export` na URL e dispara a ação.
+
+**6. apple-touch-icon multi-tamanho**
+
+`index.html` agora declara apple-touch-icon para 152, 167, 180px (mesma
+fonte). iOS pega o tamanho mais próximo. Adicionado também
+`mask-icon` SVG para Safari pinned tabs e
+`apple-touch-icon-precomposed` como fallback para iOS antigo.
+
+**7. Versão centralizada em `src/version.js`**
+
+Antes: `APP_VERSION` estava em 3 lugares (App.jsx, public/sw.js, comentários).
+Agora: única fonte em `src/version.js` que App.jsx importa diretamente.
+`public/sw.js` é sincronizado automaticamente no `npm run build`
+(prebuild hook executa `scripts/sync-sw-version.mjs`). Pode rodar
+manual com `npm run bump:sw`.
+
+**8. Notas técnicas**
+
+- `package-lock.json` está desatualizado (sem html2pdf, fflate,
+  dompurify, vitest). Vercel reconstrói no build, então deploy funciona.
+  Localmente: rodar `npm install` quando tiver Node disponível.
+- Imagens de slot decorativas com `aria-hidden="true"` (a11y melhor).
+
 ## v295 — 10 slots, expiração 30 dias, "O que mudou" no login, DOCX com Sumário, Vitest
 
 **1. Slots de salvamento — 5 → 10 + tamanho visível + 30 dias**
