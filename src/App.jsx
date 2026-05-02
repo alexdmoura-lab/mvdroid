@@ -13,6 +13,11 @@ import DOMPurify from "dompurify"; // v242: sanitização extra antes do dangero
 // v296: APP_VERSION centralizado em src/version.js (single source of truth).
 // Sincronia automática com public/sw.js via scripts/sync-sw-version.mjs.
 import { APP_VERSION } from "./version.js";
+// v296 Camada 2: helpers puros extraídos pra src/utils/.
+// Cada arquivo tem responsabilidade única (formatadores, UIDs, normalização).
+import { fmtDt, parseFmtDt, fmtDur, supPlaca, supLoc } from "./utils/format.js";
+import { uid, mkEdif, isSafeImgUrl, safeArr } from "./utils/uid.js";
+import { tpStr, tpHas, toTitleCase, lookupPerito as _lookupPerito } from "./utils/forensic.js";
 // v221+: storage migrado para IndexedDB. Não há mais cap de tamanho — o app
 // usa a quota real do dispositivo, lida em runtime via navigator.storage.estimate().
 // O valor abaixo é apenas um PLACEHOLDER inicial para o medidor de UI antes da
@@ -80,19 +85,11 @@ const TAB_VEICULO=4;
 const TAB_EXPORTAR=5;
 const TAB_DESENHO=6;
 const LOCALE="pt-BR";
-// Formata data com ano de 2 dígitos: "25/04/26 14:30"
-const fmtDt=(d)=>{if(!d)return"";const dt=d instanceof Date?d:new Date(d);if(isNaN(dt.getTime()))return"";const dd=String(dt.getDate()).padStart(2,"0"),mm=String(dt.getMonth()+1).padStart(2,"0"),yy=String(dt.getFullYear()).slice(-2),hh=String(dt.getHours()).padStart(2,"0"),mi=String(dt.getMinutes()).padStart(2,"0");return`${dd}/${mm}/${yy} ${hh}:${mi}`;};
-// v247: parseia o formato fmtDt de volta pra Date — usado no cronômetro de
-// chegada (calcula tempo decorrido desde que o perito chegou na cena).
-const parseFmtDt=(s)=>{if(!s||typeof s!=="string")return null;const m=s.match(/^(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);if(!m)return null;const yy=parseInt(m[3]);const year=yy>=70?1900+yy:2000+yy;const d=new Date(year,parseInt(m[2])-1,parseInt(m[1]),parseInt(m[4]),parseInt(m[5]));return isNaN(d.getTime())?null:d;};
-// v247: formata duração em "Xh Ym" ou "Ym" — pílula pequena no header
-const fmtDur=(ms)=>{if(ms<0)return"0m";const totalMin=Math.floor(ms/60000);const h=Math.floor(totalMin/60);const m=totalMin%60;return h>0?`${h}h ${m}m`:`${m}m`;};
+// fmtDt, parseFmtDt, fmtDur, uid, mkEdif extraídos pra src/utils/
+// (refactor v296 Camada 2 — ver imports no topo do arquivo)
 // v295: NUM_SLOTS dobrou de 5 pra 10. Expiração subiu de 48h pra 30 dias.
 const NUM_SLOTS=10;
 const BACKUP_EXPIRY_MS=30*24*60*60*1000; // 30 dias em milissegundos
-// UID generator — monotônico, sem colisão em loops rápidos
-let _uidSeq=0;const uid=()=>{_uidSeq=(_uidSeq+1)%999999;return Date.now()*1000+_uidSeq;};
-const mkEdif=(id=1)=>({id,nome:"",obs:"",tipo:"",andares:"",estado:"",acesso:"",comodos_fato:[],material:"",cobertura:"",muro:"",portao:"",n_entradas:"",ilum_int:"",cameras:"",comodos_list:[],comodos_fato_det:{},vizinhanca:""});
 
 // ════════════════════════════════════════════════════════════════
 // CONSTANTES — extraídas para src/constants/ (refactor v296)
@@ -113,13 +110,12 @@ import { ChevronLeft, ChevronRight, Sun, Moon, MapPin, Clock, Camera, Plus, Hard
 // no App). Editar o JSON e fazer push pra main passa a refletir em produção
 // sem precisar de PR de código.
 let PERITOS={"226.823-X":"Kellen Maia","238.826-X":"Victor Costa","238.838-3":"Renata","244.597-2":"Menegoi","244.600-6":"Jaqueline","244.601-4":"Gabriel Marques","244.627-8":"Laura","244.628-6":"Cachuté","244.633-2":"Patrício","244.644-8":"Leonardo Guedes","244.646-4":"Allan Fernandes","244.648-0":"Bomtempo","244.649-9":"Alexandre Moura","244.654-5":"Muria","244.666-9":"André Ventura","244.667-7":"Gabriela","244.668-5":"Lucinda","244.671-5":"Ana Fraiz","244.708-8":"Camargos","244.713-4":"Lia Guazzelli","244.753-3":"Mauricio Rocha","244.754-1":"Fabio Rodrigues","244.832-7":"Borduqui","1.699.460-4":"Carvalho","1.699.469-8":"Goulart","1.707.648-X":"Camilo"};
+// buildPeritosList — depende de PERITOS (let, recarregado em runtime do JSON).
+// Por isso fica aqui no App.jsx em vez de utils.
 const buildPeritosList=()=>Object.entries(PERITOS).map(([mat,nome])=>({mat,nome})).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-const toTitleCase=(s)=>String(s||"").toLowerCase().split(" ").map(w=>w?w[0].toUpperCase()+w.slice(1):w).join(" ");
-// Helpers for tp (Tipo) which can be array or string (legacy)
-const tpStr=(v)=>Array.isArray(v)?v.join(", "):(v||"");
-const tpHas=(v,opt)=>Array.isArray(v)?v.includes(opt):v===opt;
-const normMat=(m)=>String(m||"").trim().toUpperCase().replace(/\s+/g,"").replace(/[.\-]/g,"");
-const lookupPerito=(m)=>{if(!m)return"";if(PERITOS[m])return PERITOS[m];const n=normMat(m);if(!n)return"";for(const k of Object.keys(PERITOS)){if(normMat(k)===n)return PERITOS[k];}return"";};
+// lookupPerito wrapper — passa o PERITOS atual pro helper testado em utils.
+const lookupPerito=(m)=>_lookupPerito(m,PERITOS);
+// tpStr, tpHas, normMat, toTitleCase extraídos pra src/utils/forensic.js
 // VEHICLE_FIELDS e hasVehicleData agora vêm de ./constants/vehicles.js
 // (refactor v296 — movido pra evitar duplicação)
 
@@ -1275,7 +1271,7 @@ const deleteCustomTemplate=async(tplId)=>{const updated=customTemplates.filter(t
 const applyBackupData=(bd)=>{
 // VALIDAÇÃO: backup importado é dado externo. Sanitiza tudo antes de aplicar.
 if(!bd||typeof bd!=="object"){showToast("❌ Backup inválido: estrutura corrompida");return;}
-const safeArr=(v,defaultArr,checkItem)=>{if(!Array.isArray(v))return defaultArr;return v.filter(x=>x&&typeof x==="object"&&(!checkItem||checkItem(x)));};
+// safeArr extraído pra src/utils/uid.js (refactor v296 Camada 2)
 // fillDefaults: garante que cada item do array tem todos os campos esperados
 const fillDefaults=(arr,defaults)=>arr.map(item=>({...defaults,...item,id:item.id??uid()}));
 const dataIn=(bd.data&&typeof bd.data==="object")?bd.data:((bd.dados&&typeof bd.dados==="object")?bd.dados:{});
@@ -1307,7 +1303,8 @@ setCadaveres(fillDefaults(safeArr(bd.cadaveres,[{id:1,label:"Cadáver 1"}],c=>c.
 setVeiculos(fillDefaults(safeArr(bd.veiculos,[{id:1,label:"Veículo 1"}],c=>c.id!==null),VEICULO_DEF));
 // v235: valida desenhos — só aceita strings que sejam data:image/* ou blob:
 // (mesmo motivo da validação de fotos abaixo).
-const isSafeDrawing=(u)=>typeof u==="string"&&(/^data:image\//i.test(u)||/^blob:/i.test(u));
+// isSafeDrawing — alias de isSafeImgUrl (são idênticos). Refactor futuro: unificar nome.
+const isSafeDrawing=isSafeImgUrl;
 if(bd.desenho){if(typeof bd.desenho==="string"){imgRef.current=isSafeDrawing(bd.desenho)?{0:bd.desenho}:{};}else if(typeof bd.desenho==="object"&&bd.desenho!==null){const safe={};for(const k of Object.keys(bd.desenho)){if(isSafeDrawing(bd.desenho[k]))safe[k]=bd.desenho[k];}imgRef.current=safe;}else{imgRef.current={};}}else{imgRef.current={};}
 setDesenhos(fillDefaults(safeArr(bd.desenhos,[{id:1,label:"Croqui 1"}],d=>d.id!==null),DESENHO_DEF));
 setPpm(typeof bd.ppm==="number"&&bd.ppm>0?bd.ppm:40);
@@ -1315,9 +1312,7 @@ setPpm(typeof bd.ppm==="number"&&bd.ppm>0?bd.ppm:40);
 // no celular (abaixo do mínimo 44pt iOS HIG). Aumenta pra 80 mantendo tudo
 // editável. Não afeta croquis novos (já nascem com getStampSz dinâmico).
 setStampObjs(safeArr(bd.stampObjs,[]).map(s=>({...s,sz:Math.max(s.sz||50,80)})));
-// v235: valida URL da foto — só aceita data:image/* ou blob: pra impedir
-// que backup malicioso injete javascript: ou esquemas estranhos.
-const isSafeImgUrl=(u)=>typeof u==="string"&&(/^data:image\//i.test(u)||/^blob:/i.test(u));
+// v235: isSafeImgUrl extraído pra src/utils/uid.js — só aceita data:image/* ou blob:.
 setFotos(safeArr(bd.fotos,[],f=>isSafeImgUrl(f.dataUrl)));
 setTrilhas(fillDefaults(safeArr(bd.trilhas,[]),TRILHA_DEF));
 setResetKey(k=>k+1);
@@ -3192,11 +3187,11 @@ const mkFileName=(ext,prefixo)=>{const d=data;const oc=d.oc||"sem_oc";const ano=
   // ──────────────────────────────────────────
 const esc=(s)=>typeof s==="string"?s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"):s;
 // Helper: retorna o suporte/local com complemento de placa quando existir (para PDF/RRV/DOCX)
-const supPlaca=(sup,placa)=>{const s=(sup||"").trim();const p=(placa||"").trim();if(!p)return s;return s?`${s} — Vestígio correlacionado à placa ${p}`:`Vestígio correlacionado à placa ${p}`;};
+// supPlaca extraído pra src/utils/format.js (refactor v296 Camada 2)
 // v236: helper que combina suporte+placa+coordenadas (D1/D2/h) — usado nos
 // exports de cadeia de custódia para que as distâncias do vestígio (medidas
 // pelo perito no local) não fiquem só no backup JSON.
-const supLoc=(v)=>{const base=supPlaca(v.suporte,v.placa);const c1=(v.coord1||"").trim();const c2=(v.coord2||"").trim();const h=(v.altura||"").trim();const parts=[];if(c1)parts.push(`D1: ${c1}`);if(c2)parts.push(`D2: ${c2}`);if(h)parts.push(`h: ${h}`);const coords=parts.length?` (${parts.join(", ")})`:"";return `${base}${coords}`;};
+// supLoc extraído pra src/utils/format.js (refactor v296 Camada 2)
 const bPDF=()=>{const d=data;
 // Cores institucionais
 const PRIMARY="#1A1A2E";const GOLD="#C9A961";const ZEBRA="#F5F5F7";const BORDER="#C8D6E5";const LIGHT="#E8E8EC";
