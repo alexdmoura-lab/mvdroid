@@ -27,12 +27,11 @@ export const lookupPerito = (m, peritosDict) => {
   return "";
 };
 
-// Title Case para nomes (1ª letra maiúscula em cada palavra).
+// Title Case para nomes (1ª letra maiúscula em cada palavra separada por espaço).
 // Ex: "ALEXANDRE MOURA" → "Alexandre Moura"
-export const toTitleCase = (s) => {
-  if (!s) return "";
-  return String(s).toLowerCase().replace(/\b([a-záàâãéèêíïóôõöúçñ])/gi, (c) => c.toUpperCase());
-};
+// v296: alinhado com a versão usada no App.jsx (split por espaço só).
+export const toTitleCase = (s) =>
+  String(s || "").toLowerCase().split(" ").map(w => w ? w[0].toUpperCase() + w.slice(1) : w).join(" ");
 
 // Escape HTML/XML — remove control chars + escapa caracteres especiais.
 // Usado nos exports PDF/DOCX.
