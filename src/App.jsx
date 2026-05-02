@@ -1361,11 +1361,14 @@ const scrollTop=useCallback(()=>setTimeout(()=>{window.scrollTo({top:0,behavior:
 const tabsBarRef=useRef(null);const activeTabRef=useRef(null);const topBarRef=useRef(null);
 // v276: medição dinâmica de topBar+tabsBar para spacer e tabsBar.top reagirem ao tamanho real
 const[headerH,setHeaderH]=useState({top:48,total:96});
-useEffect(()=>{const measure=()=>{const tb=topBarRef.current;const bb=tabsBarRef.current;if(!tb||!bb)return;const tH=tb.offsetHeight;const bH=bb.offsetHeight;setHeaderH({top:tH,total:tH+bH});};measure();const ro=new ResizeObserver(measure);if(topBarRef.current)ro.observe(topBarRef.current);if(tabsBarRef.current)ro.observe(tabsBarRef.current);window.addEventListener("resize",measure);window.addEventListener("orientationchange",measure);return()=>{ro.disconnect();window.removeEventListener("resize",measure);window.removeEventListener("orientationchange",measure);};},[isLarge,loggedIn]);
+// v296: ResizeObserver disparava com qualquer mudança subpixel e o setHeaderH
+// criava objeto novo → React re-renderizava o app inteiro a cada call.
+// Guard: só atualiza se realmente mudou.
+useEffect(()=>{const measure=()=>{const tb=topBarRef.current;const bb=tabsBarRef.current;if(!tb||!bb)return;const tH=tb.offsetHeight;const bH=bb.offsetHeight;setHeaderH(prev=>(prev.top===tH&&prev.total===tH+bH)?prev:{top:tH,total:tH+bH});};measure();const ro=new ResizeObserver(measure);if(topBarRef.current)ro.observe(topBarRef.current);if(tabsBarRef.current)ro.observe(tabsBarRef.current);window.addEventListener("resize",measure);window.addEventListener("orientationchange",measure);return()=>{ro.disconnect();window.removeEventListener("resize",measure);window.removeEventListener("orientationchange",measure);};},[isLarge,loggedIn]);
 // v296: detecta se há abas escondidas por scroll horizontal e mostra
 // indicadores nas bordas. Importante em iPhone com tela pequena onde
 // abas no fim sumiam sem aviso.
-useEffect(()=>{if(!loggedIn)return;const bar=tabsBarRef.current;if(!bar)return;const check=()=>{const left=bar.scrollLeft>4;const right=bar.scrollLeft<(bar.scrollWidth-bar.clientWidth-4);setTabsOverflow({left,right});};check();const id=setTimeout(check,300);bar.addEventListener("scroll",check,{passive:true});window.addEventListener("resize",check);return()=>{clearTimeout(id);bar.removeEventListener("scroll",check);window.removeEventListener("resize",check);};},[loggedIn,tab,isLarge]);
+useEffect(()=>{if(!loggedIn)return;const bar=tabsBarRef.current;if(!bar)return;const check=()=>{const left=bar.scrollLeft>4;const right=bar.scrollLeft<(bar.scrollWidth-bar.clientWidth-4);setTabsOverflow(prev=>(prev.left===left&&prev.right===right)?prev:{left,right});};check();const id=setTimeout(check,300);bar.addEventListener("scroll",check,{passive:true});window.addEventListener("resize",check);return()=>{clearTimeout(id);bar.removeEventListener("scroll",check);window.removeEventListener("resize",check);};},[loggedIn,tab,isLarge]);
 // v225: scroll horizontal direto da barra (não scrollIntoView, que tem bug em fixed
 // no iOS Safari e às vezes rola o documento em vez da barra). Garante que a aba
 // ativa fica centralizada na barra após login e em qualquer mudança de aba.
